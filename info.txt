@@ -1,306 +1,242 @@
-## ✅ PHASE 1 — FOUNDATION — COMPLETE (2026-06-02)
+Yes. Before writing any code, you should prepare the knowledge base documents first. For your project, **`appointment_faq.md` should be one of the first files created** because appointment-related questions will likely be the most common patient queries. 
 
-All T0–T3 + Safety Checker (T3.5) built and tested. 15/15 tests passing.
-LLM: Groq direct (llama-3.3-70b-versatile + llama-3.1-8b-instant). No provider swap abstraction.
+For the Orthopedic Hospital AI Agent, I recommend the following structure for **appointment_faq.md**.
 
----
+# Sections to Include
 
-Yes, your **Phase 1 (T0–T3)** is the correct place to start. In fact, this is a much better starting point than jumping directly into agents because everything later depends on these foundations. Your roadmap aligns well with the architecture in your project documentation.
+## 1. Hospital OPD Information
 
-A few adjustments would make it even stronger:
+Store information such as:
 
-## T0 — Folder Scaffold + .env
+* Orthopedic OPD timings
+* Working days
+* Registration timings
+* Emergency service availability
+* Appointment helpline number
+* Online appointment availability
+* Walk-in availability
 
-✅ Correct
-
-I would create these folders immediately:
-
-```text
-app/
-├── agent/
-│   ├── nodes/
-│   ├── __init__.py
-│
-├── knowledge_base/
-│   ├── docs/
-│   ├── __init__.py
-│
-├── database/
-├── models/
-├── routers/
-├── tests/
-│
-├── config.py
-├── llm_factory.py
-├── main.py
-```
-
-Also add:
-
-```text
-scripts/
-tests/
-```
-
-from the beginning rather than later.
+These are among the most common patient questions. ([virrd.com][1])
 
 ---
 
-## T1 — Config + LLM Factory + Tavily
-
-✅ Correct
-
-I would add one more file:
-
-```text
-app/constants.py
-```
-
-For:
-
-```python
-RAG_THRESHOLD = 0.80
-MAX_RAG_RESULTS = 3
-```
-
-Avoid magic numbers scattered through agents.
-
-### Tavily Installation
-
-Your roadmap currently says:
-
-```bash
-uv add langchain-community
-```
-
-I recommend:
-
-```bash
-uv add langchain-community
-uv add tavily-python
-```
-
-because the Tavily tool requires the Tavily package and API key. ([LangChain Reference Docs][1])
-
-### LLM Factory
-
-Good approach:
-
-```python
-LLM_PROVIDER=groq
-```
-
-switches to
-
-```python
-LLM_PROVIDER=gemini
-```
-
-later without code changes. 
-
----
-
-## T2 — Pydantic Models
-
-✅ Correct
-
-I would slightly expand them now.
-
-### ticket.py
-
-```python
-TicketRequest
-TicketResponse
-TicketDetail
-TicketStatus
-```
-
-Good.
-
-Add:
-
-```python
-TicketCreateResponse
-```
-
-because POST /ticket returns immediately with:
-
-```json
-{
-  "ticket_id": "...",
-  "status": "processing"
-}
-```
-
----
-
-### agent.py
-
-Current:
-
-```python
-AgentResult
-EscalationBrief
-SafetyFlag
-ClassificationResult
-```
-
-Good.
-
-Add:
-
-```python
-RAGResult
-```
-
-because rag_results becomes a first-class object instead of raw dicts.
-
----
-
-## T3 — LangGraph State
-
-✅ Very important and mostly correct.
-
-I would define:
-
-```python
-class TicketState(TypedDict):
-```
-
-exactly now before writing any agents.
-
-### Keep
-
-```python
-classifications
-safety_flags
-rag_results
-```
-
-with:
-
-```python
-Annotated[List[dict], operator.add]
-```
-
-This is the correct LangGraph reducer pattern for parallel branches. 
-
-### Add Now
-
-```python
-error_message: Optional[str]
-```
-
-Useful for failures.
-
-```python
-processing_started_at: Optional[str]
-```
-
-Useful for logging.
-
-```python
-sources_used: Optional[List[str]]
-```
-
-Useful for:
-
-```python
-KB
-Tavily
-Escalation
-```
-
-tracking.
-
----
-
-## One Change I Recommend
-
-Before moving to T4 (ChromaDB), create:
-
-### T3.5 — Safety Checker First
-
-Build:
-
-```text
-agent/nodes/safety_checker.py
-```
-
-before ChromaDB.
-
-Reason:
-
-Your entire medical workflow depends on safety rules.
+## 2. Appointment Booking FAQ
 
 Examples:
 
-```text
-insulin
-warfarin
-metformin
-pain
-swelling
-MRI
-X-ray
-```
+### How can I book an appointment?
 
-must escalate regardless of RAG score. 
+* Online portal
+* Phone booking
+* Reception desk
+* Walk-in booking
 
-This is the most critical node in the system.
+### Can I book an appointment with a specialist directly?
 
-I would test it before touching ChromaDB.
+### Is referral required?
+
+### Can I choose a specific doctor?
+
+### Can family members book on behalf of the patient?
+
+These are common appointment-related questions patients ask. ([Apollo Hospitals][2])
 
 ---
 
-## Recommended Actual Build Order
+## 3. Appointment Rescheduling
 
-### Phase 1
+Questions such as:
+
+* How do I reschedule?
+* How much notice is required?
+* Can I change doctors?
+* Can I change appointment dates?
+
+---
+
+## 4. Appointment Cancellation
+
+Questions such as:
+
+* How do I cancel?
+* Is there a cancellation fee?
+* What happens if I miss my appointment?
+
+---
+
+## 5. Walk-In Patients
+
+Include:
+
+### Are walk-ins accepted?
+
+### Will I need to wait longer?
+
+### Are specialists available for walk-ins?
+
+---
+
+## 6. First-Time Patient Guide
+
+Very important.
+
+Include:
+
+### What documents should I bring?
+
+* Aadhaar card
+* Insurance card
+* Previous prescriptions
+* Previous surgery records
+* X-rays
+* MRI scans
+* Blood reports
+
+### How early should I arrive?
+
+Hospitals commonly recommend arriving before the scheduled appointment. ([Vivekananda Hospital][3])
+
+---
+
+## 7. Follow-Up Appointments
+
+Questions such as:
+
+### How do I book a follow-up?
+
+### Do I need to register again?
+
+### Can follow-up visits be done online?
+
+---
+
+## 8. Orthopedic-Specific Questions
+
+This is where your hospital becomes different from a generic hospital.
+
+Examples:
+
+### When should I see an orthopedic doctor?
+
+### Which conditions are treated?
+
+* Knee pain
+* Hip pain
+* Arthritis
+* Fractures
+* Sports injuries
+* Back pain
+* Joint replacement follow-up
+
+These are common orthopedic concerns. ([Dr Kunal Aneja][4])
+
+---
+
+## 9. Doctor Availability
+
+Examples:
+
+### How can I know if my doctor is available?
+
+### Can I request a different orthopedic specialist?
+
+### What if my doctor is unavailable?
+
+---
+
+## 10. Teleconsultation FAQ
+
+Examples:
+
+### Can I consult online?
+
+### Can I show reports during a video consultation?
+
+### Can prescriptions be issued after teleconsultation?
+
+---
+
+## 11. Insurance During Appointment
+
+Basic appointment-level questions only:
+
+### Can I use insurance during OPD consultation?
+
+### Which insurance cards should I bring?
+
+### Does cashless apply to consultations?
+
+(Detailed insurance information belongs in `insurance_billing.md`.)
+
+---
+
+## 12. Emergency vs Appointment
+
+Very important for routing.
+
+Include questions like:
+
+### Should I book an appointment or visit emergency?
+
+Examples:
+
+Emergency:
+
+* Severe fracture
+* Heavy bleeding
+* Unable to move limb
+* Severe accident injury
+
+Appointment:
+
+* Chronic knee pain
+* Arthritis consultation
+* Follow-up visit
+* Physiotherapy review
+
+This information will help the AI classify tickets correctly later.
+
+---
+
+## 13. Contact Information
+
+Store:
+
+* Appointment number
+* Reception number
+* Email
+* Hospital address
+* Emergency number
+
+---
+
+## Recommended Size
+
+For RAG quality:
 
 ```text
-T0 Folder Structure
-T1 Config + LLM Factory
-T2 Pydantic Models
-T3 TicketState
-T3.5 Safety Checker
+appointment_faq.md
+├─ Hospital Information
+├─ Appointment Booking
+├─ Appointment Changes
+├─ Walk-ins
+├─ First Visit
+├─ Follow-ups
+├─ Orthopedic FAQ
+├─ Teleconsultation
+├─ Emergency vs Appointment
+└─ Contact Information
 ```
 
-### Phase 2
+Target:
 
 ```text
-T4 ChromaDB
-T5 Orchestrator
-T6 Intent Classifier
-T8 RAG Retriever
-T9 Confidence Evaluator
+80–120 FAQ entries
 ```
 
-### Phase 3
+This is enough to generate several hundred Chroma chunks and provide strong retrieval quality for appointment-related tickets.
 
-```text
-T9.5 Tavily Search
-T10 Reply Writer
-T11 Escalation Packager
-T12 Memory Manager
-```
-
-### Phase 4
-
-```text
-Graph Wiring
-Database Layer
-FastAPI
-Tests
-```
-
-So the answer is:
-
-**Yes, your T0 → T3 foundation phase is correct and should be implemented first. I would only add:**
-
-1. `tests/` folder from day one.
-2. `constants.py`.
-3. Install `tavily-python` along with `langchain-community`. ([LangChain Reference Docs][1])
-4. Add `RAGResult` model.
-5. Build the Safety Checker immediately after the state definition before ChromaDB.
-
-[1]: https://reference.langchain.com/python/langchain-community/tools/tavily_search/tool?utm_source=chatgpt.com "tool | langchain_community"
+[1]: https://virrd.com/op-timings/?utm_source=chatgpt.com "OP Timings"
+[2]: https://www.apollohospitals.com/hospitals/apollo-health-city-jubilee-hills?utm_source=chatgpt.com "Apollo Health City, Jubilee Hills, Hyderabad"
+[3]: https://vivekanandahospital.in/out-patient-guidelines/?utm_source=chatgpt.com "OPD Guidelines | Appointment Booking"
+[4]: https://drkunalaneja.com/blogs/orthopedic-doctor/?utm_source=chatgpt.com "Frequently Asked Questions for Orthopedic Doctor"

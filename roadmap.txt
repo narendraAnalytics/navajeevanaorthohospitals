@@ -114,7 +114,7 @@ LOG_LEVEL=INFO
        from 3 parallel agents without overwriting each other
 
 ================================================================================
-PHASE 2 -- KNOWLEDGE BASE  (Task 4)
+✅ PHASE 2 -- KNOWLEDGE BASE  (Task 4)
 ================================================================================
 
 [T4] ChromaDB + 6 Knowledge Base Docs
