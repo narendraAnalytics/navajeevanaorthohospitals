@@ -129,4 +129,4 @@ LOG_LEVEL=INFO
 
 ## Knowledge Base
 
-6 `.md` files in `app/knowledge_base/docs/`. Loaded into ChromaDB by running `seed_knowledge_base.py`. To update: edit the `.md` file and re-run the seed script. Collections: `appointment_faq`, `test_preparation`, `post_surgery_care`, `insurance_billing`, `past_tickets`.
+7 `.md` files in `app/knowledge_base/docs/`. Loaded into ChromaDB by running `seed_knowledge_base.py`. To update: edit the `.md` file and re-run the seed script. Collections: `appointment_faq`, `test_preparation`, `post_surgery_care`, `insurance_billing`, `escalation_rules`, `past_tickets`, `doctors_directory`.
