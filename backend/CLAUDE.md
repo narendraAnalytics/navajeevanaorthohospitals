@@ -80,7 +80,7 @@ black --check app/
 | Phase | Status |
 |---|---|
 | **Phase 1 — Foundation** (T0–T3 + Safety Checker) | ✅ Complete |
-| Phase 2 — Knowledge Base (T4) | ⬜ Pending |
+| **Phase 2 — Knowledge Base** (T4) | ✅ Complete |
 | Phase 3 — LangGraph Agents (T5–T11) | ⬜ Pending |
 | Phase 4 — Graph Wiring + Memory (T12–T13) | ⬜ Pending |
 | Phase 5 — FastAPI + Testing (T14) | ⬜ Pending |
