@@ -1,0 +1,383 @@
+OrthoAI Backend Roadmap
+=======================
+Project: Orthopedic Hospital AI Patient Support Agent
+Author:  Narendra | Bhimavaram, Andhra Pradesh
+Stack:   FastAPI + LangGraph + ChromaDB + Neon PostgreSQL
+LLM:     Groq (testing) -> Google Gemini (production) -- swap via single env var
+
+================================================================================
+ARCHITECTURE: 8-AGENT PARALLEL LANGGRAPH GRAPH
+================================================================================
+
+Fan-Out -> Fan-In Pattern (3x faster than sequential):
+
+  [START]
+     |
+  [Orchestrator] -- reads patient long-term memory, sets urgency (English only; multilingual deferred)
+     |
+  +--+--+--+
+  |        |        |
+[Intent  [Safety  [RAG
+Classi-  Checker] Retrie-   <-- 3 agents run SIMULTANEOUSLY (~1s each)
+fier]            ver]
+  |        |        |
+  +--+--+--+
+     |
+[Confidence Evaluator] -- fan-in, decides: auto_reply OR web_search OR escalate
+     |
+  +--+--+--+
+  |        |        |
+[Reply  [Tavily  [Escalation   <-- only one runs per ticket
+Writer] Search]  Packager]
+           |
+      [Reply Writer]  <-- uses Tavily web results
+     |        |
+  +--+--+
+     |
+[Memory Manager] -- writes short-term (per ticket) + long-term (per patient)
+     |
+  [END]
+
+Routing logic:
+  safety flags present                        ->  escalate    (medical safety, always wins)
+  RAG score >= 0.80, no flags                 ->  auto_reply  (use KB answer)
+  RAG score < 0.80, no flags                  ->  web_search  (Tavily fallback)
+    Tavily web_result score >= 0.50           ->  web_reply   (use web answer)
+    Tavily web_result score <  0.50 or empty  ->  escalate    (poor sources, human needed)
+
+Sequential (old 5-node):  ~9 seconds per ticket
+Parallel (8-agent + Tavily tool): ~3 seconds per ticket  (60% faster)
+
+================================================================================
+LLM PROVIDER SWAP -- ONE ENV VAR
+================================================================================
+
+  Groq (testing):
+    LLM_PROVIDER=groq
+    llm_pro   = llama-3.3-70b-versatile  (Escalation Packager only)
+    llm_flash = llama-3.1-8b-instant     (Orchestrator, Intent Classifier, RAG Retriever, Reply Writer)
+    llm_lite  = llama-3.1-8b-instant     (Memory Manager -- same model, Groq has no lite tier)
+
+  Gemini (production):
+    LLM_PROVIDER=gemini
+    llm_pro   = gemini-3.1-pro-preview   (Escalation Packager only)
+    llm_flash = gemini-3.5-flash          (Orchestrator, Intent Classifier, RAG Retriever, Reply Writer)
+    llm_lite  = gemini-3.1-flash-lite     (Memory Manager only)
+
+  No code changes. Edit backend/.env only.
+
+================================================================================
+FULL .env TEMPLATE  (backend/.env)
+================================================================================
+
+LLM_PROVIDER=groq
+GROQ_API_KEY=gsk_...                  # already set
+GEMINI_API_KEY=                        # add when switching to Gemini
+TAVILY_API_KEY=tvly-...                # get from app.tavily.com
+NEON_DB_URL=postgresql://...           # add Neon connection string
+CHROMA_MODE=local                      # local = embedded (no Docker), server = HttpClient (AWS only)
+CHROMA_HOST=localhost                  # only used when CHROMA_MODE=server (AWS)
+CHROMA_PORT=8001                       # only used when CHROMA_MODE=server (AWS)
+ALLOWED_ORIGIN=http://localhost:3000
+APP_ENV=development
+LOG_LEVEL=INFO
+
+================================================================================
+✅ PHASE 1 -- FOUNDATION  (Tasks 0-3)
+================================================================================
+
+[T0] Folder Scaffold + .env Update
+     - Create app/ folder structure:
+       app/agent/nodes/, app/knowledge_base/docs/,
+       app/database/, app/models/, app/routers/
+     - Add __init__.py files to all folders
+     - Update .env with all required vars above
+
+[T1] Config + LLM Factory + Tavily
+     - app/config.py       : pydantic-settings BaseSettings (loads all env vars + TAVILY_API_KEY)
+     - app/llm_factory.py  : returns (llm_pro, llm_flash, llm_lite) based on LLM_PROVIDER env var
+     - Install Tavily:  uv add langchain-community  (provides TavilySearchResults tool)
+     - Test: test_config.py verifies Groq models + Tavily key load correctly
+
+[T2] Pydantic Models
+     - app/models/ticket.py : TicketRequest, TicketResponse, TicketDetail, TicketStatus
+     - app/models/agent.py  : AgentResult, EscalationBrief, SafetyFlag, ClassificationResult
+
+[T3] LangGraph State
+     - app/agent/state.py : TicketState TypedDict
+     - Key fields: ticket_id, customer_id, raw_text, urgency,
+       classifications (Annotated list), safety_flags (Annotated list),
+       rag_results (Annotated list), confidence_score, route_decision,
+       web_results (Optional[List[dict]]),   <-- NEW: Tavily search results
+       reply_text, escalation_brief, final_status, patient_history, conversation_turns
+     - Annotated[List[dict], operator.add] reducers = safe concurrent writes
+       from 3 parallel agents without overwriting each other
+
+================================================================================
+PHASE 2 -- KNOWLEDGE BASE  (Task 4)
+================================================================================
+
+[T4] ChromaDB + 6 Knowledge Base Docs
+     - Write .md files with real AP orthopedic hospital content:
+       appointment_faq.md    -- OPD timings, booking, walk-in vs booked, wait times
+       test_preparation.md   -- fasting rules, MRI/CT prep, diabetic protocols, medicines
+       post_surgery_care.md  -- recovery timelines, physio, wound care, warning signs
+       insurance_billing.md  -- Star Health, New India, cashless, reimbursement guide
+       escalation_rules.md   -- all safety triggers (CRITICAL - defines what always escalates)
+       past_tickets.md       -- resolved ticket examples for RAG matching
+
+     - app/knowledge_base/chroma_client.py : ChromaDB client — PersistentClient locally,
+                                             HttpClient on AWS (reads CHROMA_MODE env var)
+     - app/knowledge_base/loader.py        : chunk .md by heading -> embed -> upsert to ChromaDB
+     - scripts/seed_knowledge_base.py      : run-once seed script
+
+     Local (no Docker needed):
+       chromadb is already installed via pyproject.toml
+       CHROMA_MODE=local  -> uses PersistentClient(path="./chroma_data") -- files on disk
+       Run seed: python scripts/seed_knowledge_base.py
+
+     AWS only (Docker):
+       CHROMA_MODE=server -> uses HttpClient(host, port) -- connects to Docker container
+
+================================================================================
+PHASE 3 -- LANGGRAPH AGENTS  (Tasks 5-11)
+================================================================================
+
+[T5] Agent 1 -- Orchestrator  (llm_flash)
+     - app/agent/nodes/orchestrator.py
+     - Reads AsyncPostgresStore for this customer_id (long-term memory)
+     - Detects urgency (keyword match: critical/high/medium/low)
+     - Language: English only (multilingual support deferred to final phase)
+     - Returns: patient_history, urgency -> injected into state for ALL downstream agents
+
+[T6] Agent 2 -- Intent Classifier  (llm_flash)  [PARALLEL BRANCH 1]
+     - app/agent/nodes/intent_classifier.py
+     - Runs simultaneously with Safety Checker and RAG Retriever
+     - Gemini/Groq prompt: classify into category, sub_category, intent, sentiment, keywords
+     - Output categories: appointment / test_prep / report / insurance / billing / post_surgery / emergency / other
+     - Writes to: state["classifications"] list
+
+[T7] Agent 3 -- Medical Safety Checker  (keyword-based, no LLM)  [PARALLEL BRANCH 2]
+     - app/agent/nodes/safety_checker.py
+     - MOST CRITICAL NODE -- deterministic keyword matching (not LLM -- never hallucinates)
+     - Hard escalation rules:
+         Medication words  -> ESCALATE (insulin, warfarin, metformin, steroids, blood thinner...)
+         Symptom words     -> ESCALATE (pain, swelling, fever, wound, discharge, bleeding...)
+         Emergency words   -> CRITICAL (chest pain, can't breathe, severe, unconscious...)
+         Report words      -> ESCALATE (X-ray, MRI, CT scan, report, scan result...)
+     - Writes to: state["safety_flags"] list
+     - Test suite: 10 escalation cases + 3 safe cases (TDD)
+
+[T8] Agent 4 -- RAG Knowledge Retriever  (llm_flash)  [PARALLEL BRANCH 3]
+     - app/agent/nodes/rag_retriever.py
+     - Queries ChromaDB: top 2 results from each of 5 collections
+     - llm_flash synthesizes top 3 docs into answer_draft
+     - Writes to: state["rag_results"] list with similarity_score per result
+
+[T9] Agent 5 -- Confidence Evaluator  (logic-based)  [FAN-IN]
+     - app/agent/nodes/confidence_evaluator.py
+     - Waits for ALL 3 parallel agents to complete (LangGraph handles automatically)
+     - Decision logic (3 routes now):
+         any safety_flag.escalation_required=True  ->  route='escalate'   (safety always wins)
+         max RAG similarity_score >= 0.80           ->  route='auto_reply' (KB has good answer)
+         RAG score < 0.80, no safety flags          ->  route='web_search' (try Tavily first)
+     - Safety flag ALWAYS overrides RAG confidence -- medical safety is non-negotiable
+     - Sets: confidence_score, route_decision, escalation_reason
+     - app/agent/edges.py : route_decision() function for conditional edge (3 paths)
+
+[T9.5] Tavily Search Tool  (TavilySearchResults -- not an agent, no LLM)
+     - app/agent/nodes/tavily_search.py
+     - Only runs when route_decision='web_search'
+     - Uses langchain_community.tools.TavilySearchResults (TAVILY_API_KEY from env)
+     - Searches web for patient query + "orthopedic" context
+     - Sets: web_results = [{url, content, score}]
+     - Quality gate (logic-based, no LLM):
+         best web_result score >= 0.50  ->  route_decision = 'web_reply'  -> Reply Writer
+         score < 0.50 or no results     ->  route_decision = 'escalate'   -> Escalation Packager
+     - Poor web sources are escalated, not silently replied to
+
+[T10] Agent 6 -- Reply Writer  (llm_flash)
+     - app/agent/nodes/reply_writer.py
+     - Runs when route_decision='auto_reply' (uses rag_results) OR 'web_search' (uses web_results)
+     - Writes reply in English
+     - Self-check: re-reads draft vs original question, revises if it doesn't answer
+     - Sets: reply_text, final_status='auto_resolved'
+     - Source label in reply: "From our records" (KB) vs "From web search" (Tavily)
+
+[T11] Agent 7 -- Escalation Packager  (llm_pro)
+     - app/agent/nodes/escalation_packager.py
+     - Only runs when route_decision='escalate'
+     - Builds full brief for human staff (they never see ticket cold):
+         1. Issue summary (2 sentences, plain language)
+         2. Patient history (from long-term memory)
+         3. Safety flags triggered (with trigger words)
+         4. Suggested action for human agent
+         5. Tone note (patient sentiment)
+         6. Urgency color: Green / Yellow / Red / Critical
+     - Sets: escalation_brief, final_status='escalated'
+
+================================================================================
+PHASE 4 -- GRAPH WIRING + MEMORY  (Tasks 12-13)
+================================================================================
+
+[T12] Agent 8 -- Memory Manager + Graph Compile
+     - app/agent/nodes/memory_manager.py
+       * llm_lite extracts patient facts from ticket (conditions, medications)
+       * Writes short-term memory: PostgresSaver (per ticket thread_id)
+       * Writes long-term memory: AsyncPostgresStore (per customer_id, persists forever)
+       * Always runs last, regardless of auto_reply or escalate path
+
+     - Install memory + Tavily packages:
+       uv add langgraph-checkpoint-postgres langgraph-store-postgres langchain-community
+
+     - app/agent/graph.py : wire 8 agent nodes + Tavily search tool
+       graph.add_edge(START, "orchestrator")
+       graph.add_edge("orchestrator", "intent_classifier")    # fan-out
+       graph.add_edge("orchestrator", "safety_checker")       # fan-out
+       graph.add_edge("orchestrator", "rag_retriever")        # fan-out
+       graph.add_edge("intent_classifier", "confidence_eval") # fan-in
+       graph.add_edge("safety_checker",    "confidence_eval") # fan-in
+       graph.add_edge("rag_retriever",     "confidence_eval") # fan-in
+       graph.add_conditional_edges("confidence_eval", route_decision,
+           {"auto_reply":  "reply_writer",
+            "web_search":  "tavily_search",        # NEW
+            "escalate":    "escalation_packager"})
+       graph.add_conditional_edges("tavily_search", route_decision,
+           {"web_reply": "reply_writer",          # good Tavily results
+            "escalate":  "escalation_packager"})  # poor/no Tavily results
+       graph.add_edge("reply_writer",        "memory_manager")
+       graph.add_edge("escalation_packager", "memory_manager")
+       graph.add_edge("memory_manager", END)
+       app = graph.compile(checkpointer=PostgresSaver(conn), store=AsyncPostgresStore(conn))
+
+[T13] Database Layer
+     - app/database/connection.py : asyncpg pool -> Neon PostgreSQL, CREATE TABLE SQL
+     - app/database/queries.py    : save_ticket, get_ticket, update_ticket_status,
+                                    save_reply, save_escalation, log_agent_decision
+
+     Tables (4):
+       tickets      -- id(UUID), customer_id, subject, description, category,
+                       urgency, sentiment, status, timestamps
+       replies      -- ticket_id(FK), content, sent_by(agent|human|customer)
+       escalations  -- ticket_id(FK), brief, assigned_to, resolved_at
+       agent_logs   -- ticket_id(FK), node_name, decision, confidence_score, input/output JSONB
+
+================================================================================
+PHASE 5 -- FASTAPI + TESTING  (Task 14)
+================================================================================
+
+[T14] FastAPI App
+     - app/main.py         : lifespan (pool + ChromaDB + graph compile), CORS, include routers
+     - routers/tickets.py  : POST /ticket, GET /ticket/{id}
+     - routers/admin.py    : GET /tickets/all, GET /ticket/{id}/brief, PATCH /ticket/{id}/resolve
+
+     Endpoints:
+       POST  /ticket             -- submit ticket, background_task runs agent, returns ticket_id instantly
+       GET   /ticket/{id}        -- status: processing / auto_resolved / escalated / resolved
+       GET   /tickets/all        -- admin: all tickets with status + escalation briefs
+       GET   /ticket/{id}/brief  -- admin: full escalation brief for specific ticket
+       PATCH /ticket/{id}/resolve-- admin: mark resolved with human reply
+       GET   /health             -- returns {status: ok, llm_provider: groq|gemini}
+
+     Test via Swagger: http://localhost:8000/docs
+     Run: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+================================================================================
+PHASE 6 -- GEMINI SWITCH + DOCKER  (Tasks 15-16)
+================================================================================
+
+[T15] Switch Groq -> Gemini
+     - Get API key from Google AI Studio (aistudio.google.com)
+     - Update backend/.env:
+         GEMINI_API_KEY=AIzaSy_...
+         LLM_PROVIDER=gemini
+     - Restart server, run tests -- identical behavior expected
+     - GET /health -> {"llm_provider": "gemini"}
+
+[T16] Docker  (AWS deployment only -- NOT for local dev)
+     - Dockerfile         : python:3.12-slim + uv sync --frozen + expose 8000
+     - docker-compose.yml : api service + chromadb service + chroma_data volume
+                            set CHROMA_MODE=server inside docker-compose env
+     - Used only when deploying to EC2 -- not needed to run locally
+     - Deploy: docker-compose up --build on EC2
+     - Verify: curl http://your-ec2-ip:8000/health
+
+================================================================================
+END-TO-END VERIFICATION
+================================================================================
+
+1. uvicorn app.main:app --reload  (local -- no Docker needed)
+2. POST /ticket  {"customer_id":"u1","subject":"Insulin question","description":"I take insulin daily. Fasting needed for blood test?"}
+   -> returns ticket_id instantly
+3. GET /ticket/{id}  (after 3s)  -> status=escalated, patient_message shown
+4. POST /ticket  {"customer_id":"u2","subject":"OPD timings","description":"What are the orthopedic OPD timings?"}
+   -> returns ticket_id
+5. GET /ticket/{id}  (after 3s)  -> status=auto_resolved, reply populated in English
+6. GET /tickets/all  -> both tickets visible with category, urgency, status
+7. GET /health       -> {"status":"ok","llm_provider":"gemini"}
+8. Switch LLM_PROVIDER=groq in .env, restart -> same behavior with Groq
+
+================================================================================
+FILE STRUCTURE (final)
+================================================================================
+
+backend/
++-- app/
+|   +-- main.py                     FastAPI app, CORS, lifespan
+|   +-- config.py                   pydantic-settings, all env vars
+|   +-- llm_factory.py              returns llm_pro+llm_flash (groq|gemini)
+|   +-- agent/
+|   |   +-- state.py                TicketState TypedDict + Annotated reducers
+|   |   +-- graph.py                8-node StateGraph, fan-out+fan-in, memory compile
+|   |   +-- edges.py                route_decision() conditional edge function
+|   |   +-- nodes/
+|   |       +-- orchestrator.py     Agent 1 - reads LTM, sets urgency
+|   |       +-- intent_classifier.py Agent 2 - category/sentiment/keywords [parallel]
+|   |       +-- safety_checker.py   Agent 3 - keyword safety rules [parallel, no LLM]
+|   |       +-- rag_retriever.py    Agent 4 - ChromaDB search + answer draft [parallel]
+|   |       +-- confidence_evaluator.py Agent 5 - fan-in, routing decision
+|   |       +-- tavily_search.py    Tavily search tool - web search fallback (no LLM)
+|   |       +-- reply_writer.py     Agent 6 - English reply (KB or web)
+|   |       +-- escalation_packager.py Agent 7 - full human brief (llm_pro)
+|   |       +-- memory_manager.py   Agent 8 - writes STM + LTM, always last
+|   +-- knowledge_base/
+|   |   +-- chroma_client.py        ChromaDB client singleton
+|   |   +-- loader.py               .md chunker + ChromaDB upserter
+|   |   +-- docs/
+|   |       +-- appointment_faq.md
+|   |       +-- test_preparation.md
+|   |       +-- post_surgery_care.md
+|   |       +-- insurance_billing.md
+|   |       +-- escalation_rules.md
+|   |       +-- past_tickets.md
+|   +-- database/
+|   |   +-- connection.py           asyncpg pool + CREATE TABLE SQL
+|   |   +-- queries.py              save/get/update ticket, reply, escalation
+|   +-- models/
+|   |   +-- ticket.py               TicketRequest, TicketResponse, TicketDetail
+|   |   +-- agent.py                AgentResult, EscalationBrief, SafetyFlag
+|   +-- routers/
+|       +-- tickets.py              POST /ticket, GET /ticket/{id}
+|       +-- admin.py                GET /tickets/all, brief, resolve
++-- scripts/
+|   +-- seed_knowledge_base.py      run-once ChromaDB seed
++-- tests/
+|   +-- conftest.py                 shared fixtures
+|   +-- test_config.py
+|   +-- test_safety_checker.py      10 escalation cases + 3 safe cases (TDD)
+|   +-- test_confidence_evaluator.py routing logic tests
+|   +-- test_graph_integration.py   end-to-end ticket submission
++-- Dockerfile
++-- docker-compose.yml
++-- pyproject.toml                  (deps already installed)
++-- .env
+
+================================================================================
+RESUME LINE (once complete)
+================================================================================
+
+Built a production Orthopedic Hospital platform with AI Patient Support Agent
+using LangGraph 8-agent parallel graph, FastAPI, ChromaDB RAG, Groq+Gemini API
+-- with medical-safety escalation rules (multilingual deferred), Next.js 15
+patient portal, Clerk role-based auth, Neon PostgreSQL, short-term + long-term
+patient memory -- deployed on AWS EC2 + Vercel.

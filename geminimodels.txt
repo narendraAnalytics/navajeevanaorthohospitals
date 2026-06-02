@@ -1,0 +1,11 @@
+| Agent                | Recommended Model             |
+| -------------------- | ----------------------------- |
+| Orchestrator         | gemini-3.1-pro-preview        |
+| Intent Classifier    | gemini-3.1-flash-lite         |
+| Safety Checker       | gemini-3.1-flash-lite + rules |
+| RAG Retriever        | No LLM for retrieval          |
+| RAG Synthesizer      | gemini-3.5-flash              |
+| Confidence Evaluator | gemini-3.5-flash              |
+| Reply Writer         | gemini-3.5-flash              |
+| Escalation Packager  | gemini-3.1-pro-preview        |
+| Memory Manager       | gemini-3.1-flash-lite         |
