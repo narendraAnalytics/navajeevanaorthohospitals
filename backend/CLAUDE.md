@@ -92,7 +92,8 @@ Approve & Send | Edit & Send | Assign to Senior Staff
 | Phase 4 — Graph Wiring + Memory (T12–T13) | ✅ Complete |
 | Phase 4.5 — HITL Review (T13.5) | ✅ Complete |
 | Phase 5 — FastAPI + Testing (T14) | ✅ Complete |
-| Phase 6 — Railway Deploy + Gemini switch | ⬜ Next |
+| Phase 6 — Render Deployment | ✅ Complete |
+| Phase 7 — Next.js 15 Frontend | ⬜ Next |
 
 ## Key Files
 
@@ -235,18 +236,21 @@ APP_ENV=development
 LOG_LEVEL=INFO
 ```
 
-## Railway Deployment
+## Render Deployment
 
-Railway auto-detects Python via `pyproject.toml`. Needs a `Procfile` in `backend/`:
-```
-web: uvicorn app.main:app --host 0.0.0.0 --port $PORT
-```
+**Live URL:** https://navajeevanaorthohospitals.onrender.com
 
-**ChromaDB on Railway** — filesystem is ephemeral. Either:
-- Add a Railway volume mounted at `/app/chroma_data`, OR
-- Call `python scripts/seed_knowledge_base.py` in a startup script (seeds in ~10s)
+Config file: `render.yaml` (project root).
 
-**Switching Groq → Gemini**: Update env vars in Railway dashboard → Railway auto-restarts. No redeploy needed. Code change required in `app/llm_factory.py` to use `ChatGoogleGenerativeAI` instead of `ChatGroq`.
+| Field | Value |
+|---|---|
+| Root Directory | `backend` |
+| Build Command | `pip install -r requirements.txt && python scripts/seed_knowledge_base.py` |
+| Start Command | `uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
+
+**ChromaDB on Render** — seeded during build, survives spin-downs. No persistent disk needed on free tier.
+
+**Switching Groq → Gemini**: Update `GROQ_API_KEY` / `LLM_PROVIDER` env vars in Render dashboard → service auto-restarts. Code change in `app/llm_factory.py` to use `ChatGoogleGenerativeAI`.
 
 ## Knowledge Base
 

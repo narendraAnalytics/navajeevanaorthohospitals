@@ -353,24 +353,24 @@ LOG_LEVEL=INFO
      Run: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ================================================================================
-PHASE 6 -- GEMINI SWITCH + DOCKER  (Tasks 15-16)
+✅ PHASE 6 -- RENDER DEPLOYMENT  (Tasks 15-16)
 ================================================================================
 
-[T15] Switch Groq -> Gemini
-     - Get API key from Google AI Studio (aistudio.google.com)
-     - Update backend/.env:
-         GEMINI_API_KEY=AIzaSy_...
-         LLM_PROVIDER=gemini
-     - Restart server, run tests -- identical behavior expected
-     - GET /health -> {"llm_provider": "gemini"}
+[T15] Render Deployment  ✅ COMPLETE
+     - render.yaml created at project root
+     - requirements.txt generated via: uv pip compile pyproject.toml -o requirements.txt
+     - Build: pip install -r requirements.txt && python scripts/seed_knowledge_base.py
+     - Start: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+     - Live URL: https://navajeevanaorthohospitals.onrender.com
+     - Swagger: https://navajeevanaorthohospitals.onrender.com/docs
+     - ChromaDB: local mode, seeded on every build (~10s), no persistent disk needed
+     - Neon DB: external, zero config changes needed for Render
 
-[T16] Docker  (AWS deployment only -- NOT for local dev)
-     - Dockerfile         : python:3.12-slim + uv sync --frozen + expose 8000
-     - docker-compose.yml : api service + chromadb service + chroma_data volume
-                            set CHROMA_MODE=server inside docker-compose env
-     - Used only when deploying to EC2 -- not needed to run locally
-     - Deploy: docker-compose up --build on EC2
-     - Verify: curl http://your-ec2-ip:8000/health
+[T16] Bug fixes deployed  ✅ COMPLETE
+     - queries.py: get_pending_review_tickets — fixed t.id → t.id AS ticket_id
+     - queries.py: get_ticket_review_detail  — replaced t.* with explicit columns + t.id AS ticket_id
+     - tickets.py: GET /ticket/{id}          — fixed row["id"] → row["ticket_id"]
+     - Root cause: mocked tests never caught DB column name vs Pydantic model mismatch
 
 ================================================================================
 END-TO-END VERIFICATION
@@ -451,4 +451,12 @@ Built a production Orthopedic Hospital platform with AI Patient Support Agent
 using LangGraph 8-agent parallel graph, FastAPI, ChromaDB RAG, Groq+Gemini API
 -- with medical-safety escalation rules (multilingual deferred), Next.js 15
 patient portal, Clerk role-based auth, Neon PostgreSQL, short-term + long-term
-patient memory -- deployed on AWS EC2 + Vercel.
+patient memory -- deployed on Render + Vercel.
+
+CURRENT STATE (Phase 6 complete)
+================================================================================
+Backend live:   https://navajeevanaorthohospitals.onrender.com
+Swagger:        https://navajeevanaorthohospitals.onrender.com/docs
+DB:             Neon PostgreSQL (navajeevanaorthohospitals / autumn-tree-81633917)
+LLM:            Groq (llama-3.3-70b + llama-3.1-8b-instant)
+Next:           Phase 7 — Next.js 15 frontend (admin dashboard + patient portal)

@@ -20,6 +20,14 @@ groqinfo.txt      ← ChatGroq / langchain-groq integration reference
 
 **All development happens inside `backend/`.** See `backend/CLAUDE.md` for commands, architecture details, routing logic, agent node descriptions, and environment variables.
 
+## Live URLs
+
+| Service | URL |
+|---|---|
+| Backend API | https://navajeevanaorthohospitals.onrender.com |
+| Swagger UI | https://navajeevanaorthohospitals.onrender.com/docs |
+| Health check | https://navajeevanaorthohospitals.onrender.com/health |
+
 ## Build Progress
 
 | Phase | Status |
@@ -30,7 +38,8 @@ groqinfo.txt      ← ChatGroq / langchain-groq integration reference
 | Phase 4 — Graph Wiring + Memory (PostgresSaver, AsyncPostgresStore, DB layer) | ✅ Complete |
 | Phase 4.5 — HITL Review router (approve / edit / assign to senior staff) | ✅ Complete |
 | Phase 5 — FastAPI app + all routers + Swagger testing | ✅ Complete |
-| Phase 6 — Docker + AWS EC2 deployment | ⬜ Next |
+| Phase 6 — Render deployment + bug fixes | ✅ Complete |
+| Phase 7 — Next.js 15 frontend (admin dashboard + patient portal) | ⬜ Next |
 
 ## Quick Start
 
