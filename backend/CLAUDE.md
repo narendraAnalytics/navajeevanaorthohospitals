@@ -90,22 +90,62 @@ Approve & Send | Edit & Send | Assign to Senior Staff
 | Phase 3 — LangGraph Agents (T5–T11) | ✅ Complete |
 | Phase 4 — Graph Wiring + Memory (T12–T13) | ✅ Complete |
 | Phase 4.5 — HITL Review (T13.5) | ✅ Complete |
-| Phase 5 — FastAPI + Testing (T14) | ⬜ Pending |
+| Phase 5 — FastAPI + Testing (T14) | ✅ Complete |
 | Phase 6 — Docker (T16) | ⬜ Pending |
 
-## Key Files (once built)
+## Key Files
 
 | File | Role |
 |---|---|
 | `app/config.py` | All env vars via pydantic-settings `Settings` |
 | `app/llm_factory.py` | Returns `llm_pro, llm_flash, llm_lite` — import from here in all nodes |
-| `app/agent/state.py` | `TicketState` TypedDict — single shared state for all 9 agents |
+| `app/agent/state.py` | `TicketState` TypedDict — single shared state for all 8 agents |
 | `app/agent/graph.py` | `build_graph(checkpointer, store)` — wires all nodes, compiles graph |
-| `app/agent/nodes/safety_checker.py` | Medical safety rules — most critical file, keyword-only |
+| `app/agent/graph_factory.py` | `build_production_graph()` — async factory used by FastAPI lifespan |
+| `app/agent/nodes/safety_checker.py` | Medical safety rules — most critical file, keyword-only, never LLM |
 | `app/agent/nodes/tavily_search.py` | Web search fallback via `TavilyClient` (tavily-python) — no LLM |
-| `app/constants.py` | `GROQ_MODEL_FLASH` and `GROQ_MODEL_PRO` string constants — used in all node files |
+| `app/agent/nodes/orchestrator.py` | **async** — reads `AsyncPostgresStore` for patient history |
+| `app/agent/nodes/memory_manager.py` | **async** — writes merged facts to `AsyncPostgresStore` |
+| `app/constants.py` | `GROQ_MODEL_FLASH` and `GROQ_MODEL_PRO` string constants |
 | `app/knowledge_base/chroma_client.py` | `get_client()` respects `CHROMA_MODE` env var |
-| `app/routers/review.py` | HITL review endpoints — approve / edit / assign to senior staff |
+| `app/database/connection.py` | `get_pool()` asyncpg pool · `create_checkpointer()` · `create_store()` |
+| `app/database/queries.py` | All DB CRUD — tickets, replies, escalations, agent_logs, review actions |
+| `app/models/review.py` | Pydantic models for HITL review request/response |
+| `app/main.py` | FastAPI entry point — lifespan, CORS, router registration |
+| `app/routers/tickets.py` | `POST /ticket` (background graph run) · `GET /ticket/{id}` |
+| `app/routers/admin.py` | Admin endpoints — list all tickets, escalation brief, resolve |
+| `app/models/admin.py` | Pydantic models for admin request/response |
+| `app/routers/review.py` | 6 HITL review endpoints — approve / edit / send-email / assign |
+
+## Async Graph — Critical Note
+
+`orchestrator` and `memory_manager` nodes are **async** (they inject `store: BaseStore`).  
+Always invoke the graph with `await graph.ainvoke(state, config={"configurable": {"thread_id": ticket_id}})`.  
+Never use `graph.invoke()` — it will fail on async nodes.
+
+Tests use `asyncio_mode = "auto"` (set in `pyproject.toml`) so all test functions can be `async def` without explicit `@pytest.mark.asyncio`.
+
+For production, call `build_production_graph()` from `app/agent/graph_factory.py` once at startup (FastAPI lifespan). For tests without a real DB, call `build_graph()` directly (no checkpointer/store).
+
+## Database Layer
+
+| Table | Purpose |
+|---|---|
+| `tickets` | One row per patient ticket — status lifecycle, urgency, route |
+| `replies` | AI draft + edited reply + final sent reply (all versions kept) |
+| `escalations` | Escalation brief + assigned senior staff |
+| `agent_logs` | Per-node decisions with JSONB input/output for debugging |
+
+Tables created via **Neon MCP** (`mcp__neon__run_sql`) — not via migration scripts.  
+Neon project: `navajeevanaorthohospitals` (ID: `autumn-tree-81633917`).
+
+**Ticket status lifecycle:**
+```
+draft_generated → pending_review → approved → emailed
+                               → escalated_to_senior
+```
+
+**Reply types:** `ai_draft` → `edited_reply` → `final_sent_reply`
 
 ## State Reducers
 

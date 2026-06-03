@@ -27,17 +27,11 @@ async def close_pool() -> None:
         logger.info("[DB] asyncpg pool closed")
 
 
-async def create_checkpointer() -> AsyncPostgresSaver:
-    """LangGraph short-term memory: per-ticket thread state in Neon PostgreSQL."""
-    saver = await AsyncPostgresSaver.afrom_conn_string(settings.NEON_DB_URL)
-    await saver.setup()
-    logger.info("[DB] AsyncPostgresSaver ready")
-    return saver
+def checkpointer_cm():
+    """Return context manager for AsyncPostgresSaver. Enter in FastAPI lifespan."""
+    return AsyncPostgresSaver.from_conn_string(settings.NEON_DB_URL)
 
 
-async def create_store() -> AsyncPostgresStore:
-    """LangGraph long-term memory: per-patient facts across all tickets."""
-    store = await AsyncPostgresStore.afrom_conn_string(settings.NEON_DB_URL)
-    await store.setup()
-    logger.info("[DB] AsyncPostgresStore ready")
-    return store
+def store_cm():
+    """Return context manager for AsyncPostgresStore. Enter in FastAPI lifespan."""
+    return AsyncPostgresStore.from_conn_string(settings.NEON_DB_URL)

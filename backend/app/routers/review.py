@@ -11,9 +11,8 @@ Staff actions:
 import logging
 from typing import List
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 
-from app.database.connection import get_pool
 from app.database.queries import (
     approve_ticket,
     assign_to_senior,
@@ -40,22 +39,18 @@ APPROVABLE_STATUSES = {"pending_review", "auto_resolved", "escalated"}
 EMAILABLE_STATUSES = {"approved"}
 
 
-async def _get_pool():
-    return await get_pool()
-
-
 @router.get("/pending", response_model=List[PendingTicket])
-async def list_pending_tickets():
+async def list_pending_tickets(request: Request):
     """Return all tickets awaiting human review, oldest first."""
-    pool = await _get_pool()
+    pool = request.app.state.pool
     rows = await get_pending_review_tickets(pool)
     return [PendingTicket(**r) for r in rows]
 
 
 @router.get("/{ticket_id}", response_model=TicketReviewDetail)
-async def get_ticket_for_review(ticket_id: str):
+async def get_ticket_for_review(ticket_id: str, request: Request):
     """Return full ticket detail + AI draft + escalation brief for staff review."""
-    pool = await _get_pool()
+    pool = request.app.state.pool
     row = await get_ticket_review_detail(pool, ticket_id)
     if not row:
         raise HTTPException(status_code=404, detail=f"Ticket {ticket_id} not found")
@@ -63,9 +58,9 @@ async def get_ticket_for_review(ticket_id: str):
 
 
 @router.patch("/{ticket_id}/approve", response_model=ReviewActionResponse)
-async def approve_ticket_reply(ticket_id: str, body: ApproveRequest):
+async def approve_ticket_reply(ticket_id: str, body: ApproveRequest, request: Request):
     """Approve AI reply as-is. Ticket moves to 'approved' — ready to send email."""
-    pool = await _get_pool()
+    pool = request.app.state.pool
     row = await get_ticket_review_detail(pool, ticket_id)
     if not row:
         raise HTTPException(status_code=404, detail=f"Ticket {ticket_id} not found")
@@ -90,9 +85,9 @@ async def approve_ticket_reply(ticket_id: str, body: ApproveRequest):
 
 
 @router.patch("/{ticket_id}/edit", response_model=ReviewActionResponse)
-async def edit_and_approve_reply(ticket_id: str, body: EditRequest):
+async def edit_and_approve_reply(ticket_id: str, body: EditRequest, request: Request):
     """Submit staff-edited reply. Replaces AI draft. Ticket moves to 'approved'."""
-    pool = await _get_pool()
+    pool = request.app.state.pool
     row = await get_ticket_review_detail(pool, ticket_id)
     if not row:
         raise HTTPException(status_code=404, detail=f"Ticket {ticket_id} not found")
@@ -112,14 +107,14 @@ async def edit_and_approve_reply(ticket_id: str, body: EditRequest):
 
 
 @router.post("/{ticket_id}/send-email", response_model=ReviewActionResponse)
-async def send_email_to_patient(ticket_id: str):
+async def send_email_to_patient(ticket_id: str, request: Request):
     """
     Trigger email to patient after approval. Ticket moves to 'emailed'.
 
     Phase 4.5: marks status 'emailed' and logs the final reply.
     Phase 5: wires real email dispatch (SMTP / Resend / SendGrid).
     """
-    pool = await _get_pool()
+    pool = request.app.state.pool
     row = await get_ticket_review_detail(pool, ticket_id)
     if not row:
         raise HTTPException(status_code=404, detail=f"Ticket {ticket_id} not found")
@@ -140,12 +135,12 @@ async def send_email_to_patient(ticket_id: str):
 
 
 @router.patch("/{ticket_id}/assign", response_model=ReviewActionResponse)
-async def assign_ticket_to_senior(ticket_id: str, body: AssignRequest):
+async def assign_ticket_to_senior(ticket_id: str, body: AssignRequest, request: Request):
     """
     Assign ticket to senior staff. Ticket moves to 'escalated_to_senior'.
     No email is sent to patient.
     """
-    pool = await _get_pool()
+    pool = request.app.state.pool
     row = await get_ticket_review_detail(pool, ticket_id)
     if not row:
         raise HTTPException(status_code=404, detail=f"Ticket {ticket_id} not found")

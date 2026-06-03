@@ -6,9 +6,14 @@ from pydantic import BaseModel, Field
 
 class TicketStatus(str, Enum):
     processing = "processing"
+    pending_review = "pending_review"
+    approved = "approved"
+    emailed = "emailed"
     auto_resolved = "auto_resolved"
     escalated = "escalated"
+    escalated_to_senior = "escalated_to_senior"
     resolved = "resolved"
+    error = "error"
 
 
 class TicketRequest(BaseModel):

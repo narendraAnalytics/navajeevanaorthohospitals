@@ -162,6 +162,47 @@ async def assign_to_senior(
     )
 
 
+async def get_all_tickets(pool: asyncpg.Pool) -> list[dict]:
+    rows = await pool.fetch(
+        """SELECT t.id AS ticket_id, t.customer_id, t.customer_name, t.subject,
+                  t.urgency, t.final_status, t.route_decision, t.confidence_score,
+                  t.created_at, t.updated_at,
+                  e.escalation_brief
+           FROM tickets t
+           LEFT JOIN escalations e ON e.ticket_id = t.id
+           ORDER BY t.created_at DESC"""
+    )
+    return [dict(r) for r in rows]
+
+
+async def get_escalation_brief(pool: asyncpg.Pool, ticket_id: str) -> dict | None:
+    row = await pool.fetchrow(
+        """SELECT t.id AS ticket_id, t.customer_id, t.subject, t.raw_text,
+                  t.urgency, t.final_status, t.created_at,
+                  e.escalation_brief, e.escalation_reason, e.assigned_to
+           FROM tickets t
+           LEFT JOIN escalations e ON e.ticket_id = t.id
+           WHERE t.id = $1""",
+        ticket_id,
+    )
+    return dict(row) if row else None
+
+
+async def resolve_ticket(
+    pool: asyncpg.Pool, ticket_id: str, human_reply: str, resolved_by: str
+) -> None:
+    await pool.execute(
+        """UPDATE tickets SET final_status = 'resolved', reviewed_by = $2, updated_at = NOW()
+           WHERE id = $1""",
+        ticket_id, resolved_by,
+    )
+    await pool.execute(
+        """INSERT INTO replies (ticket_id, reply_text, reply_type, sent_by)
+           VALUES ($1, $2, 'final_sent_reply', $3)""",
+        ticket_id, human_reply, resolved_by,
+    )
+
+
 async def log_agent_decision(
     pool: asyncpg.Pool,
     ticket_id: str,
