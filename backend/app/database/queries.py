@@ -81,7 +81,7 @@ async def save_escalation(
 
 async def get_pending_review_tickets(pool: asyncpg.Pool) -> list[dict]:
     rows = await pool.fetch(
-        """SELECT t.id, t.customer_id, t.customer_name, t.customer_email,
+        """SELECT t.id AS ticket_id, t.customer_id, t.customer_name, t.customer_email,
                   t.subject, t.urgency, t.confidence_score, t.route_decision,
                   t.final_status, t.created_at,
                   r.reply_text AS ai_draft,
@@ -97,7 +97,11 @@ async def get_pending_review_tickets(pool: asyncpg.Pool) -> list[dict]:
 
 async def get_ticket_review_detail(pool: asyncpg.Pool, ticket_id: str) -> dict | None:
     row = await pool.fetchrow(
-        """SELECT t.*, r.reply_text AS ai_draft, r.reply_type,
+        """SELECT t.id AS ticket_id, t.customer_id, t.customer_name, t.customer_email,
+                  t.subject, t.raw_text, t.urgency, t.category, t.sentiment,
+                  t.confidence_score, t.route_decision, t.final_status,
+                  t.reviewed_by, t.created_at, t.updated_at,
+                  r.reply_text AS ai_draft, r.reply_type,
                   e.escalation_brief, e.escalation_reason, e.assigned_to
            FROM tickets t
            LEFT JOIN replies r ON r.ticket_id = t.id AND r.reply_type = 'ai_draft'
