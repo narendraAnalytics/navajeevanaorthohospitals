@@ -3,6 +3,7 @@ import logging
 from datetime import datetime, timezone
 
 from langchain_groq import ChatGroq
+from langgraph.store.base import BaseStore
 
 from app.agent.state import TicketState
 from app.config import settings
@@ -29,13 +30,23 @@ Rules:
 - Base decision solely on the ticket content and patient history provided."""
 
 
-def orchestrator(state: TicketState) -> dict:
-    """Agent 1: Reads patient history, detects urgency. Runs first, results shared with all downstream agents."""
+async def orchestrator(state: TicketState, store: BaseStore) -> dict:
+    """Agent 1: Reads patient long-term history, detects urgency. Results shared with all downstream agents."""
     llm = ChatGroq(model=GROQ_MODEL_FLASH, api_key=settings.GROQ_API_KEY, temperature=0)
 
+    # Read long-term patient history from AsyncPostgresStore
+    customer_id = state.get("customer_id", "unknown")
     patient_history = ""
-    # Long-term memory read will be wired in Phase 4 (AsyncPostgresStore).
-    # Until then, history is empty — orchestrator still sets urgency correctly.
+    try:
+        namespace = ("patient", customer_id)
+        result = await store.aget(namespace, "medical_history")
+        if result:
+            facts = result.value.get("facts", [])
+            if facts:
+                patient_history = "Prior patient history: " + "; ".join(facts)
+                logger.info(f"[Orchestrator] Loaded {len(facts)} facts for {customer_id}")
+    except Exception as e:
+        logger.warning(f"[Orchestrator] Could not read patient history: {e}. Continuing without it.")
 
     ticket_context = f"""PATIENT TICKET
 Subject: {state.get('subject', '')}
@@ -57,7 +68,6 @@ PATIENT HISTORY (from previous visits):
         urgency = "medium"
         urgency_reason = "Auto-assigned: could not parse urgency from ticket"
 
-    # Clamp to valid values
     if urgency not in ("critical", "high", "medium", "low"):
         urgency = "medium"
 

@@ -27,8 +27,8 @@ groqinfo.txt      ← ChatGroq / langchain-groq integration reference
 | Phase 1 — Foundation (config, state, models, safety checker) | ✅ Complete |
 | Phase 2 — Knowledge Base (ChromaDB, 7 docs, loader, seed script) | ✅ Complete |
 | Phase 3 — LangGraph Agents (all 8 nodes + graph wiring + edges) | ✅ Complete |
-| Phase 4 — Graph Wiring + Memory (PostgresSaver, AsyncPostgresStore, DB layer) | ⬜ Pending |
-| Phase 4.5 — HITL Review router (approve / edit / assign to senior staff) | ⬜ Pending |
+| Phase 4 — Graph Wiring + Memory (PostgresSaver, AsyncPostgresStore, DB layer) | ✅ Complete |
+| Phase 4.5 — HITL Review router (approve / edit / assign to senior staff) | ✅ Complete |
 | Phase 5 — FastAPI app + all routers + Swagger testing | ⬜ Pending |
 | Phase 6 — Docker + AWS EC2 deployment | ⬜ Pending |
 

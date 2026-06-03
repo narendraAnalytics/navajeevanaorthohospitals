@@ -88,8 +88,8 @@ Approve & Send | Edit & Send | Assign to Senior Staff
 | **Phase 1 — Foundation** (T0–T3 + Safety Checker) | ✅ Complete |
 | **Phase 2 — Knowledge Base** (T4) | ✅ Complete |
 | Phase 3 — LangGraph Agents (T5–T11) | ✅ Complete |
-| Phase 4 — Graph Wiring + Memory (T12–T13) | ⬜ Pending |
-| Phase 4.5 — HITL Review (T13.5) | ⬜ Pending |
+| Phase 4 — Graph Wiring + Memory (T12–T13) | ✅ Complete |
+| Phase 4.5 — HITL Review (T13.5) | ✅ Complete |
 | Phase 5 — FastAPI + Testing (T14) | ⬜ Pending |
 | Phase 6 — Docker (T16) | ⬜ Pending |
 

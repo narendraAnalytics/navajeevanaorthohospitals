@@ -39,7 +39,7 @@ def _base_state(subject: str, raw_text: str, ticket_id: str = "TEST-001") -> dic
 
 
 @SKIP_IF_NO_KEY
-def test_safety_escalation_path():
+async def test_safety_escalation_path():
     """Ticket with 'insulin' → safety flag → escalate → escalation_packager produces staff brief."""
     graph = build_graph()
     state = _base_state(
@@ -48,7 +48,7 @@ def test_safety_escalation_path():
         ticket_id="TEST-SAFETY-001",
     )
 
-    result = graph.invoke(state)
+    result = await graph.ainvoke(state)
 
     _safe_print(f"\n{'='*60}")
     _safe_print("TEST: Safety Escalation Path")
@@ -69,7 +69,7 @@ def test_safety_escalation_path():
 
 
 @SKIP_IF_NO_KEY
-def test_auto_reply_opd_timings():
+async def test_auto_reply_opd_timings():
     """OPD timings query → RAG retrieves appointment_faq → auto_reply → patient reply generated."""
     graph = build_graph()
     state = _base_state(
@@ -78,7 +78,7 @@ def test_auto_reply_opd_timings():
         ticket_id="TEST-OPD-001",
     )
 
-    result = graph.invoke(state)
+    result = await graph.ainvoke(state)
 
     print(f"\n{'='*60}")
     print("TEST: Auto-Reply Path — OPD Timings")
@@ -97,7 +97,7 @@ def test_auto_reply_opd_timings():
 
 
 @SKIP_IF_NO_KEY
-def test_graph_state_fields_populated():
+async def test_graph_state_fields_populated():
     """Verify all critical state fields are set after a full graph run."""
     graph = build_graph()
     state = _base_state(
@@ -106,7 +106,7 @@ def test_graph_state_fields_populated():
         ticket_id="TEST-STATE-001",
     )
 
-    result = graph.invoke(state)
+    result = await graph.ainvoke(state)
 
     print(f"\n{'='*60}")
     print("TEST: State Fields Check")
@@ -126,6 +126,5 @@ def test_graph_state_fields_populated():
     assert result.get("route_decision") in VALID_ROUTES
     assert result.get("final_status") in ("auto_resolved", "escalated")
     assert result.get("processing_started_at") is not None
-    # Either reply_text or escalation_brief must be set
     has_output = bool(result.get("reply_text")) or bool(result.get("escalation_brief"))
     assert has_output, "Graph must produce either reply_text or escalation_brief"

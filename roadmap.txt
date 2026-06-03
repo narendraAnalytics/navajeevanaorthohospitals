@@ -228,7 +228,7 @@ LOG_LEVEL=INFO
      - Sets: escalation_brief, final_status='escalated'
 
 ================================================================================
-PHASE 4 -- GRAPH WIRING + MEMORY  (Tasks 12-13)
+✅ PHASE 4 -- GRAPH WIRING + MEMORY  (Tasks 12-13)
 ================================================================================
 
 [T12] Agent 8 -- Memory Manager + Graph Compile
@@ -274,7 +274,7 @@ PHASE 4 -- GRAPH WIRING + MEMORY  (Tasks 12-13)
        agent_logs   -- ticket_id(FK), node_name, decision, confidence_score, input/output JSONB
 
 ================================================================================
-PHASE 4.5 -- HUMAN-IN-THE-LOOP (HITL)  (Task 13.5)
+✅ PHASE 4.5 -- HUMAN-IN-THE-LOOP (HITL)  (Task 13.5)
 ================================================================================
 
 [T13.5] HITL Review Layer

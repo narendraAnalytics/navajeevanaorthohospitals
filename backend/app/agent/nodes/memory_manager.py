@@ -2,6 +2,7 @@ import json
 import logging
 
 from langchain_groq import ChatGroq
+from langgraph.store.base import BaseStore
 
 from app.agent.state import TicketState
 from app.config import settings
@@ -30,12 +31,8 @@ If nothing factual is explicitly stated:
 No explanation. No markdown. JSON only."""
 
 
-def memory_manager(state: TicketState) -> dict:
-    """Agent 8 (always runs last): Extracts patient facts from ticket, writes to long-term memory.
-
-    Phase 4 will wire AsyncPostgresStore for actual DB persistence.
-    Until then: extracts facts and logs them — no data loss, just not persisted to DB yet.
-    """
+async def memory_manager(state: TicketState, store: BaseStore) -> dict:
+    """Agent 8 (always runs last): Extracts patient facts, writes to long-term memory (AsyncPostgresStore)."""
     llm = ChatGroq(model=GROQ_MODEL_FLASH, api_key=settings.GROQ_API_KEY, temperature=0)
 
     ticket_text = f"Subject: {state.get('subject', '')}\nMessage: {state.get('raw_text', '')}"
@@ -60,11 +57,17 @@ def memory_manager(state: TicketState) -> dict:
     ticket_id = state.get("ticket_id", "unknown")
 
     if facts:
-        logger.info(f"[MemoryManager] customer={customer_id} ticket={ticket_id} facts={facts}")
-        # Phase 4: await store.aput(("patient", customer_id), "medical_history", {"facts": facts})
+        try:
+            namespace = ("patient", customer_id)
+            # Merge with existing facts to avoid overwriting prior history
+            existing = await store.aget(namespace, "medical_history")
+            prior_facts: list[str] = existing.value.get("facts", []) if existing else []
+            merged = list(dict.fromkeys(prior_facts + facts))  # deduplicate, preserve order
+            await store.aput(namespace, "medical_history", {"facts": merged})
+            logger.info(f"[MemoryManager] customer={customer_id} ticket={ticket_id} stored {len(facts)} new facts ({len(merged)} total)")
+        except Exception as e:
+            logger.error(f"[MemoryManager] Failed to write to store: {e}")
     else:
         logger.info(f"[MemoryManager] customer={customer_id} ticket={ticket_id} — no new facts to store")
 
-    # Memory manager does not modify the main state — it writes to the external store.
-    # Return empty dict so LangGraph sees no state mutation from this node.
     return {}
