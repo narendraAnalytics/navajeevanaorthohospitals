@@ -1,15 +1,38 @@
-PS C:\Users\ES\Desktop\2025\navajeevanaorthohospitals> cd .\backend\
-PS C:\Users\ES\Desktop\2025\navajeevanaorthohospitals\backend> (Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned) ; (& c:\Users\ES\Desktop\2025\navajeevanaorthohospitals\backend\.venv\Scripts\Activate.ps1)
-(backend) PS C:\Users\ES\Desktop\2025\navajeevanaorthohospitals\backend> .\.venv\Scripts\activate                                           
-(backend) PS C:\Users\ES\Desktop\2025\navajeevanaorthohospitals\backend> uvicorn app.main:app --reload --host 0.0.0.0 --port 8000           
-INFO:     Will watch for changes in these directories: ['C:\\Users\\ES\\Desktop\\2025\\navajeevanaorthohospitals\\backend']
-INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)         
-INFO:     Started reloader process [2160] using WatchFiles                                                            
-INFO:     Started server process [10168]
-INFO:     Waiting for application startup.
-INFO:app.main:[Startup] Initialising database...
-INFO:app.database.connection:[DB] asyncpg pool created
-INFO:app.database.init_db:[DB] All app tables verified / created
-INFO:app.main:[Startup] Building production graph...
-INFO:app.main:[Startup] OrthoAI ready.
-INFO:     Application startup complete.
+Yes Railway works great for FastAPI. For Gemini switch — just update the env var in Railway dashboard, it auto-restarts. No redeploy
+  needed.
+  ---
+  Two things to sort before deploying:
+  1. Start command — Railway needs this. Create a Procfile in backend/:
+  web: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+
+  2. ChromaDB ⚠️  — Railway has ephemeral storage (resets on redeploy). Your chroma_data/ folder won't survive. Two options:
+
+  ┌──────────────────────────────┬─────────────────────────────────────────────────────────────────────────┐
+  │            Option            │                                   How                                   │
+  ├──────────────────────────────┼─────────────────────────────────────────────────────────────────────────┤
+  │ Railway Volume (recommended) │ Add a persistent volume in Railway dashboard, mount to /app/chroma_data │
+  ├──────────────────────────────┼─────────────────────────────────────────────────────────────────────────┤
+  │ Re-seed on startup           │ Add seed_knowledge_base.py call to lifespan startup — runs every deploy │
+  └──────────────────────────────┴─────────────────────────────────────────────────────────────────────────┘
+
+  Re-seed on startup is the simplest — 7 docs seed in ~10 seconds.
+
+  ---
+  Env vars to set in Railway dashboard (copy from your .env):
+  GROQ_API_KEY=gsk_...
+  TAVILY_API_KEY=tvly-...
+  NEON_DB_URL=postgresql://...
+  CHROMA_MODE=local
+  ALLOWED_ORIGIN=https://your-frontend.vercel.app
+  APP_ENV=production
+  LOG_LEVEL=INFO
+
+  ---
+  When you switch to Gemini later:
+  - Railway dashboard → Variables → update GEMINI_API_KEY → Railway auto-restarts
+  - No git push, no redeploy needed
+
+  Want me to add the auto-seed to startup and create the Procfile now so you're deployment-ready?
+
+  Next step
+  is creating a Procfile and deploying to Railway.

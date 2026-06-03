@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-OrthoAI — Orthopedic Hospital AI Patient Support Agent for Andhra Pradesh, India.
+OrthoAI — Orthopedic Hospital AI Patient Support Agent for Navajeevana Orthopedic Hospital, Bhimavaram, Andhra Pradesh, India.
 Backend only. Frontend (Next.js 15) is a separate future phase.
 
 ## Commands
@@ -18,19 +18,22 @@ All commands run from `backend/` with the `.venv` activated.
 # Run dev server
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
-# Run all tests
+# Run all tests (offline — no Neon/Groq needed)
 python -m pytest tests/ -v
 
-# Run a single test file
-python -m pytest tests/test_safety_checker.py -v
+# Run route tests only
+python -m pytest tests/test_routes.py -v
 
-# Run a single test by name
+# Run a single test
 python -m pytest tests/test_safety_checker.py::test_medication_triggers_escalation -v
+
+# Run integration test (real Groq API calls)
+python -m pytest tests/test_graph_integration.py -v -s
 
 # Add a dependency
 uv add <package>
 
-# Seed ChromaDB knowledge base (run once after writing .md docs)
+# Seed ChromaDB knowledge base (run once, or on every Railway deploy)
 python scripts/seed_knowledge_base.py
 
 # Lint
@@ -59,27 +62,25 @@ black --check app/
 [Human Review Queue]  ← AI never emails patients directly
       ↓
 Approve & Send | Edit & Send | Assign to Senior Staff
-      ↓
-[Send Email]
 ```
 
 **LLM** — `app/llm_factory.py` returns `(llm_pro, llm_flash, llm_lite)` using Groq directly.
 
 - `llm_pro`   = `llama-3.3-70b-versatile` — Escalation Packager only
 - `llm_flash` = `llama-3.1-8b-instant`    — Orchestrator, Intent Classifier, RAG Retriever, Reply Writer
-- `llm_lite`  = `llama-3.1-8b-instant`    — Memory Manager (same model, no separate lite tier on Groq)
+- `llm_lite`  = `llama-3.1-8b-instant`    — Memory Manager
 
 **Safety Checker is keyword-based (no LLM)** — deterministic, never hallucinates. Must never be converted to LLM-based.
 
-**Tavily is a tool node, not an agent** — uses `TavilyClient` from `tavily-python` directly. No LLM call inside it. Medication / symptom / emergency / report keywords always force escalation regardless of RAG confidence score.
+**Tavily is a tool node, not an agent** — uses `TavilyClient` from `tavily-python` directly. No LLM call inside it.
 
 **ChromaDB mode**:
-- Local dev: `CHROMA_MODE=local` → `PersistentClient(path="./chroma_data")` — no server needed
-- AWS/prod: `CHROMA_MODE=server` → `HttpClient(host, port)` — connects to Docker container
+- Local / Railway: `CHROMA_MODE=local` → `PersistentClient(path="./chroma_data")` — no server needed
+- Docker/prod: `CHROMA_MODE=server` → `HttpClient(host, port)` — connects to separate container
 
 **Memory layers**:
-- Short-term: `PostgresSaver` (LangGraph checkpointer) — per `ticket_id` thread, Neon PostgreSQL
-- Long-term: `AsyncPostgresStore` (LangGraph store) — per `customer_id`, persists across all sessions
+- Short-term: `AsyncPostgresSaver` (LangGraph checkpointer) — per `ticket_id` thread, Neon PostgreSQL
+- Long-term: `AsyncPostgresStore` (LangGraph store) — per `customer_id`, persists across all tickets
 
 ## Build Progress
 
@@ -91,117 +92,140 @@ Approve & Send | Edit & Send | Assign to Senior Staff
 | Phase 4 — Graph Wiring + Memory (T12–T13) | ✅ Complete |
 | Phase 4.5 — HITL Review (T13.5) | ✅ Complete |
 | Phase 5 — FastAPI + Testing (T14) | ✅ Complete |
-| Phase 6 — Docker (T16) | ⬜ Pending |
+| Phase 6 — Railway Deploy + Gemini switch | ⬜ Next |
 
 ## Key Files
 
 | File | Role |
 |---|---|
 | `app/config.py` | All env vars via pydantic-settings `Settings` |
+| `app/main.py` | FastAPI entry point — lifespan owns checkpointer/store lifecycle, CORS, routers |
 | `app/llm_factory.py` | Returns `llm_pro, llm_flash, llm_lite` — import from here in all nodes |
 | `app/agent/state.py` | `TicketState` TypedDict — single shared state for all 8 agents |
 | `app/agent/graph.py` | `build_graph(checkpointer, store)` — wires all nodes, compiles graph |
-| `app/agent/graph_factory.py` | `build_production_graph()` — async factory used by FastAPI lifespan |
-| `app/agent/nodes/safety_checker.py` | Medical safety rules — most critical file, keyword-only, never LLM |
-| `app/agent/nodes/tavily_search.py` | Web search fallback via `TavilyClient` (tavily-python) — no LLM |
+| `app/agent/nodes/safety_checker.py` | Medical safety rules — keyword-only, never LLM. Do not change to LLM. |
+| `app/agent/nodes/escalation_packager.py` | Sets both `escalation_brief` (staff) AND `reply_text` (patient warm message) |
+| `app/agent/nodes/reply_writer.py` | KB reply (auto_reply) and web reply (web_reply) with disclaimer |
 | `app/agent/nodes/orchestrator.py` | **async** — reads `AsyncPostgresStore` for patient history |
 | `app/agent/nodes/memory_manager.py` | **async** — writes merged facts to `AsyncPostgresStore` |
 | `app/constants.py` | `GROQ_MODEL_FLASH` and `GROQ_MODEL_PRO` string constants |
 | `app/knowledge_base/chroma_client.py` | `get_client()` respects `CHROMA_MODE` env var |
-| `app/database/connection.py` | `get_pool()` asyncpg pool · `create_checkpointer()` · `create_store()` |
-| `app/database/queries.py` | All DB CRUD — tickets, replies, escalations, agent_logs, review actions |
+| `app/database/connection.py` | `get_pool()` asyncpg singleton · `checkpointer_cm()` · `store_cm()` context managers |
+| `app/database/queries.py` | All DB CRUD — tickets, replies, escalations, agent_logs, review + admin actions |
+| `app/models/ticket.py` | `TicketRequest`, `TicketDetail` (includes `route_decision`, `confidence_score`), `TicketStatus` enum |
 | `app/models/review.py` | Pydantic models for HITL review request/response |
-| `app/main.py` | FastAPI entry point — lifespan, CORS, router registration |
-| `app/routers/tickets.py` | `POST /ticket` (background graph run) · `GET /ticket/{id}` |
-| `app/routers/admin.py` | Admin endpoints — list all tickets, escalation brief, resolve |
-| `app/models/admin.py` | Pydantic models for admin request/response |
-| `app/routers/review.py` | 6 HITL review endpoints — approve / edit / send-email / assign |
+| `app/models/admin.py` | Pydantic models for admin endpoints |
+| `app/routers/tickets.py` | `POST /ticket` (202, background graph run) · `GET /ticket/{id}` |
+| `app/routers/admin.py` | `GET /tickets/all` · `GET /ticket/{id}/brief` · `PATCH /ticket/{id}/resolve` |
+| `app/routers/review.py` | 6 HITL review endpoints — all use `request.app.state.pool` (not get_pool()) |
 
-## Async Graph — Critical Note
+## FastAPI Lifespan — Critical Pattern
 
-`orchestrator` and `memory_manager` nodes are **async** (they inject `store: BaseStore`).  
-Always invoke the graph with `await graph.ainvoke(state, config={"configurable": {"thread_id": ticket_id}})`.  
+`main.py` owns the checkpointer and store lifecycle via nested `async with`:
+
+```python
+async with checkpointer_cm() as checkpointer:
+    await checkpointer.setup()
+    async with store_cm() as store:
+        await store.setup()
+        app.state.graph = build_graph(checkpointer=checkpointer, store=store)
+        yield   # connections stay open for full app lifetime
+```
+
+**Never** return from inside `async with checkpointer_cm()` — it closes the connection immediately.
+All routers access pool and graph via `request.app.state.pool` and `request.app.state.graph`.
+
+## Async Graph
+
+`orchestrator` and `memory_manager` nodes are **async** (they inject `store: BaseStore`).
+Always invoke: `await graph.ainvoke(state, config={"configurable": {"thread_id": ticket_id}})`.
 Never use `graph.invoke()` — it will fail on async nodes.
 
-Tests use `asyncio_mode = "auto"` (set in `pyproject.toml`) so all test functions can be `async def` without explicit `@pytest.mark.asyncio`.
+Tests use `asyncio_mode = "auto"` (set in `pyproject.toml`) — all `async def` tests run automatically.
+For offline tests (no Neon/Groq): use mocked `app.state.pool` and `app.state.graph` — see `tests/test_routes.py`.
 
-For production, call `build_production_graph()` from `app/agent/graph_factory.py` once at startup (FastAPI lifespan). For tests without a real DB, call `build_graph()` directly (no checkpointer/store).
+## Reply Behavior by Route
+
+| Route | Trigger | `reply_text` | `escalation_brief` |
+|---|---|---|---|
+| `auto_reply` | RAG score ≥ 0.75, no flags | KB-sourced answer, begins "Based on our hospital information..." | empty |
+| `web_reply` | RAG score < 0.75, Tavily score ≥ 0.50 | Web-sourced answer + disclaimer + "until you consult our doctor..." | empty |
+| `escalate` | Any safety flag OR poor Tavily results | Warm patient acknowledgment (urgency-aware) | Full staff brief |
+
+**Escalation patient reply is urgency-aware** (`escalation_packager._build_patient_reply`):
+- `critical` / `high` → "Please do not panic. Come to hospital with reports, X-rays, medicines list. Staff ready 24/7."
+- `medium` → "Team will review and get back to you shortly."
+- `low` → "Team will look into it and respond soon."
+
+**Web reply always ends with disclaimer** (in `WEB_SYSTEM_PROMPT`):
+> "This information has been sourced from general web resources and is not a substitute for professional medical advice. Until you consult our doctor in person, we cannot provide fully accurate guidance..."
 
 ## Database Layer
 
 | Table | Purpose |
 |---|---|
-| `tickets` | One row per patient ticket — status lifecycle, urgency, route |
-| `replies` | AI draft + edited reply + final sent reply (all versions kept) |
-| `escalations` | Escalation brief + assigned senior staff |
-| `agent_logs` | Per-node decisions with JSONB input/output for debugging |
+| `tickets` | One row per ticket — status, urgency, route, confidence_score, reviewed_by |
+| `replies` | All reply versions kept: `ai_draft` → `edited_reply` → `final_sent_reply` |
+| `escalations` | Staff escalation brief + assigned_to |
+| `agent_logs` | Per-node decisions with JSONB for debugging |
 
-Tables created via **Neon MCP** (`mcp__neon__run_sql`) — not via migration scripts.  
+Tables created via **Neon MCP** (`mcp__neon__run_sql`) — not via migration scripts.
 Neon project: `navajeevanaorthohospitals` (ID: `autumn-tree-81633917`).
 
-**Ticket status lifecycle:**
+**Full ticket status lifecycle:**
 ```
-draft_generated → pending_review → approved → emailed
-                               → escalated_to_senior
+processing → pending_review → approved → emailed
+                           → escalated_to_senior
+                           → resolved   (admin resolves manually)
 ```
 
 **Reply types:** `ai_draft` → `edited_reply` → `final_sent_reply`
-
-## State Reducers
-
-`TicketState` uses `Annotated[List[dict], operator.add]` on `classifications`, `safety_flags`, and `rag_results`. This lets the 3 parallel agents write to the same list fields without overwriting each other. `web_results` is `Optional[List[dict]]` — set only when route is `web_search`. All other fields are plain `Optional[str/float]`.
 
 ## Routing Logic
 
 `confidence_evaluator` decides the path (3 routes):
 1. Any `safety_flag` with `escalation_required=True` → **escalate** (overrides everything)
-2. Best RAG `similarity_score >= 0.75`, no flags → **auto_reply** (use KB answer)
-3. RAG score < 0.75, no flags → **web_search** → `tavily_search` node → quality gate:
-   - Tavily score >= 0.50 → **web_reply** → `reply_writer` (use web answer)
-   - Tavily score < 0.50 or no results → **escalate** → `escalation_packager` (poor sources)
+2. Best RAG `similarity_score >= 0.75`, no flags → **auto_reply** (KB answer)
+3. RAG score < 0.75, no flags → **web_search** → `tavily_search` → quality gate:
+   - Tavily score ≥ 0.50 → **web_reply** → `reply_writer`
+   - Tavily score < 0.50 or no results → **escalate** → `escalation_packager`
 
-Tavily is the fallback **before** escalating for low-confidence queries. Poor Tavily results escalate to human rather than generating an unreliable reply.
+**Safety checker keywords** (any match → escalate, no exceptions):
+- SYMPTOM: `pain, swelling, fever, wound, discharge, bleeding, infection, redness, pus, numbness, tingling, dizziness, vomiting, nausea`
+- MEDICATION: `insulin, warfarin, metformin, steroids, aspirin, heparin, clopidogrel, ...`
+- EMERGENCY: `chest pain, can't breathe, severe, unconscious, collapse, heart attack, stroke, ambulance`
+- REPORT: `x-ray, xray, mri, ct scan, scan result, report, lab report, blood report, test result`
 
-## Human-in-the-Loop (HITL)
+## HITL Review Endpoints
 
-AI never sends emails directly to patients. After all 8 agents complete, every reply lands in a human review queue.
-
-**Staff dashboard shows:** Patient Name, Patient Email, Ticket text, AI Generated Reply, Confidence Score, Safety Flags triggered, Escalation Brief (if applicable).
-
-**Three staff actions:**
-
-1. **Approve & Send** — AI reply is correct; email sent unchanged.
-   `ticket status: pending_review → approved → emailed`
-   `reply type: ai_draft → final_sent_reply`
-
-2. **Edit & Send** — Staff modifies AI reply, then sends.
-   `ticket status: pending_review → approved → emailed`
-   `reply type: ai_draft → edited_reply → final_sent_reply`
-
-3. **Assign to Senior Staff** — Staff cannot resolve; ticket routed to senior staff. No email sent.
-   `ticket status: pending_review → escalated`
-
-**HITL is NOT Agent 9.** It is a human workflow step that runs after all 8 agents complete. The AI pipeline is unchanged.
-
-**Review endpoints** (`app/routers/review.py`):
 ```
 GET   /review/pending               -- tickets awaiting review
 GET   /review/{ticket_id}           -- full ticket + AI draft details
 PATCH /review/{ticket_id}/approve   -- approve AI reply as-is
-PATCH /review/{ticket_id}/edit      -- submit edited reply
-POST  /review/{ticket_id}/send-email-- trigger email send
+PATCH /review/{ticket_id}/edit      -- submit staff-edited reply
+POST  /review/{ticket_id}/send-email-- trigger email (Phase 6: real SMTP/Resend)
 PATCH /review/{ticket_id}/assign    -- assign to senior staff
 ```
 
-**Ticket statuses (full lifecycle):**
-`draft_generated → pending_review → approved → emailed`
-`draft_generated → pending_review → escalated → resolved`
+All review endpoints use `request.app.state.pool` — NOT `get_pool()` (important for testability).
+
+## Admin Endpoints
+
+```
+GET   /tickets/all          -- all tickets all statuses, newest first
+GET   /ticket/{id}/brief    -- full escalation brief for one ticket
+PATCH /ticket/{id}/resolve  -- mark resolved with human reply
+```
+
+## State Reducers
+
+`TicketState` uses `Annotated[List[dict], operator.add]` on `classifications`, `safety_flags`, and `rag_results`. This lets 3 parallel agents write to the same list fields without overwriting. All other fields are plain `Optional[str/float]`.
 
 ## Environment Variables
 
 ```
 GROQ_API_KEY=gsk_...
-TAVILY_API_KEY=tvly-...     # from app.tavily.com — used by tavily_search node
+TAVILY_API_KEY=tvly-...
 NEON_DB_URL=postgresql://...
 CHROMA_MODE=local           # local | server
 CHROMA_HOST=localhost       # server mode only
@@ -211,6 +235,20 @@ APP_ENV=development
 LOG_LEVEL=INFO
 ```
 
+## Railway Deployment
+
+Railway auto-detects Python via `pyproject.toml`. Needs a `Procfile` in `backend/`:
+```
+web: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+```
+
+**ChromaDB on Railway** — filesystem is ephemeral. Either:
+- Add a Railway volume mounted at `/app/chroma_data`, OR
+- Call `python scripts/seed_knowledge_base.py` in a startup script (seeds in ~10s)
+
+**Switching Groq → Gemini**: Update env vars in Railway dashboard → Railway auto-restarts. No redeploy needed. Code change required in `app/llm_factory.py` to use `ChatGoogleGenerativeAI` instead of `ChatGroq`.
+
 ## Knowledge Base
 
-7 `.md` files in `app/knowledge_base/docs/`. Loaded into ChromaDB by running `seed_knowledge_base.py`. To update: edit the `.md` file and re-run the seed script. Collections: `appointment_faq`, `test_preparation`, `post_surgery_care`, `insurance_billing`, `escalation_rules`, `past_tickets`, `doctors_directory`.
+7 `.md` files in `app/knowledge_base/docs/`. Collections: `appointment_faq`, `test_preparation`, `post_surgery_care`, `insurance_billing`, `escalation_rules`, `past_tickets`, `doctors_directory`.
+To update: edit the `.md` file → re-run `python scripts/seed_knowledge_base.py`.
