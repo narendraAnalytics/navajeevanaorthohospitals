@@ -44,6 +44,52 @@ Rules:
 - If in doubt about urgency, choose one level higher."""
 
 
+def _build_patient_reply(subject: str, urgency: str) -> str:
+    """Build a warm patient-facing acknowledgment. Never shown to staff — that's escalation_brief."""
+    urgency_lower = (urgency or "").lower()
+    subject_clean = subject.strip() if subject else "your concern"
+
+    if urgency_lower in ("critical", "high"):
+        return (
+            f"Dear Patient,\n\n"
+            f"Thank you for reaching out to Navajeevana Orthopedic Hospital.\n\n"
+            f"We have received your concern regarding **{subject_clean}** and our staff will "
+            f"immediately look into it.\n\n"
+            f"**Please do not panic.** We kindly request you to visit the hospital as soon as possible. "
+            f"Please bring the following with you:\n"
+            f"  • Previous medical reports\n"
+            f"  • X-rays (if any)\n"
+            f"  • Current medicines list\n\n"
+            f"Our dedicated team is available **24/7** and will be ready to attend to you the moment you arrive.\n\n"
+            f"For any queries before visiting, please call us at **+91 9494559848**.\n\n"
+            f"Warm regards,\n"
+            f"Patient Support Team\n"
+            f"Navajeevana Orthopedic Hospital, Bhimavaram"
+        )
+    elif urgency_lower == "medium":
+        return (
+            f"Dear Patient,\n\n"
+            f"Thank you for reaching out to Navajeevana Orthopedic Hospital.\n\n"
+            f"We have noted your query about **{subject_clean}**. "
+            f"Our team will review it and get back to you shortly.\n\n"
+            f"If you need immediate assistance, please call us at **+91 9494559848**.\n\n"
+            f"Warm regards,\n"
+            f"Patient Support Team\n"
+            f"Navajeevana Orthopedic Hospital, Bhimavaram"
+        )
+    else:
+        return (
+            f"Dear Patient,\n\n"
+            f"Thank you for reaching out to Navajeevana Orthopedic Hospital.\n\n"
+            f"We have received your query about **{subject_clean}**. "
+            f"Our team will look into it and respond soon.\n\n"
+            f"For any assistance, please call us at **+91 9494559848**.\n\n"
+            f"Warm regards,\n"
+            f"Patient Support Team\n"
+            f"Navajeevana Orthopedic Hospital, Bhimavaram"
+        )
+
+
 def escalation_packager(state: TicketState) -> dict:
     """Agent 7 (llm_pro): Builds complete staff escalation brief. Only runs on escalate path."""
     llm = ChatGroq(model=GROQ_MODEL_PRO, api_key=settings.GROQ_API_KEY, temperature=0)
@@ -108,8 +154,14 @@ Prepare the escalation brief now."""
             f"URGENCY\n🟠 HIGH — Manual review required due to system issue."
         )
 
+    patient_reply = _build_patient_reply(
+        subject=state.get("subject", ""),
+        urgency=state.get("urgency", "medium"),
+    )
+
     return {
         "escalation_brief": escalation_brief,
+        "reply_text": patient_reply,
         "final_status": "escalated",
         "sources_used": ["Escalation"],
     }
