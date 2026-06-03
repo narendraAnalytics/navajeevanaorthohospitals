@@ -16,6 +16,7 @@ COLLECTIONS = [
     "insurance_billing",
     "past_tickets",
     "doctors_directory",
+    "hospital_information",
 ]
 
 SYNTHESIS_PROMPT = """You are a medical knowledge retrieval AI for Navajeevana Orthopedic Hospital, Bhimavaram, Andhra Pradesh.

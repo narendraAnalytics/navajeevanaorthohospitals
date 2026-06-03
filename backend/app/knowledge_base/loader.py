@@ -10,9 +10,10 @@ COLLECTION_MAP = {
     "test_preparation.md":   "test_preparation",
     "post_surgery_care.md":  "post_surgery_care",
     "insurance_billing.md":  "insurance_billing",
-    "escalation_rules.md":   "escalation_rules",
-    "past_tickets.md":       "past_tickets",
-    "doctors_directory.md":  "doctors_directory",
+    "escalation_rules.md":       "escalation_rules",
+    "past_tickets.md":           "past_tickets",
+    "doctors_directory.md":      "doctors_directory",
+    "hospital_information.md":   "hospital_information",
 }
 
 
