@@ -14,7 +14,13 @@ _pool: asyncpg.Pool | None = None
 async def get_pool() -> asyncpg.Pool:
     global _pool
     if _pool is None:
-        _pool = await asyncpg.create_pool(settings.NEON_DB_URL)
+        _pool = await asyncpg.create_pool(
+            settings.NEON_DB_URL,
+            min_size=1,
+            max_size=5,
+            timeout=30,           # fail fast if Neon doesn't respond in 30s
+            command_timeout=60,   # per-query timeout
+        )
         logger.info("[DB] asyncpg pool created")
     return _pool
 
