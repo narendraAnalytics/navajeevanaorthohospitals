@@ -102,7 +102,7 @@ async def get_ticket(ticket_id: str, request: Request):
     if not row:
         raise HTTPException(status_code=404, detail=f"Ticket {ticket_id} not found")
     return TicketDetail(
-        ticket_id=row["id"],
+        ticket_id=row["ticket_id"],
         customer_id=row["customer_id"],
         subject=row["subject"],
         description=row.get("raw_text") or "",
