@@ -33,7 +33,7 @@ python -m pytest tests/test_graph_integration.py -v -s
 # Add a dependency
 uv add <package>
 
-# Seed ChromaDB knowledge base (run once, or on every Railway deploy)
+# Seed ChromaDB knowledge base (run once, or on every Render deploy)
 python scripts/seed_knowledge_base.py
 
 # Lint
@@ -149,8 +149,8 @@ For offline tests (no Neon/Groq): use mocked `app.state.pool` and `app.state.gra
 
 | Route | Trigger | `reply_text` | `escalation_brief` |
 |---|---|---|---|
-| `auto_reply` | RAG score ≥ 0.75, no flags | KB-sourced answer, begins "Based on our hospital information..." | empty |
-| `web_reply` | RAG score < 0.75, Tavily score ≥ 0.50 | Web-sourced answer + disclaimer + "until you consult our doctor..." | empty |
+| `auto_reply` | RAG score ≥ 0.70, no flags | KB-sourced answer, begins "At Navajeevana Ortho Hospitals, ..." | empty |
+| `web_reply` | RAG score < 0.70, Tavily score ≥ 0.50 | Begins "[Web Search Result]..." + disclaimer | empty |
 | `escalate` | Any safety flag OR poor Tavily results | Warm patient acknowledgment (urgency-aware) | Full staff brief |
 
 **Escalation patient reply is urgency-aware** (`escalation_packager._build_patient_reply`):
@@ -186,8 +186,8 @@ processing → pending_review → approved → emailed
 
 `confidence_evaluator` decides the path (3 routes):
 1. Any `safety_flag` with `escalation_required=True` → **escalate** (overrides everything)
-2. Best RAG `similarity_score >= 0.75`, no flags → **auto_reply** (KB answer)
-3. RAG score < 0.75, no flags → **web_search** → `tavily_search` → quality gate:
+2. Best RAG `similarity_score >= 0.70`, no flags → **auto_reply** (KB answer)
+3. RAG score < 0.70, no flags → **web_search** → `tavily_search` → quality gate:
    - Tavily score ≥ 0.50 → **web_reply** → `reply_writer`
    - Tavily score < 0.50 or no results → **escalate** → `escalation_packager`
 
@@ -254,5 +254,6 @@ Config file: `render.yaml` (project root).
 
 ## Knowledge Base
 
-7 `.md` files in `app/knowledge_base/docs/`. Collections: `appointment_faq`, `test_preparation`, `post_surgery_care`, `insurance_billing`, `escalation_rules`, `past_tickets`, `doctors_directory`.
-To update: edit the `.md` file → re-run `python scripts/seed_knowledge_base.py`.
+8 `.md` files in `app/knowledge_base/docs/`. Collections: `appointment_faq`, `test_preparation`, `post_surgery_care`, `insurance_billing`, `escalation_rules`, `past_tickets`, `doctors_directory`, `hospital_information`.
+To add a doc: create `.md` → add to `COLLECTION_MAP` in `loader.py` → add name to `COLLECTIONS` in `rag_retriever.py` → re-run seed.
+To update: edit the `.md` → re-run `python scripts/seed_knowledge_base.py`.
