@@ -110,6 +110,8 @@ async def get_ticket(ticket_id: str, request: Request):
         category=row.get("category"),
         urgency=row.get("urgency"),
         sentiment=row.get("sentiment"),
+        confidence_score=row.get("confidence_score"),
+        route_decision=row.get("route_decision"),
         reply_text=row.get("ai_draft"),
         escalation_brief=row.get("escalation_brief"),
         created_at=row.get("created_at"),

@@ -47,6 +47,8 @@ class TicketDetail(BaseModel):
     category: Optional[str] = None
     urgency: Optional[str] = None
     sentiment: Optional[str] = None
+    confidence_score: Optional[float] = None
+    route_decision: Optional[str] = None
     reply_text: Optional[str] = None
     escalation_brief: Optional[str] = None
     created_at: Optional[datetime] = None
