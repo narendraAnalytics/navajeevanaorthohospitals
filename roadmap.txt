@@ -36,6 +36,17 @@ Writer] Search]  Packager]
      |
 [Memory Manager] -- writes short-term (per ticket) + long-term (per patient)
      |
+  [Human Review Queue]  <-- HITL: AI never emails patients directly
+     |
+  +--+--+--+
+  |        |        |
+[Approve [Edit  [Assign to
+& Send]  & Send] Senior
+  |        |     Staff]
+  +--+--+
+     |
+  [Send Email]
+     |
   [END]
 
 Routing logic:
@@ -140,7 +151,7 @@ LOG_LEVEL=INFO
        CHROMA_MODE=server -> uses HttpClient(host, port) -- connects to Docker container
 
 ================================================================================
-PHASE 3 -- LANGGRAPH AGENTS  (Tasks 5-11)
+✅ PHASE 3 -- LANGGRAPH AGENTS  (Tasks 5-11)
 ================================================================================
 
 [T5] Agent 1 -- Orchestrator  (llm_flash)
@@ -263,6 +274,58 @@ PHASE 4 -- GRAPH WIRING + MEMORY  (Tasks 12-13)
        agent_logs   -- ticket_id(FK), node_name, decision, confidence_score, input/output JSONB
 
 ================================================================================
+PHASE 4.5 -- HUMAN-IN-THE-LOOP (HITL)  (Task 13.5)
+================================================================================
+
+[T13.5] HITL Review Layer
+
+     Goal: AI never sends emails directly to patients.
+     Every reply (auto_resolved or escalated) lands in a human review queue first.
+
+     Staff Review Dashboard shows:
+       * Patient Name + Email
+       * Original Ticket text
+       * AI Generated Reply (ai_draft)
+       * Confidence Score
+       * Safety Flags triggered (if any)
+       * Escalation Brief (if route=escalate)
+
+     Three actions available to staff:
+
+     1. Approve & Send
+        AI reply is correct -> staff clicks Approve -> email sent unchanged
+        ticket status: pending_review -> approved -> emailed
+        reply type: ai_draft -> final_sent_reply
+
+     2. Edit & Send
+        Staff modifies AI reply -> submits edited version -> email sent
+        ticket status: pending_review -> approved -> emailed
+        reply type: ai_draft -> edited_reply -> final_sent_reply
+
+     3. Assign to Senior Staff
+        Staff cannot resolve -> routes ticket to senior staff member
+        ticket status: pending_review -> escalated
+        No email sent; senior staff takes over
+
+     Database: updated ticket statuses
+       draft_generated -> pending_review -> approved -> emailed
+                                        -> escalated -> resolved
+
+     Database: reply types
+       ai_draft | edited_reply | final_sent_reply
+
+     New router: app/routers/review.py
+       GET   /review/pending              -- tickets awaiting human review
+       GET   /review/{ticket_id}          -- full ticket + AI draft details
+       PATCH /review/{ticket_id}/approve  -- approve AI reply as-is
+       PATCH /review/{ticket_id}/edit     -- submit staff-edited reply
+       POST  /review/{ticket_id}/send-email -- send email after approval
+       PATCH /review/{ticket_id}/assign   -- assign to senior staff
+
+     Note: HITL is NOT Agent 9. It is a human workflow step that runs AFTER
+     all 8 agents complete. The AI pipeline is unchanged.
+
+================================================================================
 PHASE 5 -- FASTAPI + TESTING  (Task 14)
 ================================================================================
 
@@ -270,14 +333,21 @@ PHASE 5 -- FASTAPI + TESTING  (Task 14)
      - app/main.py         : lifespan (pool + ChromaDB + graph compile), CORS, include routers
      - routers/tickets.py  : POST /ticket, GET /ticket/{id}
      - routers/admin.py    : GET /tickets/all, GET /ticket/{id}/brief, PATCH /ticket/{id}/resolve
+     - routers/review.py   : HITL review endpoints (see Phase 4.5)
 
      Endpoints:
-       POST  /ticket             -- submit ticket, background_task runs agent, returns ticket_id instantly
-       GET   /ticket/{id}        -- status: processing / auto_resolved / escalated / resolved
-       GET   /tickets/all        -- admin: all tickets with status + escalation briefs
-       GET   /ticket/{id}/brief  -- admin: full escalation brief for specific ticket
-       PATCH /ticket/{id}/resolve-- admin: mark resolved with human reply
-       GET   /health             -- returns {status: ok, llm_provider: groq|gemini}
+       POST  /ticket                       -- submit ticket, background_task runs agent, returns ticket_id
+       GET   /ticket/{id}                  -- status: processing / pending_review / emailed / escalated
+       GET   /tickets/all                  -- admin: all tickets with status + escalation briefs
+       GET   /ticket/{id}/brief            -- admin: full escalation brief for specific ticket
+       PATCH /ticket/{id}/resolve          -- admin: mark resolved with human reply
+       GET   /health                       -- returns {status: ok, llm_provider: groq|gemini}
+       GET   /review/pending               -- HITL: tickets awaiting human review
+       GET   /review/{ticket_id}           -- HITL: full ticket + AI draft for staff review
+       PATCH /review/{ticket_id}/approve   -- HITL: approve AI reply as-is
+       PATCH /review/{ticket_id}/edit      -- HITL: submit staff-edited reply
+       POST  /review/{ticket_id}/send-email-- HITL: trigger email after approval
+       PATCH /review/{ticket_id}/assign    -- HITL: assign to senior staff
 
      Test via Swagger: http://localhost:8000/docs
      Run: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
@@ -359,6 +429,7 @@ backend/
 |   +-- routers/
 |       +-- tickets.py              POST /ticket, GET /ticket/{id}
 |       +-- admin.py                GET /tickets/all, brief, resolve
+|       +-- review.py               HITL: pending, approve, edit, send-email, assign
 +-- scripts/
 |   +-- seed_knowledge_base.py      run-once ChromaDB seed
 +-- tests/

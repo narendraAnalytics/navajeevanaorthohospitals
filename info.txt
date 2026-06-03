@@ -1,242 +1,230 @@
-Yes. Before writing any code, you should prepare the knowledge base documents first. For your project, **`appointment_faq.md` should be one of the first files created** because appointment-related questions will likely be the most common patient queries. 
-
-For the Orthopedic Hospital AI Agent, I recommend the following structure for **appointment_faq.md**.
-
-# Sections to Include
-
-## 1. Hospital OPD Information
-
-Store information such as:
-
-* Orthopedic OPD timings
-* Working days
-* Registration timings
-* Emergency service availability
-* Appointment helpline number
-* Online appointment availability
-* Walk-in availability
-
-These are among the most common patient questions. ([virrd.com][1])
-
----
-
-## 2. Appointment Booking FAQ
-
-Examples:
-
-### How can I book an appointment?
-
-* Online portal
-* Phone booking
-* Reception desk
-* Walk-in booking
-
-### Can I book an appointment with a specialist directly?
-
-### Is referral required?
-
-### Can I choose a specific doctor?
-
-### Can family members book on behalf of the patient?
-
-These are common appointment-related questions patients ask. ([Apollo Hospitals][2])
-
----
-
-## 3. Appointment Rescheduling
-
-Questions such as:
-
-* How do I reschedule?
-* How much notice is required?
-* Can I change doctors?
-* Can I change appointment dates?
-
----
-
-## 4. Appointment Cancellation
-
-Questions such as:
-
-* How do I cancel?
-* Is there a cancellation fee?
-* What happens if I miss my appointment?
-
----
-
-## 5. Walk-In Patients
-
-Include:
-
-### Are walk-ins accepted?
-
-### Will I need to wait longer?
-
-### Are specialists available for walk-ins?
-
----
-
-## 6. First-Time Patient Guide
-
-Very important.
-
-Include:
-
-### What documents should I bring?
-
-* Aadhaar card
-* Insurance card
-* Previous prescriptions
-* Previous surgery records
-* X-rays
-* MRI scans
-* Blood reports
-
-### How early should I arrive?
-
-Hospitals commonly recommend arriving before the scheduled appointment. ([Vivekananda Hospital][3])
-
----
-
-## 7. Follow-Up Appointments
-
-Questions such as:
-
-### How do I book a follow-up?
-
-### Do I need to register again?
-
-### Can follow-up visits be done online?
-
----
-
-## 8. Orthopedic-Specific Questions
-
-This is where your hospital becomes different from a generic hospital.
-
-Examples:
-
-### When should I see an orthopedic doctor?
-
-### Which conditions are treated?
-
-* Knee pain
-* Hip pain
-* Arthritis
-* Fractures
-* Sports injuries
-* Back pain
-* Joint replacement follow-up
-
-These are common orthopedic concerns. ([Dr Kunal Aneja][4])
-
----
-
-## 9. Doctor Availability
-
-Examples:
-
-### How can I know if my doctor is available?
-
-### Can I request a different orthopedic specialist?
-
-### What if my doctor is unavailable?
-
----
-
-## 10. Teleconsultation FAQ
-
-Examples:
-
-### Can I consult online?
-
-### Can I show reports during a video consultation?
-
-### Can prescriptions be issued after teleconsultation?
-
----
-
-## 11. Insurance During Appointment
-
-Basic appointment-level questions only:
-
-### Can I use insurance during OPD consultation?
-
-### Which insurance cards should I bring?
-
-### Does cashless apply to consultations?
-
-(Detailed insurance information belongs in `insurance_billing.md`.)
-
----
-
-## 12. Emergency vs Appointment
-
-Very important for routing.
-
-Include questions like:
-
-### Should I book an appointment or visit emergency?
-
-Examples:
-
-Emergency:
-
-* Severe fracture
-* Heavy bleeding
-* Unable to move limb
-* Severe accident injury
-
-Appointment:
-
-* Chronic knee pain
-* Arthritis consultation
-* Follow-up visit
-* Physiotherapy review
-
-This information will help the AI classify tickets correctly later.
-
----
-
-## 13. Contact Information
-
-Store:
-
-* Appointment number
-* Reception number
-* Email
-* Hospital address
-* Emergency number
-
----
-
-## Recommended Size
-
-For RAG quality:
-
-```text
-appointment_faq.md
-├─ Hospital Information
-├─ Appointment Booking
-├─ Appointment Changes
-├─ Walk-ins
-├─ First Visit
-├─ Follow-ups
-├─ Orthopedic FAQ
-├─ Teleconsultation
-├─ Emergency vs Appointment
-└─ Contact Information
-```
-
-Target:
-
-```text
-80–120 FAQ entries
-```
-
-This is enough to generate several hundred Chroma chunks and provide strong retrieval quality for appointment-related tickets.
-
-[1]: https://virrd.com/op-timings/?utm_source=chatgpt.com "OP Timings"
-[2]: https://www.apollohospitals.com/hospitals/apollo-health-city-jubilee-hills?utm_source=chatgpt.com "Apollo Health City, Jubilee Hills, Hyderabad"
-[3]: https://vivekanandahospital.in/out-patient-guidelines/?utm_source=chatgpt.com "OPD Guidelines | Appointment Booking"
-[4]: https://drkunalaneja.com/blogs/orthopedic-doctor/?utm_source=chatgpt.com "Frequently Asked Questions for Orthopedic Doctor"
+# LangGraph Implementation Notes — OrthoAI Hospital Ticketing System
+# Stack: LangGraph + ChatGroq + PostgresSaver + AsyncPostgresStore
+# Date: 2026 | langgraph>=0.2, langchain-groq latest
+
+================================================================================
+1. STATEGRAPH + CHATGROQ — MINIMAL SETUP
+================================================================================
+
+Imports:
+  from typing_extensions import TypedDict, Annotated
+  from langgraph.graph import StateGraph, START, END
+  from langchain_groq import ChatGroq
+  from langchain_core.messages import HumanMessage
+
+State:
+  class TicketState(TypedDict):
+      ticket_id: str
+      customer_message: str
+      classification: str
+      response: str
+
+Node with ChatGroq (direct model name — no factory):
+  def classify_ticket(state: TicketState) -> dict:
+      llm = ChatGroq(model="llama-3.1-8b-instant", temperature=0)
+      messages = [
+          ("system", "Classify this hospital ticket."),
+          ("human", state["customer_message"])
+      ]
+      response = llm.invoke(messages)
+      return {"classification": response.content.strip()}
+
+Compile & Invoke:
+  builder = StateGraph(TicketState)
+  builder.add_node("classify", classify_ticket)
+  builder.add_edge(START, "classify")
+  builder.add_edge("classify", END)
+  graph = builder.compile()
+  result = graph.invoke({"ticket_id": "T001", "customer_message": "OPD timings?", ...})
+
+================================================================================
+2. FAN-OUT / FAN-IN — PARALLEL NODES (Send API)
+================================================================================
+
+Use Annotated[list[dict], operator.add] on shared state fields so 3 parallel
+agents write without overwriting each other.
+
+  from langgraph.types import Send
+  import operator
+  from typing import Annotated
+
+  class TicketState(TypedDict):
+      ...
+      handlers_output: Annotated[list[dict], operator.add]
+
+Dispatch node returns list of Send objects:
+  def route_parallel(state: TicketState) -> list[Send]:
+      return [
+          Send("intent_classifier", state),
+          Send("safety_checker",    state),
+          Send("rag_retriever",     state),
+      ]
+
+Each parallel node appends to the accumulator:
+  def intent_classifier(state: TicketState) -> dict:
+      ...
+      return {"classifications": [{"category": "appointment", ...}]}
+
+  def safety_checker(state: TicketState) -> dict:
+      ...
+      return {"safety_flags": [{"flag": "medication", ...}]}
+
+Graph wiring:
+  builder.add_conditional_edges("orchestrator", route_parallel)
+  builder.add_edge("intent_classifier", "confidence_eval")
+  builder.add_edge("safety_checker",    "confidence_eval")
+  builder.add_edge("rag_retriever",     "confidence_eval")
+
+LangGraph waits for ALL three to complete before running confidence_eval (fan-in).
+
+Alternatively for fixed 3 parallel:
+  builder.add_edge("orchestrator", "intent_classifier")
+  builder.add_edge("orchestrator", "safety_checker")
+  builder.add_edge("orchestrator", "rag_retriever")
+  # All 3 auto fan-in to confidence_eval
+
+================================================================================
+3. HUMAN-IN-THE-LOOP — interrupt() PRIMITIVE (New 2025 API)
+================================================================================
+
+CRITICAL: Checkpointer MUST be compiled into the graph for interrupt() to work.
+interrupt() is the new primitive — do NOT use interrupt_before/interrupt_after params
+for HITL logic (those are for debugging only).
+
+  from langgraph.types import interrupt, Command
+  from langgraph.checkpoint.postgres import PostgresSaver
+
+Node that pauses for human review:
+  def human_review_node(state: TicketState) -> dict:
+      # First call: raises GraphInterrupt — graph halts here
+      # FastAPI endpoint receives the interrupt and shows data to staff
+      human_decision = interrupt({
+          "ticket_id":        state["ticket_id"],
+          "ai_reply":         state["reply_text"],
+          "confidence_score": state["confidence_score"],
+          "safety_flags":     state["safety_flags"],
+          "escalation_brief": state.get("escalation_brief"),
+      })
+      # On resume: human_decision = {"action": "approve"|"edit"|"assign", "edited_reply": ...}
+      return {"human_decision": human_decision, "final_status": human_decision["action"]}
+
+First invocation (graph pauses):
+  config = {"configurable": {"thread_id": ticket_id}}
+  result = graph.invoke(state, config)
+  # result contains {"__interrupt__": (Interrupt(value={...}),)}
+  # Store the interrupt payload for the staff dashboard
+
+Resume after staff acts (FastAPI PATCH /review/{id}/approve etc.):
+  from langgraph.types import Command
+  command = Command(resume={"action": "approve", "edited_reply": None})
+  final = graph.invoke(command, config)
+
+Three action payloads:
+  Approve:  Command(resume={"action": "approve"})
+  Edit:     Command(resume={"action": "edit", "edited_reply": "Staff edited text..."})
+  Assign:   Command(resume={"action": "assign", "assigned_to": "dr_suresh"})
+
+================================================================================
+4. POSTGRESSAVER + ASYNCPOSTGRESSTORE — MEMORY LAYERS
+================================================================================
+
+Short-term memory (per ticket thread):
+  from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+
+  async with AsyncPostgresSaver.from_conn_string(NEON_DB_URL) as checkpointer:
+      await checkpointer.setup()   # creates schema once
+      graph = builder.compile(checkpointer=checkpointer)
+
+  config = {"configurable": {"thread_id": ticket_id}}
+  result = await graph.ainvoke(state, config)
+
+Long-term memory (per patient, persists forever):
+  from langgraph.store.postgres import AsyncPostgresStore
+
+  async with AsyncPostgresStore.from_conn_string(NEON_DB_URL) as store:
+      await store.setup()
+
+      # Write patient fact
+      await store.aput(
+          ("patient", customer_id),
+          "medical_history",
+          {"conditions": ["knee_pain"], "medications": ["ibuprofen"]}
+      )
+
+      # Read in orchestrator node
+      history = await store.aget(("patient", customer_id), "medical_history")
+
+Combined (both at once — production pattern):
+  async with AsyncPostgresStore.from_conn_string(NEON_DB_URL) as store:
+      await store.setup()
+      async with AsyncPostgresSaver.from_conn_string(NEON_DB_URL) as checkpointer:
+          await checkpointer.setup()
+          graph = builder.compile(checkpointer=checkpointer, store=store)
+
+Node accessing the store (injected by LangGraph automatically):
+  def orchestrator(state: TicketState, store: BaseStore) -> dict:
+      history = store.get(("patient", state["customer_id"]), "medical_history")
+      return {"patient_history": history.value if history else {}}
+
+================================================================================
+5. CUSTOMER SUPPORT TICKETING PATTERN — ORTHOAI SPECIFIC
+================================================================================
+
+Full routing logic for our 8-agent graph:
+
+  safety flags present                -> escalate  (always wins, non-negotiable)
+  RAG similarity_score >= 0.80        -> auto_reply (KB answer, high confidence)
+  RAG score < 0.80, no safety flags   -> web_search (Tavily fallback)
+    Tavily score >= 0.50              -> web_reply  (use web answer)
+    Tavily score < 0.50 or empty      -> escalate   (poor sources)
+
+Conditional edge function:
+  def route_decision(state: TicketState) -> str:
+      return state["route_decision"]  # "auto_reply" | "web_search" | "escalate" | "web_reply"
+
+  builder.add_conditional_edges("confidence_eval", route_decision, {
+      "auto_reply": "reply_writer",
+      "web_search": "tavily_search",
+      "escalate":   "escalation_packager",
+  })
+  builder.add_conditional_edges("tavily_search", route_decision, {
+      "web_reply": "reply_writer",
+      "escalate":  "escalation_packager",
+  })
+
+Reply writer handles both KB and web sources:
+  def reply_writer(state: TicketState) -> dict:
+      llm = ChatGroq(model="llama-3.1-8b-instant", temperature=0.3)
+      source = state["rag_results"] if state["route_decision"] == "auto_reply" else state["web_results"]
+      source_label = "From our records" if state["route_decision"] == "auto_reply" else "From web search"
+      # ... build reply with source label
+      return {"reply_text": reply, "final_status": "auto_resolved"}
+
+================================================================================
+6. DIRECT MODEL NAMES — USE IN ALL NODES (no factory during Groq phase)
+================================================================================
+
+  GROQ_FLASH = "llama-3.1-8b-instant"      # Orchestrator, Intent, RAG, Reply Writer
+  GROQ_PRO   = "llama-3.3-70b-versatile"   # Escalation Packager only
+  GROQ_LITE  = "llama-3.1-8b-instant"      # Memory Manager (same model on Groq)
+
+  # In each node file:
+  from langchain_groq import ChatGroq
+  llm = ChatGroq(model="llama-3.1-8b-instant", temperature=0)
+
+  # Safety Checker uses NO LLM — pure keyword matching, deterministic
+
+================================================================================
+7. VERSION TARGETS
+================================================================================
+
+  langgraph                    >= 0.2.0  (tested 0.2.74, 0.4.8)
+  langchain-groq               latest
+  langchain-core               >= 0.1.0
+  langchain-community          (for TavilySearchResults)
+  langgraph-checkpoint-postgres (for PostgresSaver)
+  langgraph-store-postgres      (for AsyncPostgresStore)
+
+Install:
+  uv add langgraph langchain-groq langchain-core langchain-community
+  uv add langgraph-checkpoint-postgres langgraph-store-postgres

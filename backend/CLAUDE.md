@@ -55,6 +55,12 @@ black --check app/
                [Reply Writer]
       ↓
 [Memory Manager] → writes short-term (per ticket) + long-term (per patient)
+      ↓
+[Human Review Queue]  ← AI never emails patients directly
+      ↓
+Approve & Send | Edit & Send | Assign to Senior Staff
+      ↓
+[Send Email]
 ```
 
 **LLM** — `app/llm_factory.py` returns `(llm_pro, llm_flash, llm_lite)` using Groq directly.
@@ -65,7 +71,7 @@ black --check app/
 
 **Safety Checker is keyword-based (no LLM)** — deterministic, never hallucinates. Must never be converted to LLM-based.
 
-**Tavily is a tool node, not an agent** — `TavilySearchResults` from `langchain-community`. No LLM call inside it. Medication / symptom / emergency / report keywords always force escalation regardless of RAG confidence score.
+**Tavily is a tool node, not an agent** — uses `TavilyClient` from `tavily-python` directly. No LLM call inside it. Medication / symptom / emergency / report keywords always force escalation regardless of RAG confidence score.
 
 **ChromaDB mode**:
 - Local dev: `CHROMA_MODE=local` → `PersistentClient(path="./chroma_data")` — no server needed
@@ -81,8 +87,9 @@ black --check app/
 |---|---|
 | **Phase 1 — Foundation** (T0–T3 + Safety Checker) | ✅ Complete |
 | **Phase 2 — Knowledge Base** (T4) | ✅ Complete |
-| Phase 3 — LangGraph Agents (T5–T11) | ⬜ Pending |
+| Phase 3 — LangGraph Agents (T5–T11) | ✅ Complete |
 | Phase 4 — Graph Wiring + Memory (T12–T13) | ⬜ Pending |
+| Phase 4.5 — HITL Review (T13.5) | ⬜ Pending |
 | Phase 5 — FastAPI + Testing (T14) | ⬜ Pending |
 | Phase 6 — Docker (T16) | ⬜ Pending |
 
@@ -95,8 +102,10 @@ black --check app/
 | `app/agent/state.py` | `TicketState` TypedDict — single shared state for all 9 agents |
 | `app/agent/graph.py` | `build_graph(checkpointer, store)` — wires all nodes, compiles graph |
 | `app/agent/nodes/safety_checker.py` | Medical safety rules — most critical file, keyword-only |
-| `app/agent/nodes/tavily_search.py` | Web search fallback via `TavilySearchResults` (langchain-community) |
+| `app/agent/nodes/tavily_search.py` | Web search fallback via `TavilyClient` (tavily-python) — no LLM |
+| `app/constants.py` | `GROQ_MODEL_FLASH` and `GROQ_MODEL_PRO` string constants — used in all node files |
 | `app/knowledge_base/chroma_client.py` | `get_client()` respects `CHROMA_MODE` env var |
+| `app/routers/review.py` | HITL review endpoints — approve / edit / assign to senior staff |
 
 ## State Reducers
 
@@ -106,12 +115,47 @@ black --check app/
 
 `confidence_evaluator` decides the path (3 routes):
 1. Any `safety_flag` with `escalation_required=True` → **escalate** (overrides everything)
-2. Best RAG `similarity_score >= 0.80`, no flags → **auto_reply** (use KB answer)
-3. RAG score < 0.80, no flags → **web_search** → `tavily_search` node → quality gate:
+2. Best RAG `similarity_score >= 0.75`, no flags → **auto_reply** (use KB answer)
+3. RAG score < 0.75, no flags → **web_search** → `tavily_search` node → quality gate:
    - Tavily score >= 0.50 → **web_reply** → `reply_writer` (use web answer)
    - Tavily score < 0.50 or no results → **escalate** → `escalation_packager` (poor sources)
 
 Tavily is the fallback **before** escalating for low-confidence queries. Poor Tavily results escalate to human rather than generating an unreliable reply.
+
+## Human-in-the-Loop (HITL)
+
+AI never sends emails directly to patients. After all 8 agents complete, every reply lands in a human review queue.
+
+**Staff dashboard shows:** Patient Name, Patient Email, Ticket text, AI Generated Reply, Confidence Score, Safety Flags triggered, Escalation Brief (if applicable).
+
+**Three staff actions:**
+
+1. **Approve & Send** — AI reply is correct; email sent unchanged.
+   `ticket status: pending_review → approved → emailed`
+   `reply type: ai_draft → final_sent_reply`
+
+2. **Edit & Send** — Staff modifies AI reply, then sends.
+   `ticket status: pending_review → approved → emailed`
+   `reply type: ai_draft → edited_reply → final_sent_reply`
+
+3. **Assign to Senior Staff** — Staff cannot resolve; ticket routed to senior staff. No email sent.
+   `ticket status: pending_review → escalated`
+
+**HITL is NOT Agent 9.** It is a human workflow step that runs after all 8 agents complete. The AI pipeline is unchanged.
+
+**Review endpoints** (`app/routers/review.py`):
+```
+GET   /review/pending               -- tickets awaiting review
+GET   /review/{ticket_id}           -- full ticket + AI draft details
+PATCH /review/{ticket_id}/approve   -- approve AI reply as-is
+PATCH /review/{ticket_id}/edit      -- submit edited reply
+POST  /review/{ticket_id}/send-email-- trigger email send
+PATCH /review/{ticket_id}/assign    -- assign to senior staff
+```
+
+**Ticket statuses (full lifecycle):**
+`draft_generated → pending_review → approved → emailed`
+`draft_generated → pending_review → escalated → resolved`
 
 ## Environment Variables
 
