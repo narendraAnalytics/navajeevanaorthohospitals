@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 import asyncpg
@@ -14,14 +15,26 @@ _pool: asyncpg.Pool | None = None
 async def get_pool() -> asyncpg.Pool:
     global _pool
     if _pool is None:
-        _pool = await asyncpg.create_pool(
-            settings.NEON_DB_URL,
-            min_size=1,
-            max_size=5,
-            timeout=30,           # fail fast if Neon doesn't respond in 30s
-            command_timeout=60,   # per-query timeout
-        )
-        logger.info("[DB] asyncpg pool created")
+        # Neon free tier sleeps after inactivity — retry up to 3 times.
+        # First attempt wakes Neon (times out after 30s), second attempt succeeds.
+        for attempt in range(1, 4):
+            try:
+                _pool = await asyncpg.create_pool(
+                    settings.NEON_DB_URL,
+                    min_size=1,
+                    max_size=5,
+                    timeout=30,
+                    command_timeout=60,
+                )
+                logger.info("[DB] asyncpg pool created")
+                break
+            except Exception as e:
+                if attempt < 3:
+                    logger.warning(f"[DB] Pool attempt {attempt}/3 failed: {e}. Retrying in 5s...")
+                    await asyncio.sleep(5)
+                else:
+                    logger.error("[DB] All 3 pool attempts failed. Is NEON_DB_URL correct?")
+                    raise
     return _pool
 
 
