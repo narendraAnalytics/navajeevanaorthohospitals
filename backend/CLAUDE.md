@@ -254,6 +254,6 @@ Config file: `render.yaml` (project root).
 
 ## Knowledge Base
 
-8 `.md` files in `app/knowledge_base/docs/`. Collections: `appointment_faq`, `test_preparation`, `post_surgery_care`, `insurance_billing`, `escalation_rules`, `past_tickets`, `doctors_directory`, `hospital_information`.
+9 `.md` files in `app/knowledge_base/docs/`. Collections: `appointment_faq`, `test_preparation`, `post_surgery_care`, `insurance_billing`, `escalation_rules`, `past_tickets`, `doctors_directory`, `hospital_information`, `physiotherapy_rehabilitation`.
 To add a doc: create `.md` → add to `COLLECTION_MAP` in `loader.py` → add name to `COLLECTIONS` in `rag_retriever.py` → re-run seed.
 To update: edit the `.md` → re-run `python scripts/seed_knowledge_base.py`.

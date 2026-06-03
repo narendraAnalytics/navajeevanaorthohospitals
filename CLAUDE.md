@@ -67,7 +67,7 @@ black --check app/
 
 ## Knowledge Base
 
-8 `.md` docs in `backend/app/knowledge_base/docs/`, each maps to a ChromaDB collection:
+9 `.md` docs in `backend/app/knowledge_base/docs/`, each maps to a ChromaDB collection:
 
 | File | Collection |
 |---|---|
@@ -77,6 +77,7 @@ black --check app/
 | `hospital_information.md` | `hospital_information` |
 | `insurance_billing.md` | `insurance_billing` |
 | `past_tickets.md` | `past_tickets` |
+| `physiotherapy_rehabilitation.md` | `physiotherapy_rehabilitation` |
 | `post_surgery_care.md` | `post_surgery_care` |
 | `test_preparation.md` | `test_preparation` |
 

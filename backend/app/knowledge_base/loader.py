@@ -13,7 +13,8 @@ COLLECTION_MAP = {
     "escalation_rules.md":       "escalation_rules",
     "past_tickets.md":           "past_tickets",
     "doctors_directory.md":      "doctors_directory",
-    "hospital_information.md":   "hospital_information",
+    "hospital_information.md":          "hospital_information",
+    "physiotherapy_rehabilitation.md":  "physiotherapy_rehabilitation",
 }
 
 
