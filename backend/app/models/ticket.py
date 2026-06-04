@@ -17,9 +17,10 @@ class TicketStatus(str, Enum):
 
 
 class TicketRequest(BaseModel):
-    customer_id: str = Field(..., description="Patient/customer identifier")
-    subject: str = Field(..., min_length=3, max_length=200)
-    description: str = Field(..., min_length=10, max_length=2000)
+    customer_name: str = Field(..., min_length=1, max_length=200)
+    customer_email: str = Field(..., description="Clerk-verified email — used as customer_id")
+    customer_phone: Optional[str] = None
+    message: str = Field(..., min_length=10, max_length=2000)
 
 
 class TicketCreateResponse(BaseModel):

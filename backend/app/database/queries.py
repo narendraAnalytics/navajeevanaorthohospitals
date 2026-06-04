@@ -18,12 +18,16 @@ async def save_ticket(
     customer_id: str,
     subject: str,
     raw_text: str,
+    customer_name: str | None = None,
+    customer_email: str | None = None,
+    customer_phone: str | None = None,
 ) -> None:
     await pool.execute(
-        """INSERT INTO tickets (id, customer_id, subject, raw_text)
-           VALUES ($1, $2, $3, $4)
+        """INSERT INTO tickets
+               (id, customer_id, subject, raw_text, customer_name, customer_email, customer_phone)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)
            ON CONFLICT (id) DO NOTHING""",
-        ticket_id, customer_id, subject, raw_text,
+        ticket_id, customer_id, subject, raw_text, customer_name, customer_email, customer_phone,
     )
 
 

@@ -62,14 +62,23 @@ async def submit_ticket(body: TicketRequest, background_tasks: BackgroundTasks, 
     graph = request.app.state.graph
 
     ticket_id = f"TICKET-{uuid4().hex[:8].upper()}"
+    customer_id = body.customer_email
+    subject = body.message[:60] + ("…" if len(body.message) > 60 else "")
 
-    await save_ticket(pool, ticket_id, body.customer_id, body.subject, body.description)
+    await save_ticket(
+        pool, ticket_id, customer_id, subject, body.message,
+        customer_name=body.customer_name,
+        customer_email=body.customer_email,
+        customer_phone=body.customer_phone,
+    )
 
     state = {
         "ticket_id": ticket_id,
-        "customer_id": body.customer_id,
-        "subject": body.subject,
-        "raw_text": body.description,
+        "customer_id": customer_id,
+        "customer_name": body.customer_name,
+        "customer_email": body.customer_email,
+        "subject": subject,
+        "raw_text": body.message,
         "patient_history": "",
         "urgency": None,
         "processing_started_at": None,
@@ -89,7 +98,7 @@ async def submit_ticket(body: TicketRequest, background_tasks: BackgroundTasks, 
     }
 
     background_tasks.add_task(_run_graph, pool, graph, ticket_id, state)
-    logger.info(f"[Ticket] Submitted {ticket_id} for customer {body.customer_id}")
+    logger.info(f"[Ticket] Submitted {ticket_id} for customer {customer_id}")
 
     return TicketCreateResponse(ticket_id=ticket_id)
 

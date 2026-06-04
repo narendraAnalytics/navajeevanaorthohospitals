@@ -6,6 +6,8 @@ class TicketState(TypedDict):
     # Input — set by API before graph runs
     ticket_id: str
     customer_id: str
+    customer_name: Optional[str]
+    customer_email: Optional[str]
     raw_text: str
     subject: str
 

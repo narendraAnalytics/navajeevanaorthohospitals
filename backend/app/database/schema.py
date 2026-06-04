@@ -2,6 +2,9 @@ CREATE_TICKETS = """
 CREATE TABLE IF NOT EXISTS tickets (
     id TEXT PRIMARY KEY,
     customer_id TEXT NOT NULL,
+    customer_name TEXT,
+    customer_email TEXT,
+    customer_phone TEXT,
     subject TEXT NOT NULL,
     raw_text TEXT NOT NULL,
     urgency TEXT,
@@ -10,6 +13,7 @@ CREATE TABLE IF NOT EXISTS tickets (
     confidence_score FLOAT,
     route_decision TEXT,
     final_status TEXT,
+    reviewed_by TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );"""
