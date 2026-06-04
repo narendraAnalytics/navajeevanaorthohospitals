@@ -1,14 +1,8 @@
-access-control-allow-credentials: true 
- alt-svc: h3=":443"; ma=86400 
- cf-cache-status: DYNAMIC 
- cf-ray: a05f36e22f5eff67-BOM 
- content-encoding: br 
- content-length: 52 
- content-type: application/json 
- date: Wed,03 Jun 2026 13:58:45 GMT 
- priority: u=1,i 
- rndr-id: 709c7c44-ebfc-4c1d 
- server: cloudflare 
- server-timing: cfExtPri 
- vary: Accept-Encoding 
- x-render-origin-server: uvicorn 
+What happens on future deploys now:
+  - If Neon is awake → connects first try, starts normally  - If Neon is sleeping → attempt 1 wakes it (fails after 30s), 5s pause, attempt 2 succeeds → app starts
+  - Worst case: ~65 seconds instead of 15 minutes of silence
+  This is a free-tier Neon reality. The only way to eliminate it entirely is to upgrade Neon to a paid plan (removes sleep) or use Neon's pooled connection
+  string (the -pooler hostname from the Neon dashboard — it handles wakeup transparently). For now the retry loop handles it reliably.
+
+
+Summary: 1 repo, 1 Next.js app, 3 routes — landing + patient portal + admin dashboard. The admin dashboard is the heart of the HITL loop you already built.
