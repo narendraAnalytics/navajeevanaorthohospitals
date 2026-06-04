@@ -162,7 +162,8 @@ All frontend code lives in `frontend/`. Stack: Next.js 16 + React 19 + Tailwind 
 | `frontend/src/app/layout.tsx` | Sora + Plus Jakarta Sans fonts via `next/font/google` |
 | `frontend/src/lib/api.ts` | Typed fetch wrapper for all backend endpoints |
 | `frontend/src/components/Nav.tsx` | Glassmorphic nav — scroll shrink + section spy (client) |
-| `frontend/src/components/HeroSection.tsx` | Full-width banner hero — `bannerimage.png` background, animated stat counters (client) |
+| `frontend/src/components/HeroSection.tsx` | 4-slide Cloudinary carousel with Ken Burns crossfade + animated stat counters (client) |
+| `frontend/src/components/RevealObserver.tsx` | IntersectionObserver — adds `.in` to `.reveal` elements on scroll; rendered once in `page.tsx` (client) |
 | `frontend/src/components/TestimonialsSection.tsx` | Testimonial carousel + AI feature card (client) |
 | `frontend/src/components/Footer.tsx` | 4-column dark footer (server) |
 
@@ -170,7 +171,8 @@ All frontend code lives in `frontend/`. Stack: Next.js 16 + React 19 + Tailwind 
 - Brand CSS variables prefixed to avoid Tailwind 4 conflicts: `--bk-muted` (not `--muted`), `--brand-maxw` (not `--maxw`)
 - Landing page wrapper uses `className="brand-page"` — sets Sora/Jakarta fonts and ivory background
 - Tailwind is used for `/admin` and `/patient`; custom CSS classes for the landing page
-- Hero uses `bannerimage.png` as full-width CSS background image; text overlays on left with ivory gradient fade
+- Hero uses a 4-slide Cloudinary carousel (URLs in `images.txt` at project root). `next.config.ts` whitelists `res.cloudinary.com` in `images.remotePatterns` — required for Next.js `<Image>` with remote URLs.
+- `.reveal` elements (landing page cards) start `opacity:0` and animate in via `RevealObserver.tsx`. Must render `<RevealObserver />` in any page that uses `.reveal`.
 - API base URL: `NEXT_PUBLIC_API_URL` in `.env.local` (localhost:8000 in dev, Render URL in prod)
 
 ## Render Deployment

@@ -2,6 +2,7 @@ import Nav from '@/components/Nav'
 import HeroSection from '@/components/HeroSection'
 import TestimonialsSection from '@/components/TestimonialsSection'
 import Footer from '@/components/Footer'
+import RevealObserver from '@/components/RevealObserver'
 
 const doctors = [
   { n: 'Dr. Ravi Kumar', r: 'Senior Orthopedic Surgeon', m: '20+ Years Experience · Knee & Hip Specialist', c: 'var(--g-teal)', tag: 'Top Rated' },
@@ -12,12 +13,21 @@ const doctors = [
 ]
 
 const specialties = [
-  { label: 'Knee Replacement', sub: 'Robotic precision', g: 'var(--g-teal)' },
-  { label: 'Hip Replacement', sub: 'Minimally invasive', g: 'var(--g-warm)' },
-  { label: 'Spine Surgery', sub: 'Advanced techniques', g: 'var(--g-warm)' },
-  { label: 'Sports Medicine', sub: 'Return to play', g: 'var(--g-teal)' },
-  { label: 'Trauma Care', sub: '24/7 emergency', g: 'var(--g-violet)' },
-  { label: 'Physiotherapy & Rehab', sub: 'Faster recovery', g: 'var(--g-teal)' },
+  { label: 'Knee Replacement',      sub: 'Robotic precision',   g: 'var(--g-teal)',   bg: '#e7ed9c' },
+  { label: 'Hip Replacement',       sub: 'Minimally invasive',  g: 'var(--g-warm)',   bg: '#fde8cf' },
+  { label: 'Spine Surgery',         sub: 'Advanced techniques', g: 'var(--g-warm)',   bg: '#fde2c8' },
+  { label: 'Sports Medicine',       sub: 'Return to play',      g: 'var(--g-teal)',   bg: '#d0f5e8' },
+  { label: 'Trauma Care',           sub: '24/7 emergency',      g: 'var(--g-violet)', bg: '#ede0ff' },
+  { label: 'Physiotherapy & Rehab', sub: 'Faster recovery',     g: 'var(--g-teal)',   bg: '#c8eedd' },
+]
+
+const specIconPaths = [
+  /* Knee Replacement */ 'M8 3v5m0 0a4 4 0 008 0m-8 0H5m11 0h3M8 21v-5m0 0a4 4 0 008 0m-8 0H5m11 0h3',
+  /* Hip Replacement  */ 'M12 4a2 2 0 100-4 2 2 0 000 4zm-2 3c-2 0-3 1-3 3l1 10h8l1-10c0-2-1-3-3-3h-4z',
+  /* Spine Surgery    */ 'M12 3v18M9 6h6M9 10h6M9 14h6M9 18h6',
+  /* Sports Medicine  */ 'M13 2L4 14h8l-1 8 9-12h-8z',
+  /* Trauma Care      */ 'M12 6v12M6 12h12',
+  /* Physio & Rehab   */ 'M12 4a2 2 0 100-4 2 2 0 000 4zm-5 17l4-9 3 4 4-9',
 ]
 
 const whyItems = [
@@ -43,6 +53,7 @@ export default function LandingPage() {
         <div className="orb a" /><div className="orb b" /><div className="orb c" />
       </div>
 
+      <RevealObserver />
       <Nav />
       <HeroSection />
 
@@ -57,11 +68,11 @@ export default function LandingPage() {
                 <p>Comprehensive orthopedic care tailored to your needs.</p>
               </div>
               <div className="spec-grid">
-                {specialties.map(({ label, sub, g }, i) => (
-                  <div key={label} className={`spec-card reveal d${i + 1}`}>
+                {specialties.map(({ label, sub, g, bg }, i) => (
+                  <div key={label} className={`spec-card reveal d${i + 1}`} style={{ background: bg }}>
                     <div className="si" style={{ background: g }}>
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                        <path d="M12 3v18M9 6h6M9 10h6M9 14h6" />
+                        <path d={specIconPaths[i]} />
                       </svg>
                     </div>
                     <h4>{label}</h4>

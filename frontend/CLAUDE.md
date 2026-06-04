@@ -33,7 +33,7 @@ Fonts loaded in `src/app/layout.tsx`:
 
 ## Hero Section
 
-`HeroSection.tsx` uses a 3-slide crossfade carousel with Ken Burns effect:
+`HeroSection.tsx` uses a 4-slide crossfade carousel with Ken Burns effect:
 
 ```
 <header class="hero">
@@ -64,7 +64,8 @@ Fonts loaded in `src/app/layout.tsx`:
 | File | Type | What it does |
 |---|---|---|
 | `src/components/Nav.tsx` | client | Glassmorphic floating nav, scroll shrink, section spy |
-| `src/components/HeroSection.tsx` | client | Banner hero with animated stat counters |
+| `src/components/HeroSection.tsx` | client | 4-slide Cloudinary carousel (Ken Burns + crossfade) + animated stat counters |
+| `src/components/RevealObserver.tsx` | client | IntersectionObserver — adds `.in` to `.reveal` elements; render once per page |
 | `src/components/TestimonialsSection.tsx` | client | Testimonial carousel (6500ms) + AI feature card |
 | `src/components/Footer.tsx` | server | 4-column dark footer |
 
@@ -77,7 +78,9 @@ Set `NEXT_PUBLIC_API_URL` in `.env.local`:
 
 ## Assets
 
-`public/assets/` — bannerimage.png (hero background), hero1.png, hero2.png, hero3.png, logo.png  
+All production images (banner slides + logo) are hosted on Cloudinary. URLs are recorded in `images.txt` at the project root. `next.config.ts` whitelists `res.cloudinary.com` in `images.remotePatterns` — required for Next.js `<Image>` with these URLs.
+
+`public/assets/` may still contain legacy local images — do not reference them in new code.  
 Source reference: `samplecode/` — original vanilla HTML/CSS design. Do not import from it.
 
 ## Commands
