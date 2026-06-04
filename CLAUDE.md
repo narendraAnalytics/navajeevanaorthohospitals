@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Stack: FastAPI + LangGraph (8-agent graph) + ChromaDB RAG + Neon PostgreSQL + Groq LLM + Next.js 16 frontend.
 
-Source layout: `backend/` (Python API + agents), `frontend/` (Next.js), `render.yaml` (deployment config).
+Source layout: `backend/` (Python API + agents), `frontend/` (Next.js), `render.yaml` (backend deploy), `vercel.json` (frontend deploy).
 
 ## Commands
 
@@ -35,7 +35,7 @@ black --check app/
 
 ```powershell
 npm run dev     # dev server on :3000
-npm run build   # production build
+npm run build   # production build check
 ```
 
 ## Backend Architecture
@@ -131,6 +131,7 @@ PATCH /ticket/{id}/resolve
 
 ## Environment Variables
 
+**Backend** (set in Render dashboard or `.env`):
 ```
 GROQ_API_KEY=gsk_...
 TAVILY_API_KEY=tvly-...
@@ -138,8 +139,13 @@ NEON_DB_URL=postgresql://...
 CHROMA_MODE=local           # local | server
 CHROMA_HOST=localhost       # server mode only
 CHROMA_PORT=8001            # server mode only
-ALLOWED_ORIGIN=http://localhost:3000
+ALLOWED_ORIGIN=https://navajeevanaorthohospitals.vercel.app
 APP_ENV=development
+```
+
+**Frontend** (set in Vercel dashboard or `frontend/.env.local`):
+```
+NEXT_PUBLIC_API_URL=https://navajeevanaorthohospitals.onrender.com
 ```
 
 ## Frontend Architecture
@@ -159,7 +165,7 @@ All frontend code lives in `frontend/`. Stack: Next.js 16 + React 19 + Tailwind 
 | File | Purpose |
 |---|---|
 | `frontend/src/app/globals.css` | All brand CSS — design tokens (CSS vars) + every landing page class |
-| `frontend/src/app/layout.tsx` | Sora + Plus Jakarta Sans fonts via `next/font/google` |
+| `frontend/src/app/layout.tsx` | Sora + Plus Jakarta Sans fonts; favicon set via `metadata.icons` (Cloudinary URL) |
 | `frontend/src/lib/api.ts` | Typed fetch wrapper for all backend endpoints |
 | `frontend/src/components/Nav.tsx` | Glassmorphic nav — scroll shrink + section spy (client) |
 | `frontend/src/components/HeroSection.tsx` | 4-slide Cloudinary carousel with Ken Burns crossfade + animated stat counters (client) |
@@ -171,17 +177,20 @@ All frontend code lives in `frontend/`. Stack: Next.js 16 + React 19 + Tailwind 
 - Brand CSS variables prefixed to avoid Tailwind 4 conflicts: `--bk-muted` (not `--muted`), `--brand-maxw` (not `--maxw`)
 - Landing page wrapper uses `className="brand-page"` — sets Sora/Jakarta fonts and ivory background
 - Tailwind is used for `/admin` and `/patient`; custom CSS classes for the landing page
-- Hero uses a 4-slide Cloudinary carousel (URLs in `images.txt` at project root). `next.config.ts` whitelists `res.cloudinary.com` in `images.remotePatterns` — required for Next.js `<Image>` with remote URLs.
-- `.reveal` elements (landing page cards) start `opacity:0` and animate in via `RevealObserver.tsx`. Must render `<RevealObserver />` in any page that uses `.reveal`.
-- API base URL: `NEXT_PUBLIC_API_URL` in `.env.local` (localhost:8000 in dev, Render URL in prod)
+- Hero uses a 4-slide Cloudinary carousel (URLs in `images.txt` at project root). `next.config.ts` whitelists `res.cloudinary.com` in `images.remotePatterns`.
+- `.reveal` elements start `opacity:0` and animate in via `RevealObserver.tsx`. Must render `<RevealObserver />` in any page that uses `.reveal`.
+- **Hero carousel pitfall:** never put a changing `key` on the `<img>` elements — it forces React to remount them on every slide change, causing flickers and stalls. CSS `opacity` transition on `.hero-slide.active` handles crossfade; images stay in DOM permanently.
 
-## Render Deployment
+## Deployment
 
-Live: https://navajeevanaorthohospitals.onrender.com · Swagger: `/docs` · Health: `/health`
+| Service | Platform | URL |
+|---|---|---|
+| Backend (FastAPI) | Render | https://navajeevanaorthohospitals.onrender.com |
+| Frontend (Next.js) | Vercel | https://navajeevanaorthohospitals.vercel.app |
 
-Config: `render.yaml` (project root). Root dir = `backend`. Build = `pip install -r requirements.txt && python scripts/seed_knowledge_base.py`. Start = `uvicorn app.main:app --host 0.0.0.0 --port $PORT`.
+**Backend (Render):** config in `render.yaml`. Uses `runtime: python` (not `env:`). Root dir = `backend`. Push to `main` → auto-deploy. Seed script runs on every build (upsert is idempotent).
 
-Push to `main` → auto-deploy. Seed runs on every build, upsert is idempotent.
+**Frontend (Vercel):** config in `vercel.json` (`{"framework": "nextjs"}`). Root directory set to `frontend` in Vercel dashboard. Push to `main` → auto-deploy. `rootDirectory` is a dashboard setting — do not add it to `vercel.json` (causes validation error).
 
 ## Build Progress
 
@@ -193,5 +202,6 @@ Push to `main` → auto-deploy. Seed runs on every build, upsert is idempotent.
 | Phase 4 — Graph Wiring + Memory (PostgresSaver, AsyncPostgresStore) | ✅ |
 | Phase 4.5 — HITL Review router | ✅ |
 | Phase 5 — FastAPI + routers + Swagger | ✅ |
-| Phase 6 — Render deployment | ✅ |
-| Phase 7 — Next.js 16 frontend (landing page + patient portal + admin dashboard) | 🔨 In Progress |
+| Phase 6 — Render + Vercel deployment | ✅ |
+| Phase 7 — Next.js frontend: landing page | ✅ |
+| Phase 7 — Next.js frontend: patient portal + admin dashboard | 🔨 In Progress |
