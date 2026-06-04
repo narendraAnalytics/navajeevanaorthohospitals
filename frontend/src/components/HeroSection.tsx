@@ -174,16 +174,16 @@ export default function HeroSection() {
                 </SignInButton>
               )}
               {isSignedIn ? (
-                <button className="bbtn outline lg" onClick={() => document.getElementById('doctors')?.scrollIntoView({ behavior: 'smooth' })}>
-                  Meet Our Specialists
+                <button className="bbtn outline lg" onClick={() => router.push('/patient')}>
+                  Ask Our Care Team
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}>
                     <path d="M5 12h14M13 6l6 6-6 6" />
                   </svg>
                 </button>
               ) : (
-                <SignInButton mode="redirect" forceRedirectUrl="/#doctors">
+                <SignInButton mode="redirect" forceRedirectUrl="/patient">
                   <button className="bbtn outline lg">
-                    Meet Our Specialists
+                    Ask Our Care Team
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}>
                       <path d="M5 12h14M13 6l6 6-6 6" />
                     </svg>
