@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { useUser, SignOutButton, SignInButton, Show } from '@clerk/nextjs'
+import { useUser, UserButton, SignInButton, Show } from '@clerk/nextjs'
 
 const links = [
   { href: '#home', label: 'Home' },
@@ -88,9 +88,7 @@ export default function Nav() {
               </svg>
               Patient Portal
             </Link>
-            <SignOutButton redirectUrl="/">
-              <button className="bbtn outline">Sign Out</button>
-            </SignOutButton>
+            <UserButton afterSignOutUrl="/" />
           </Show>
           <Show when="signed-out">
             <SignInButton mode="redirect" forceRedirectUrl="/api/auth/sync">
