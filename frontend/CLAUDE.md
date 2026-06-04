@@ -1,5 +1,11 @@
 @AGENTS.md
 
+
+## Skills (always load before working in these areas)
+
+```
+Frontend / UI work:     C:\Users\ES\.claude\skills\nextstack.skill
+
 # Frontend — Navajeevana Ortho Hospitals
 
 Next.js 16 · React 19 · Tailwind 4 · Shadcn (`@base-ui/react`, style: `base-nova`)

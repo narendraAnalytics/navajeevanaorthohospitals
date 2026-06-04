@@ -1,1 +1,5 @@
-logourl : https://res.cloudinary.com/dkqbzwicr/image/upload/q_auto/f_auto/v1780555373/logo_xr4zab.png
+### Clerk v7 Patterns
+
+- `useUser()` → `{ isSignedIn, user }`
+- `<UserButton />` — no `afterSignOutUrl` prop (removed in v7; use `NEXT_PUBLIC_CLERK_AFTER_SIGN_OUT_URL` env var)
+- Middleware: `clerkMiddleware` + `createRouteMatcher` from `@clerk/nextjs/server`
