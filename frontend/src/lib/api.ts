@@ -21,6 +21,7 @@ export interface Ticket {
   route: 'auto_reply' | 'web_search' | 'escalate' | null
   confidence_score: number | null
   created_at: string
+  subject?: string
   customer_name?: string
   customer_email?: string
 }
@@ -66,6 +67,9 @@ export const submitTicket = (body: SubmitTicketInput) =>
   req<SubmitTicketResponse>('/ticket', { method: 'POST', body: JSON.stringify(body) })
 
 export const getTicket = (id: string) => req<Ticket>(`/ticket/${id}`)
+
+export const getTicketsByEmail = (email: string) =>
+  req<Ticket[]>(`/tickets/by-email/${encodeURIComponent(email)}`)
 
 // ---- review (admin) ----
 

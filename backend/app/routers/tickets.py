@@ -10,6 +10,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 
 from app.database.queries import (
     get_ticket_review_detail,
+    get_tickets_by_email,
     save_escalation,
     save_reply,
     save_ticket,
@@ -101,6 +102,14 @@ async def submit_ticket(body: TicketRequest, background_tasks: BackgroundTasks, 
     logger.info(f"[Ticket] Submitted {ticket_id} for customer {customer_id}")
 
     return TicketCreateResponse(ticket_id=ticket_id)
+
+
+@router.get("/tickets/by-email/{email}", tags=["Tickets"])
+async def get_tickets_by_email_route(email: str, request: Request):
+    """Return all tickets for a patient email, newest first."""
+    pool = request.app.state.pool
+    rows = await get_tickets_by_email(pool, email)
+    return rows
 
 
 @router.get("/ticket/{ticket_id}", response_model=TicketDetail, tags=["Tickets"])
