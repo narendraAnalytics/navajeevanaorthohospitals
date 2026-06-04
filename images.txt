@@ -1,1 +1,1 @@
-bannerimage4 : https://res.cloudinary.com/dkqbzwicr/image/upload/q_auto/f_auto/v1780575743/bannerimage4_srk9ls.png
+logourl : https://res.cloudinary.com/dkqbzwicr/image/upload/q_auto/f_auto/v1780555373/logo_xr4zab.png
