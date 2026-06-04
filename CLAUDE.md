@@ -143,10 +143,18 @@ ALLOWED_ORIGIN=https://navajeevanaorthohospitals.vercel.app
 APP_ENV=development
 ```
 
-**Frontend** (set in Vercel dashboard or `frontend/.env.local`):
+**Frontend** (set in Vercel dashboard; locally in `frontend/.env` — gitignored, never commit secrets):
 ```
 NEXT_PUBLIC_API_URL=https://navajeevanaorthohospitals.onrender.com
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+CLERK_SECRET_KEY=sk_test_...
+NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+NEXT_PUBLIC_CLERK_SIGN_IN_FORCE_REDIRECT_URL=/api/auth/sync
+NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL=/api/auth/sync
+NEXT_PUBLIC_CLERK_AFTER_SIGN_OUT_URL=/
 ```
+Note: `NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL` / `AFTER_SIGN_UP_URL` are **deprecated in Clerk v7** — use `FORCE_REDIRECT_URL` variants only.
 
 ## Frontend Architecture
 
@@ -165,10 +173,12 @@ All frontend code lives in `frontend/`. Stack: Next.js 16 + React 19 + Tailwind 
 | File | Purpose |
 |---|---|
 | `frontend/src/app/globals.css` | All brand CSS — design tokens (CSS vars) + every landing page class |
-| `frontend/src/app/layout.tsx` | Sora + Plus Jakarta Sans fonts; favicon set via `metadata.icons` (Cloudinary URL) |
+| `frontend/src/app/layout.tsx` | Sora + Plus Jakarta Sans fonts; `<ClerkProvider>` inside `<body>`; favicon via `metadata.icons` |
+| `frontend/src/proxy.ts` | Clerk middleware — protects `/patient` and `/admin`; public routes: `/`, `/sign-in`, `/sign-up`, `/api/auth/sync` |
+| `frontend/src/app/api/auth/sync/route.ts` | Post-login redirect to `/` (Clerk redirects here after sign-in/up) |
 | `frontend/src/lib/api.ts` | Typed fetch wrapper for all backend endpoints |
-| `frontend/src/components/Nav.tsx` | Glassmorphic nav — scroll shrink + section spy (client) |
-| `frontend/src/components/HeroSection.tsx` | 4-slide Cloudinary carousel with Ken Burns crossfade + animated stat counters (client) |
+| `frontend/src/components/Nav.tsx` | Glassmorphic nav — auth-aware: shows `Welcome [name]` + `<UserButton>` when signed in, hides Admin Portal |
+| `frontend/src/components/HeroSection.tsx` | 4-slide carousel + CTA buttons gated with `<SignInButton>` when signed out |
 | `frontend/src/components/RevealObserver.tsx` | IntersectionObserver — adds `.in` to `.reveal` elements on scroll; rendered once in `page.tsx` (client) |
 | `frontend/src/components/TestimonialsSection.tsx` | Testimonial carousel + AI feature card (client) |
 | `frontend/src/components/Footer.tsx` | 4-column dark footer (server) |
@@ -180,6 +190,17 @@ All frontend code lives in `frontend/`. Stack: Next.js 16 + React 19 + Tailwind 
 - Hero uses a 4-slide Cloudinary carousel (URLs in `images.txt` at project root). `next.config.ts` whitelists `res.cloudinary.com` in `images.remotePatterns`.
 - `.reveal` elements start `opacity:0` and animate in via `RevealObserver.tsx`. Must render `<RevealObserver />` in any page that uses `.reveal`.
 - **Hero carousel pitfall:** never put a changing `key` on the `<img>` elements — it forces React to remount them on every slide change, causing flickers and stalls. CSS `opacity` transition on `.hero-slide.active` handles crossfade; images stay in DOM permanently.
+
+## Clerk Auth (frontend)
+
+Clerk app ID: `app_3Eg6FM0HTdOA2XbRdiouZPemsef`. Auth is wired end-to-end:
+
+- **Middleware:** `src/proxy.ts` — this is the correct path for Next.js 16 with `src/` layout. File MUST be named `proxy.ts` per project convention (standard `middleware.ts` also works if needed).
+- **Components:** use `<Show when="signed-in">` / `<Show when="signed-out">` — never deprecated `<SignedIn>` / `<SignedOut>`
+- **`<UserButton />`** — no props needed; sign-out redirect handled by `NEXT_PUBLIC_CLERK_AFTER_SIGN_OUT_URL` env var. `afterSignOutUrl` prop does not exist in Clerk v7.
+- **`<SignInButton>`** — use `forceRedirectUrl` prop, not `redirectUrl` (deprecated).
+- **Nav behavior:** signed-out → Patient Portal triggers sign-in + Admin Portal visible. Signed-in → Welcome [name] + UserButton (profile pic/sign-out dropdown) + Admin Portal hidden.
+- **CTA buttons** in `HeroSection.tsx`: wrapped in `<SignInButton>` when `!isSignedIn`, navigate directly when signed in.
 
 ## Deployment
 
@@ -204,4 +225,5 @@ All frontend code lives in `frontend/`. Stack: Next.js 16 + React 19 + Tailwind 
 | Phase 5 — FastAPI + routers + Swagger | ✅ |
 | Phase 6 — Render + Vercel deployment | ✅ |
 | Phase 7 — Next.js frontend: landing page | ✅ |
+| Phase 7 — Next.js frontend: Clerk auth (sign-in/up, nav, CTA gates) | ✅ |
 | Phase 7 — Next.js frontend: patient portal + admin dashboard | 🔨 In Progress |
