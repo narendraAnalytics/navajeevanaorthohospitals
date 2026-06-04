@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 const SLIDES = [
   'https://res.cloudinary.com/dkqbzwicr/image/upload/q_auto/f_auto/v1780555374/bannerimage1_b8zcjn.png',
