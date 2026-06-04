@@ -6,13 +6,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **OrthoAI** — AI-powered patient support agent for Navajeevana Ortho Hospitals, Bhimavaram, Andhra Pradesh, India.
 
-Stack: FastAPI + LangGraph (8-agent graph) + ChromaDB RAG + Neon PostgreSQL + Groq LLM.
+Stack: FastAPI + LangGraph (8-agent graph) + ChromaDB RAG + Neon PostgreSQL + Groq LLM + Next.js 16 frontend.
 
-All source code lives in `backend/`. The root holds `render.yaml`, `roadmap.txt`, `info.txt` (LangGraph notes), and `groqinfo.txt` (ChatGroq reference).
+Source layout: `backend/` (Python API + agents), `frontend/` (Next.js), `render.yaml` (deployment config).
 
 ## Commands
 
-All commands run from `backend/` with `.venv` activated.
+**Backend** — run from `backend/` with `.venv` activated:
 
 ```powershell
 .venv\Scripts\activate
@@ -20,7 +20,7 @@ All commands run from `backend/` with `.venv` activated.
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 python -m pytest tests/ -v                              # offline unit tests (no Neon/Groq)
-python -m pytest tests/test_routes.py -v                # router tests only
+python -m pytest tests/test_routes.py -v
 python -m pytest tests/test_safety_checker.py::test_medication_triggers_escalation -v
 python -m pytest tests/test_graph_integration.py -v -s  # end-to-end (real Groq API calls)
 
@@ -31,7 +31,14 @@ ruff check app/
 black --check app/
 ```
 
-## Architecture
+**Frontend** — run from `frontend/`:
+
+```powershell
+npm run dev     # dev server on :3000
+npm run build   # production build
+```
+
+## Backend Architecture
 
 **8-node LangGraph StateGraph** — ticket flows through agents in two phases:
 
@@ -135,6 +142,37 @@ ALLOWED_ORIGIN=http://localhost:3000
 APP_ENV=development
 ```
 
+## Frontend Architecture
+
+All frontend code lives in `frontend/`. Stack: Next.js 16 + React 19 + Tailwind 4 + Shadcn (`@base-ui/react`).
+
+**Route structure:**
+
+| Route | Purpose |
+|---|---|
+| `/` | Landing page — server component, imports client section components |
+| `/patient` | Patient portal — submit ticket, poll status with auto-refresh |
+| `/admin` | Admin dashboard — HITL review queue, approve/edit/send email |
+
+**Key files:**
+
+| File | Purpose |
+|---|---|
+| `frontend/src/app/globals.css` | All brand CSS — design tokens (CSS vars) + every landing page class |
+| `frontend/src/app/layout.tsx` | Sora + Plus Jakarta Sans fonts via `next/font/google` |
+| `frontend/src/lib/api.ts` | Typed fetch wrapper for all backend endpoints |
+| `frontend/src/components/Nav.tsx` | Glassmorphic nav — scroll shrink + section spy (client) |
+| `frontend/src/components/HeroSection.tsx` | Full-width banner hero — `bannerimage.png` background, animated stat counters (client) |
+| `frontend/src/components/TestimonialsSection.tsx` | Testimonial carousel + AI feature card (client) |
+| `frontend/src/components/Footer.tsx` | 4-column dark footer (server) |
+
+**Design system notes:**
+- Brand CSS variables prefixed to avoid Tailwind 4 conflicts: `--bk-muted` (not `--muted`), `--brand-maxw` (not `--maxw`)
+- Landing page wrapper uses `className="brand-page"` — sets Sora/Jakarta fonts and ivory background
+- Tailwind is used for `/admin` and `/patient`; custom CSS classes for the landing page
+- Hero uses `bannerimage.png` as full-width CSS background image; text overlays on left with ivory gradient fade
+- API base URL: `NEXT_PUBLIC_API_URL` in `.env.local` (localhost:8000 in dev, Render URL in prod)
+
 ## Render Deployment
 
 Live: https://navajeevanaorthohospitals.onrender.com · Swagger: `/docs` · Health: `/health`
@@ -148,10 +186,10 @@ Push to `main` → auto-deploy. Seed runs on every build, upsert is idempotent.
 | Phase | Status |
 |---|---|
 | Phase 1 — Foundation (config, state, models, safety checker) | ✅ |
-| Phase 2 — Knowledge Base (ChromaDB, 8 docs, loader, seed) | ✅ |
+| Phase 2 — Knowledge Base (ChromaDB, 9 docs, loader, seed) | ✅ |
 | Phase 3 — LangGraph Agents (all 8 nodes) | ✅ |
 | Phase 4 — Graph Wiring + Memory (PostgresSaver, AsyncPostgresStore) | ✅ |
 | Phase 4.5 — HITL Review router | ✅ |
 | Phase 5 — FastAPI + routers + Swagger | ✅ |
 | Phase 6 — Render deployment | ✅ |
-| Phase 7 — Next.js 15 frontend (admin dashboard + patient portal) | ⬜ Next |
+| Phase 7 — Next.js 16 frontend (landing page + patient portal + admin dashboard) | 🔨 In Progress |

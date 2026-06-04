@@ -1,0 +1,375 @@
+- generic [ref=e2]:
+  - navigation [ref=e4]:
+    - link "Navajeevana logo Navajeevana Ortho Hospitals · Healing Mobility" [ref=e5] [cursor=pointer]:
+      - /url: "#home"
+      - img "Navajeevana logo" [ref=e6]
+      - generic [ref=e7]:
+        - generic [ref=e8]: Navajeevana
+        - generic [ref=e9]: Ortho Hospitals · Healing Mobility
+    - generic [ref=e10]:
+      - link "Home" [ref=e11] [cursor=pointer]:
+        - /url: "#home"
+      - link "Doctors" [ref=e12] [cursor=pointer]:
+        - /url: "#doctors"
+      - link "Services" [ref=e13] [cursor=pointer]:
+        - /url: "#specialties"
+      - link "Treatments" [ref=e14] [cursor=pointer]:
+        - /url: "#treatments"
+      - link "Appointments" [ref=e15] [cursor=pointer]:
+        - /url: "#appointments"
+      - link "Insurance" [ref=e16] [cursor=pointer]:
+        - /url: "#insurance"
+      - link "Contact" [ref=e17] [cursor=pointer]:
+        - /url: "#contact"
+    - generic [ref=e18]:
+      - link "Patient Portal" [ref=e19] [cursor=pointer]:
+        - /url: /patient
+        - img [ref=e20]
+        - text: Patient Portal
+      - button "Book Appointment" [ref=e23] [cursor=pointer]:
+        - text: Book Appointment
+        - img [ref=e24]
+      - link "Admin Portal" [ref=e26] [cursor=pointer]:
+        - /url: /admin
+  - banner [ref=e27]:
+    - generic [ref=e28]:
+      - generic [ref=e29]:
+        - generic [ref=e30]:
+          - img [ref=e32]
+          - text: Trusted Orthopedic Care Since 2004
+        - heading "Advanced Orthopedic Care For Every Stage Of Life" [level=1] [ref=e34]:
+          - text: Advanced Orthopedic
+          - text: Care For Every
+          - text: Stage Of Life
+        - generic [ref=e35]:
+          - generic [ref=e36]:
+            - img [ref=e38]
+            - text: Joint Replacement
+          - generic [ref=e40]:
+            - img [ref=e42]
+            - text: Spine Care
+          - generic [ref=e44]:
+            - img [ref=e46]
+            - text: Sports Injury
+          - generic [ref=e48]:
+            - img [ref=e50]
+            - text: Trauma Care
+          - generic [ref=e52]:
+            - img [ref=e54]
+            - text: Physiotherapy & Rehabilitation
+        - paragraph [ref=e56]:
+          - img [ref=e58]
+          - text: Trusted by
+          - generic [ref=e60]: 50,000+
+          - text: Patients Across South India
+        - generic [ref=e61]:
+          - button "📅 Book Appointment" [ref=e62] [cursor=pointer]:
+            - text: 📅 Book Appointment
+            - img [ref=e63]
+          - button "Meet Our Specialists" [ref=e65] [cursor=pointer]:
+            - text: Meet Our Specialists
+            - img [ref=e66]
+        - generic [ref=e68]:
+          - generic [ref=e69]:
+            - img [ref=e71]
+            - generic [ref=e73]: "0"
+            - generic [ref=e74]: Patient Rating
+            - generic [ref=e75]: ★★★★★
+          - generic [ref=e76]:
+            - img [ref=e78]
+            - generic [ref=e82]: "0"
+            - generic [ref=e83]:
+              - text: Specialist Doctors
+              - text: Expert Team
+          - generic [ref=e84]:
+            - img [ref=e86]
+            - generic [ref=e88]: "0"
+            - generic [ref=e89]:
+              - text: Years of Excellence
+              - text: In Orthopedic Care
+          - generic [ref=e90]:
+            - img [ref=e92]
+            - generic [ref=e96]: "0"
+            - generic [ref=e97]:
+              - text: Successful
+              - text: Treatments
+      - generic [ref=e98]:
+        - generic [ref=e99]:
+          - img "Robotic-assisted joint replacement surgery" [ref=e101]
+          - img "Orthopedic knee surgery with digital diagnostics" [ref=e103]
+          - img "Physiotherapy and rehabilitation session" [ref=e105]
+        - generic [ref=e106]:
+          - img [ref=e108]
+          - generic [ref=e110]:
+            - generic [ref=e111]: "0"
+            - generic [ref=e112]: Joint Replacements · Successful Surgeries
+            - img [ref=e113]
+        - generic [ref=e115]:
+          - img [ref=e117]
+          - generic [ref=e119]:
+            - generic [ref=e120]: "0"
+            - generic [ref=e121]: Patient Satisfaction · Positive Feedback
+            - img [ref=e122]
+        - generic [ref=e124]:
+          - img [ref=e126]
+          - generic [ref=e131]:
+            - generic [ref=e132]: 24/7
+            - generic [ref=e133]: Emergency Trauma Care Available
+            - img [ref=e134]
+        - generic [ref=e136]:
+          - button "Slide 1" [ref=e137] [cursor=pointer]
+          - button "Slide 2" [ref=e138] [cursor=pointer]
+          - button "Slide 3" [ref=e139] [cursor=pointer]
+  - main [ref=e140]:
+    - generic [ref=e143]:
+      - generic [ref=e144]:
+        - generic [ref=e145]: Our Specialties
+        - heading "Our Specialties" [level=2] [ref=e146]
+        - paragraph [ref=e147]: Comprehensive orthopedic care tailored to your needs.
+      - generic [ref=e148]:
+        - generic [ref=e149] [cursor=pointer]:
+          - img [ref=e151]
+          - heading "Knee Replacement" [level=4] [ref=e153]
+          - generic [ref=e154]: Robotic precision
+        - generic [ref=e155] [cursor=pointer]:
+          - img [ref=e157]
+          - heading "Hip Replacement" [level=4] [ref=e159]
+          - generic [ref=e160]: Minimally invasive
+        - generic [ref=e161] [cursor=pointer]:
+          - img [ref=e163]
+          - heading "Spine Surgery" [level=4] [ref=e165]
+          - generic [ref=e166]: Advanced techniques
+        - generic [ref=e167] [cursor=pointer]:
+          - img [ref=e169]
+          - heading "Sports Medicine" [level=4] [ref=e171]
+          - generic [ref=e172]: Return to play
+        - generic [ref=e173] [cursor=pointer]:
+          - img [ref=e175]
+          - heading "Trauma Care" [level=4] [ref=e177]
+          - generic [ref=e178]: 24/7 emergency
+        - generic [ref=e179] [cursor=pointer]:
+          - img [ref=e181]
+          - heading "Physiotherapy & Rehab" [level=4] [ref=e183]
+          - generic [ref=e184]: Faster recovery
+    - generic [ref=e187]:
+      - generic [ref=e188]:
+        - generic [ref=e189]: Our Team
+        - heading "Meet Our Specialists" [level=2] [ref=e190]:
+          - text: Meet Our
+          - text: Specialists
+        - paragraph [ref=e191]: Experienced orthopedic surgeons committed to your recovery.
+        - button "View All Doctors" [ref=e192] [cursor=pointer]:
+          - text: View All Doctors
+          - img [ref=e193]
+      - generic [ref=e195]:
+        - generic [ref=e196]:
+          - generic [ref=e197]:
+            - generic [ref=e198]: Top Rated
+            - img [ref=e200]
+          - generic [ref=e203]:
+            - heading "Dr. Ravi Kumar" [level=4] [ref=e204]
+            - generic [ref=e205]: Senior Orthopedic Surgeon
+            - generic [ref=e206]: 20+ Years Experience · Knee & Hip Specialist
+        - generic [ref=e208]:
+          - generic [ref=e209]:
+            - generic [ref=e210]: Spine
+            - img [ref=e212]
+          - generic [ref=e215]:
+            - heading "Dr. Priya Nair" [level=4] [ref=e216]
+            - generic [ref=e217]: Spine Surgeon
+            - generic [ref=e218]: 15+ Years Experience · Spine Specialist
+        - generic [ref=e220]:
+          - generic [ref=e221]:
+            - generic [ref=e222]: Sports
+            - img [ref=e224]
+          - generic [ref=e227]:
+            - heading "Dr. Suresh Babu" [level=4] [ref=e228]
+            - generic [ref=e229]: Sports Medicine Expert
+            - generic [ref=e230]: 12+ Years Experience · Sports Injury Specialist
+        - generic [ref=e232]:
+          - generic [ref=e233]:
+            - generic [ref=e234]: Joints
+            - img [ref=e236]
+          - generic [ref=e239]:
+            - heading "Dr. Anitha Reddy" [level=4] [ref=e240]
+            - generic [ref=e241]: Joint Replacement Surgeon
+            - generic [ref=e242]: 18+ Years Experience · Joint Replacement Expert
+        - generic [ref=e244]:
+          - generic [ref=e245]:
+            - generic [ref=e246]: Trauma
+            - img [ref=e248]
+          - generic [ref=e251]:
+            - heading "Dr. Venkatesh" [level=4] [ref=e252]
+            - generic [ref=e253]: Trauma & Fracture Specialist
+            - generic [ref=e254]: 14+ Years Experience · Trauma Care Expert
+    - generic [ref=e258]:
+      - generic [ref=e259]:
+        - generic [ref=e260]: Why Navajeevana
+        - heading "Why Choose Navajeevana?" [level=2] [ref=e261]
+        - paragraph [ref=e262]: Advanced technology, expert care and a patient-first approach.
+      - generic [ref=e263]:
+        - generic [ref=e264]:
+          - img [ref=e266]
+          - heading "Advanced Orthopedic Care" [level=4] [ref=e269]
+          - paragraph [ref=e270]: State-of-the-art technology for accurate diagnosis and effective treatment.
+        - generic [ref=e271]:
+          - img [ref=e273]
+          - heading "AI-Assisted Patient Support" [level=4] [ref=e276]
+          - paragraph [ref=e277]: 24/7 AI support for instant answers and quick assistance.
+        - generic [ref=e278]:
+          - img [ref=e280]
+          - heading "Expert Surgeons" [level=4] [ref=e283]
+          - paragraph [ref=e284]: Highly experienced specialists with a proven track record.
+        - generic [ref=e285]:
+          - img [ref=e287]
+          - heading "World-Class Facilities" [level=4] [ref=e290]
+          - paragraph [ref=e291]: Modern infrastructure with advanced operation theatres.
+    - generic [ref=e294]:
+      - generic [ref=e295]:
+        - generic [ref=e296]: The Process
+        - heading "Your Treatment Journey" [level=2] [ref=e297]:
+          - text: Your Treatment
+          - text: Journey
+        - paragraph [ref=e298]: From consultation to recovery, we're with you every step.
+      - generic [ref=e299]:
+        - generic [ref=e300]:
+          - generic [ref=e301]:
+            - img [ref=e303]
+            - heading "Book Appointment" [level=4] [ref=e306]
+            - generic [ref=e307]: Online or call
+          - img [ref=e309]
+        - generic [ref=e311]:
+          - generic [ref=e312]:
+            - img [ref=e314]
+            - heading "Doctor Consultation" [level=4] [ref=e317]
+            - generic [ref=e318]: Expert assessment
+          - img [ref=e320]
+        - generic [ref=e322]:
+          - generic [ref=e323]:
+            - img [ref=e325]
+            - heading "Diagnostic Tests" [level=4] [ref=e328]
+            - generic [ref=e329]: Precise imaging
+          - img [ref=e331]
+        - generic [ref=e333]:
+          - generic [ref=e334]:
+            - img [ref=e336]
+            - heading "Treatment Plan" [level=4] [ref=e339]
+            - generic [ref=e340]: Personalised path
+          - img [ref=e342]
+        - generic [ref=e345]:
+          - img [ref=e347]
+          - heading "Recovery & Rehab" [level=4] [ref=e350]
+          - generic [ref=e351]: Back to life
+    - generic [ref=e353]:
+      - generic [ref=e354]:
+        - generic [ref=e355]: What Our Patients Say
+        - generic [ref=e356]:
+          - generic [ref=e357]: ★★★★★
+          - blockquote [ref=e358]: “My knee replacement surgery changed my life. The doctors and staff at Navajeevana Ortho Hospitals were exceptional throughout my recovery.”
+          - generic [ref=e359]:
+            - generic [ref=e360]: L
+            - generic [ref=e361]:
+              - text: Lakshmi Devi
+              - text: Knee Replacement Patient
+        - generic [ref=e362]:
+          - button "Previous" [ref=e363] [cursor=pointer]:
+            - img [ref=e364]
+          - button "Next" [ref=e366] [cursor=pointer]:
+            - img [ref=e367]
+      - generic [ref=e369]:
+        - heading "AI Patient Support 24/7" [level=3] [ref=e373]
+        - list [ref=e374]:
+          - listitem [ref=e375]:
+            - img [ref=e377]
+            - text: Appointment & Scheduling Queries
+          - listitem [ref=e379]:
+            - img [ref=e381]
+            - text: Insurance & Billing Assistance
+          - listitem [ref=e383]:
+            - img [ref=e385]
+            - text: Test Preparation Guidance
+          - listitem [ref=e387]:
+            - img [ref=e389]
+            - text: Post-Treatment Care Support
+          - listitem [ref=e391]:
+            - img [ref=e393]
+            - text: Instant Ticket Creation & Tracking
+        - img [ref=e396]
+    - generic [ref=e402]:
+      - generic [ref=e403]:
+        - img [ref=e405]
+        - generic [ref=e408]:
+          - heading "Ready to Take the First Step Towards a Pain-Free Life?" [level=3] [ref=e409]
+          - paragraph [ref=e410]: Book your appointment with our experts today.
+      - generic [ref=e411]:
+        - button "Book Appointment" [ref=e412] [cursor=pointer]
+        - button "Call Now" [ref=e413] [cursor=pointer]:
+          - img [ref=e414]
+          - text: Call Now
+  - contentinfo [ref=e416]:
+    - generic [ref=e417]:
+      - generic [ref=e418]:
+        - generic [ref=e419]:
+          - generic [ref=e420]:
+            - img "logo" [ref=e421]
+            - generic [ref=e422]:
+              - generic [ref=e423]: Navajeevana
+              - generic [ref=e424]: Ortho Hospitals
+          - paragraph [ref=e425]: World-class orthopedic care combining advanced technology, expert surgeons and a patient-first philosophy — healing mobility, restoring lives across South India.
+        - generic [ref=e426]:
+          - heading "Care" [level=5] [ref=e427]
+          - list [ref=e428]:
+            - listitem [ref=e429]:
+              - link "Knee Replacement" [ref=e430] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e431]:
+              - link "Hip Replacement" [ref=e432] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e433]:
+              - link "Spine Surgery" [ref=e434] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e435]:
+              - link "Sports Medicine" [ref=e436] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e437]:
+              - link "Physiotherapy" [ref=e438] [cursor=pointer]:
+                - /url: "#"
+        - generic [ref=e439]:
+          - heading "Hospital" [level=5] [ref=e440]
+          - list [ref=e441]:
+            - listitem [ref=e442]:
+              - link "About Us" [ref=e443] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e444]:
+              - link "Our Doctors" [ref=e445] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e446]:
+              - link "Facilities" [ref=e447] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e448]:
+              - link "Insurance" [ref=e449] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e450]:
+              - link "Careers" [ref=e451] [cursor=pointer]:
+                - /url: "#"
+        - generic [ref=e452]:
+          - heading "Contact" [level=5] [ref=e453]
+          - list [ref=e454]:
+            - listitem [ref=e455]:
+              - link "+91 99000 00000" [ref=e456] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e457]:
+              - link "care@navajeevana.in" [ref=e458] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e459]:
+              - link "Emergency 24/7" [ref=e460] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e461]:
+              - link "Book Appointment" [ref=e462] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e463]:
+              - link "Patient Portal" [ref=e464] [cursor=pointer]:
+                - /url: /patient
+      - generic [ref=e465]:
+        - generic [ref=e466]: © 2026 Navajeevana Ortho Hospitals. All rights reserved.
+        - generic [ref=e467]: Privacy · Terms · Accessibility

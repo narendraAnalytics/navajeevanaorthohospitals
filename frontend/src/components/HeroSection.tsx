@@ -1,7 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, useCallback } from 'react'
-import Image from 'next/image'
+import { useEffect, useRef } from 'react'
 
 interface CounterProps {
   target: number
@@ -41,273 +40,150 @@ function AnimatedCounter({ target, decimals = 0, suffix = '', comma = false, del
   return <span ref={ref}>0</span>
 }
 
-const slides = [
-  { src: '/assets/hero1.png', alt: 'Robotic-assisted joint replacement surgery' },
-  { src: '/assets/hero2.png', alt: 'Orthopedic knee surgery with digital diagnostics' },
-  { src: '/assets/hero3.png', alt: 'Physiotherapy and rehabilitation session' },
-]
-
 export default function HeroSection() {
-  const [cur, setCur] = useState(0)
-  const [leaving, setLeaving] = useState<number | null>(null)
-  const glowRef = useRef<HTMLDivElement>(null)
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-
-  const go = useCallback(
-    (next: number) => {
-      if (next === cur) return
-      setLeaving(cur)
-      setCur(next)
-      const glow = glowRef.current
-      if (glow) {
-        glow.classList.remove('go')
-        void glow.offsetWidth
-        glow.classList.add('go')
-      }
-      setTimeout(() => setLeaving(null), 1200)
-    },
-    [cur]
-  )
-
-  const nextSlide = useCallback(() => {
-    setCur((c) => {
-      const next = (c + 1) % slides.length
-      setLeaving(c)
-      const glow = glowRef.current
-      if (glow) { glow.classList.remove('go'); void glow.offsetWidth; glow.classList.add('go') }
-      setTimeout(() => setLeaving(null), 1200)
-      return next
-    })
-  }, [])
-
-  const start = useCallback(() => {
-    if (timerRef.current) clearInterval(timerRef.current)
-    timerRef.current = setInterval(nextSlide, 4800)
-  }, [nextSlide])
-
-  const stop = useCallback(() => {
-    if (timerRef.current) clearInterval(timerRef.current)
-  }, [])
-
-  useEffect(() => {
-    start()
-    return stop
-  }, [start, stop])
-
   return (
     <header className="hero" id="home" data-screen-label="Hero">
-      <div className="bwrap hero-grid">
-        {/* LEFT */}
-        <div className="hero-left">
-          <div className="trust-chip">
-            <span className="dot">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
-                <path d="M5 12l5 5L20 7" />
-              </svg>
-            </span>
-            Trusted Orthopedic Care Since 2004
-          </div>
+      <div className="hero-banner-bg" />
+      <div className="hero-banner-overlay" />
 
-          <h1>
-            Advanced Orthopedic<br />
-            Care <span className="warm">For Every</span><br />
-            <span className="green">Stage Of Life</span>
-          </h1>
+      <div className="hero-content-wrap">
+          <div className="hero-left">
+            <div className="trust-chip">
+              <span className="dot">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
+                  <path d="M5 12l5 5L20 7" />
+                </svg>
+              </span>
+              Trusted Orthopedic Care Since 2004
+            </div>
 
-          <div className="spec-row">
-            <span>
-              <i style={{ background: 'var(--g-teal)' }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                  <path d="M8 4v6m8-6v6M8 7h8M9 10c0 4-3 4-3 7a3 3 0 006 0c0-3-3-3-3-7m6 0c0 4 3 4 3 7a3 3 0 01-6 0" />
-                </svg>
-              </i>
-              Joint Replacement
-            </span>
-            <span>
-              <i style={{ background: 'var(--g-teal)' }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                  <path d="M12 3v18M9 6h6M9 10h6M9 14h6M9 18h6" />
-                </svg>
-              </i>
-              Spine Care
-            </span>
-            <span>
-              <i style={{ background: 'var(--g-coral)' }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                  <path d="M13 4l-2 6h4l-3 10M6 9l3-2m6 9l3-2" />
-                </svg>
-              </i>
-              Sports Injury
-            </span>
-            <span>
-              <i style={{ background: 'var(--g-coral)' }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                  <path d="M12 2v4m0 0a6 6 0 016 6v2H6v-2a6 6 0 016-6zM5 16h14l-1 6H6z" />
-                </svg>
-              </i>
-              Trauma Care
-            </span>
-            <span>
-              <i style={{ background: 'var(--g-violet)' }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                  <path d="M6 4l4 8-4 8m12-16l-4 8 4 8M10 12h4" />
-                </svg>
-              </i>
-              Physiotherapy &amp; Rehabilitation
-            </span>
-          </div>
+            <h1>
+              Advanced Orthopedic<br />
+              Care <span className="warm">For Every</span><br />
+              <span className="green">Stage Of Life</span>
+            </h1>
 
-          <p className="tline">
-            <span className="seal">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
-                <path d="M5 12l5 5L20 7" />
-              </svg>
-            </span>
-            Trusted by <b>&nbsp;50,000+&nbsp;</b> Patients Across South India
-          </p>
+            <div className="spec-row">
+              <span>
+                <i style={{ background: 'var(--g-teal)' }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                    <path d="M8 4v6m8-6v6M8 7h8M9 10c0 4-3 4-3 7a3 3 0 006 0c0-3-3-3-3-7m6 0c0 4 3 4 3 7a3 3 0 01-6 0" />
+                  </svg>
+                </i>
+                Joint Replacement
+              </span>
+              <span>
+                <i style={{ background: 'var(--g-teal)' }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                    <path d="M12 3v18M9 6h6M9 10h6M9 14h6M9 18h6" />
+                  </svg>
+                </i>
+                Spine Care
+              </span>
+              <span>
+                <i style={{ background: 'var(--g-coral)' }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                    <path d="M13 4l-2 6h4l-3 10M6 9l3-2m6 9l3-2" />
+                  </svg>
+                </i>
+                Sports Injury
+              </span>
+              <span>
+                <i style={{ background: 'var(--g-coral)' }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                    <path d="M12 2v4m0 0a6 6 0 016 6v2H6v-2a6 6 0 016-6zM5 16h14l-1 6H6z" />
+                  </svg>
+                </i>
+                Trauma Care
+              </span>
+              <span>
+                <i style={{ background: 'var(--g-violet)' }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                    <path d="M6 4l4 8-4 8m12-16l-4 8 4 8M10 12h4" />
+                  </svg>
+                </i>
+                Physiotherapy &amp; Rehabilitation
+              </span>
+            </div>
 
-          <div className="hero-ctas">
-            <button className="bbtn warm lg">
-              📅&nbsp; Book Appointment
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}>
-                <path d="M5 12h14M13 6l6 6-6 6" />
-              </svg>
-            </button>
-            <button className="bbtn outline lg">
-              Meet Our Specialists
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}>
-                <path d="M5 12h14M13 6l6 6-6 6" />
-              </svg>
-            </button>
-          </div>
-
-          <div className="stat-cards">
-            <div className="scard">
-              <div className="ico" style={{ background: 'var(--g-warm)' }}>
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.7L12 17l-6.2 3.6 1.6-6.7L2.2 8.9l6.9-.6z" />
+            <p className="tline">
+              <span className="seal">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
+                  <path d="M5 12l5 5L20 7" />
                 </svg>
+              </span>
+              Trusted by <b>&nbsp;50,000+&nbsp;</b> Patients Across South India
+            </p>
+
+            <div className="hero-ctas">
+              <button className="bbtn warm lg">
+                📅&nbsp; Book Appointment
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}>
+                  <path d="M5 12h14M13 6l6 6-6 6" />
+                </svg>
+              </button>
+              <button className="bbtn outline lg">
+                Meet Our Specialists
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}>
+                  <path d="M5 12h14M13 6l6 6-6 6" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="stat-cards">
+              <div className="scard">
+                <div className="ico" style={{ background: 'var(--g-warm)' }}>
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.7L12 17l-6.2 3.6 1.6-6.7L2.2 8.9l6.9-.6z" />
+                  </svg>
+                </div>
+                <div className="scard-text">
+                  <div className="num"><AnimatedCounter target={4.9} decimals={1} delay={500} /></div>
+                  <div className="lab">Patient Rating</div>
+                  <div className="stars">★★★★★</div>
+                </div>
               </div>
-              <div className="num"><AnimatedCounter target={4.9} decimals={1} delay={500} /></div>
-              <div className="lab">Patient Rating</div>
-              <div className="stars">★★★★★</div>
-            </div>
-            <div className="scard">
-              <div className="ico" style={{ background: 'var(--g-teal)' }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                  <circle cx={9} cy={8} r={3.2} />
-                  <path d="M3 20c0-3.3 2.7-5 6-5s6 1.7 6 5" />
-                  <path d="M17 8h4m-2-2v4" />
-                </svg>
+              <div className="scard">
+                <div className="ico" style={{ background: 'var(--g-teal)' }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                    <circle cx={9} cy={8} r={3.2} />
+                    <path d="M3 20c0-3.3 2.7-5 6-5s6 1.7 6 5" />
+                    <path d="M17 8h4m-2-2v4" />
+                  </svg>
+                </div>
+                <div className="scard-text">
+                  <div className="num"><AnimatedCounter target={8} suffix="+" delay={500} /></div>
+                  <div className="lab">Specialist Doctors</div>
+                </div>
               </div>
-              <div className="num"><AnimatedCounter target={8} suffix="+" delay={500} /></div>
-              <div className="lab">Specialist Doctors<br />Expert Team</div>
-            </div>
-            <div className="scard">
-              <div className="ico" style={{ background: 'var(--g-violet)' }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                  <path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z" />
-                </svg>
+              <div className="scard">
+                <div className="ico" style={{ background: 'var(--g-violet)' }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                    <path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z" />
+                  </svg>
+                </div>
+                <div className="scard-text">
+                  <div className="num"><AnimatedCounter target={20} suffix="+" delay={500} /></div>
+                  <div className="lab">Years Excellence</div>
+                </div>
               </div>
-              <div className="num"><AnimatedCounter target={20} suffix="+" delay={500} /></div>
-              <div className="lab">Years of Excellence<br />In Orthopedic Care</div>
-            </div>
-            <div className="scard">
-              <div className="ico" style={{ background: 'var(--g-coral)' }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                  <circle cx={8} cy={8} r={3} />
-                  <circle cx={17} cy={9} r={2.4} />
-                  <path d="M2 20c0-3 2.7-4.6 6-4.6s6 1.6 6 4.6M14.5 19c.2-2.3 1.9-3.3 4-3.3 2 0 3.5 1 3.5 3.3" />
-                </svg>
+              <div className="scard">
+                <div className="ico" style={{ background: 'var(--g-coral)' }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                    <circle cx={8} cy={8} r={3} />
+                    <circle cx={17} cy={9} r={2.4} />
+                    <path d="M2 20c0-3 2.7-4.6 6-4.6s6 1.6 6 4.6M14.5 19c.2-2.3 1.9-3.3 4-3.3 2 0 3.5 1 3.5 3.3" />
+                  </svg>
+                </div>
+                <div className="scard-text">
+                  <div className="num"><AnimatedCounter target={50000} suffix="+" comma delay={500} /></div>
+                  <div className="lab">Treatments</div>
+                </div>
               </div>
-              <div className="num"><AnimatedCounter target={50000} suffix="+" comma delay={500} /></div>
-              <div className="lab">Successful<br />Treatments</div>
             </div>
           </div>
-        </div>
-
-        {/* RIGHT: CAROUSEL */}
-        <div
-          className="hero-stage"
-          onMouseEnter={stop}
-          onMouseLeave={start}
-        >
-          <div className="stage-halo" />
-          <div ref={glowRef} className="glow-ring" />
-
-          <div className="carousel">
-            {slides.map((slide, i) => (
-              <div
-                key={i}
-                className={`cslide${i === cur ? ' active' : ''}${i === leaving ? ' leaving' : ''}`}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={slide.src} alt={slide.alt} />
-              </div>
-            ))}
-          </div>
-
-          {/* floating achievement cards */}
-          <div className="fcard f1">
-            <div className="fi" style={{ background: 'var(--g-teal)' }}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                <path d="M8 4v6m8-6v6M8 7h8M9 10c0 4-3 4-3 7a3 3 0 006 0c0-3-3-3-3-7m6 0c0 4 3 4 3 7a3 3 0 01-6 0" />
-              </svg>
-            </div>
-            <div>
-              <div className="fn"><AnimatedCounter target={5000} suffix="+" comma delay={800} /></div>
-              <div className="fl">Joint Replacements · Successful Surgeries</div>
-              <svg className="squig" viewBox="0 0 34 6">
-                <path d="M1 3c4-4 8 4 12 0s8-4 12 0 8 4 9 0" fill="none" stroke="#10B981" strokeWidth={2} strokeLinecap="round" />
-              </svg>
-            </div>
-          </div>
-
-          <div className="fcard f2">
-            <div className="fi" style={{ background: 'linear-gradient(120deg,#FB7BA8,#F472B6)' }}>
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.7L12 17l-6.2 3.6 1.6-6.7L2.2 8.9l6.9-.6z" />
-              </svg>
-            </div>
-            <div>
-              <div className="fn"><AnimatedCounter target={98} suffix="%" delay={800} /></div>
-              <div className="fl">Patient Satisfaction · Positive Feedback</div>
-              <svg className="squig" viewBox="0 0 34 6">
-                <path d="M1 3c4-4 8 4 12 0s8-4 12 0 8 4 9 0" fill="none" stroke="#FB7BA8" strokeWidth={2} strokeLinecap="round" />
-              </svg>
-            </div>
-          </div>
-
-          <div className="fcard f3">
-            <div className="fi" style={{ background: 'var(--g-violet)' }}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                <rect x={3} y={8} width={14} height={9} rx={2} />
-                <path d="M17 11h2.5L22 14v3h-5M7 17a2 2 0 104 0M14 17a0 0 0 100 0" />
-                <circle cx={8} cy={17} r={2} />
-                <circle cx={15} cy={17} r={2} />
-              </svg>
-            </div>
-            <div>
-              <div className="fn">24/7</div>
-              <div className="fl">Emergency Trauma Care Available</div>
-              <svg className="squig" viewBox="0 0 34 6">
-                <path d="M1 3c4-4 8 4 12 0s8-4 12 0 8 4 9 0" fill="none" stroke="#9B7BFF" strokeWidth={2} strokeLinecap="round" />
-              </svg>
-            </div>
-          </div>
-
-          <div className="cdots">
-            {slides.map((_, i) => (
-              <button
-                key={i}
-                className={i === cur ? 'on' : ''}
-                aria-label={`Slide ${i + 1}`}
-                onClick={() => { go(i); start() }}
-              />
-            ))}
-          </div>
-        </div>
       </div>
+
     </header>
   )
 }
