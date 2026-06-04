@@ -434,3 +434,18 @@
   .cta-inner { flex-direction: column; align-items: flex-start; }
   .foot-grid { grid-template-columns: 1fr; }
 }
+
+/* ── Page utility classes (replaces inline styles) ── */
+.bg-gi-teal   { background: var(--g-teal); }
+.bg-gi-warm   { background: var(--g-warm); }
+.bg-gi-violet { background: var(--g-violet); }
+.bg-gi-coral  { background: linear-gradient(120deg,#FB7BA8,#F472B6); }
+.bg-sc-lime     { background: #e7ed9c; }
+.bg-sc-peach    { background: #fde8cf; }
+.bg-sc-salmon   { background: #fde2c8; }
+.bg-sc-mint     { background: #d0f5e8; }
+.bg-sc-lavender { background: #ede0ff; }
+.bg-sc-teal-lt  { background: #c8eedd; }
+.d-contents { display: contents; }
+.mt-18      { margin-top: 18px; }
+.pt-label   { font-size: 13px; font-weight: 600; color: var(--bk-muted); display: block; margin-bottom: 6px; }

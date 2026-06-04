@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useUser } from '@clerk/nextjs'
 import { submitTicket, getTicket, type Ticket } from '@/lib/api'
 
 type Tab = 'submit' | 'track'
@@ -17,21 +18,44 @@ const statusLabel: Record<string, { label: string; color: string }> = {
   resolved: { label: 'Resolved', color: '#6B7280' },
 }
 
+const inputStyle: React.CSSProperties = {
+  width: '100%', padding: '11px 14px', borderRadius: 12,
+  border: '1.5px solid var(--line)', fontSize: 14,
+  fontFamily: 'var(--font-body)', background: '#fff',
+  color: 'var(--ink)', outline: 'none', boxSizing: 'border-box',
+}
+
+const lockedInputStyle: React.CSSProperties = {
+  ...inputStyle,
+  background: '#F3F4F6',
+  color: 'var(--ink-2)',
+  cursor: 'not-allowed',
+}
+
 export default function PatientPortal() {
+  const { user } = useUser()
   const [tab, setTab] = useState<Tab>('submit')
 
-  // submit form
   const [form, setForm] = useState({ name: '', email: '', phone: '', message: '' })
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState<{ ticket_id: string } | null>(null)
   const [submitError, setSubmitError] = useState('')
 
-  // track
   const [trackId, setTrackId] = useState('')
   const [ticket, setTicket] = useState<Ticket | null>(null)
   const [tracking, setTracking] = useState(false)
   const [trackError, setTrackError] = useState('')
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // Pre-fill from Clerk profile once loaded
+  useEffect(() => {
+    if (!user) return
+    setForm(f => ({
+      ...f,
+      name: f.name || user.fullName || `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim(),
+      email: user.emailAddresses[0]?.emailAddress ?? '',
+    }))
+  }, [user])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -87,7 +111,7 @@ export default function PatientPortal() {
       {/* Nav */}
       <div style={{ background: 'rgba(255,255,255,.9)', backdropFilter: 'blur(16px)', borderBottom: '1px solid var(--line)', padding: '14px 26px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 50 }}>
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-          <Image src="/assets/logo.png" alt="logo" width={34} height={34} style={{ borderRadius: '50%' }} />
+          <Image src="https://res.cloudinary.com/dkqbzwicr/image/upload/q_auto/f_auto/v1780555373/logo_xr4zab.png" alt="logo" width={34} height={34} style={{ borderRadius: '50%' }} />
           <div>
             <div style={{ fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 14, background: 'var(--g-teal)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Navajeevana</div>
             <div style={{ fontSize: 10, color: 'var(--bk-muted)' }}>Ortho Hospitals</div>
@@ -140,7 +164,13 @@ export default function PatientPortal() {
                   <div style={{ fontSize: 12, color: 'var(--bk-muted)', marginTop: 6 }}>Save this ID to track your query status</div>
                 </div>
                 <button
-                  onClick={() => { setSubmitted(null); setForm({ name: '', email: '', phone: '', message: '' }); setTab('track'); setTrackId(submitted.ticket_id) }}
+                  onClick={() => {
+                    const tid = submitted.ticket_id
+                    setSubmitted(null)
+                    setForm(f => ({ name: f.name, email: f.email, phone: '', message: '' }))
+                    setTab('track')
+                    setTrackId(tid)
+                  }}
                   style={{ background: 'var(--g-teal)', color: '#fff', border: 'none', borderRadius: 30, padding: '11px 24px', fontWeight: 700, fontSize: 13.5, cursor: 'pointer' }}
                 >
                   Track This Ticket
@@ -149,34 +179,68 @@ export default function PatientPortal() {
             ) : (
               <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
                 <h2 style={{ fontFamily: 'var(--font-head)', fontSize: 18, marginBottom: 4 }}>Tell Us How We Can Help</h2>
-                {[
-                  { key: 'name', label: 'Full Name', type: 'text', placeholder: 'Your full name', required: true },
-                  { key: 'email', label: 'Email Address', type: 'email', placeholder: 'your@email.com', required: true },
-                  { key: 'phone', label: 'Phone Number (optional)', type: 'tel', placeholder: '+91 99000 00000', required: false },
-                ].map(({ key, label, type, placeholder, required }) => (
-                  <div key={key}>
-                    <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink-2)', display: 'block', marginBottom: 6 }}>{label}</label>
-                    <input
-                      type={type}
-                      placeholder={placeholder}
-                      required={required}
-                      value={form[key as keyof typeof form]}
-                      onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
-                      style={{ width: '100%', padding: '11px 14px', borderRadius: 12, border: '1.5px solid var(--line)', fontSize: 14, fontFamily: 'var(--font-body)', background: '#fff', color: 'var(--ink)', outline: 'none', boxSizing: 'border-box' }}
-                    />
-                  </div>
-                ))}
+
+                {/* Full Name — editable, pre-filled */}
                 <div>
-                  <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink-2)', display: 'block', marginBottom: 6 }}>Your Query</label>
+                  <label htmlFor="pt-name" className="pt-label">Full Name</label>
+                  <input
+                    id="pt-name"
+                    type="text"
+                    placeholder="Your full name"
+                    required
+                    value={form.name}
+                    onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))}
+                    style={inputStyle}
+                  />
+                </div>
+
+                {/* Email — locked to Clerk account */}
+                <div>
+                  <label htmlFor="pt-email" className="pt-label">
+                    Email Address
+                    <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 500, color: 'var(--teal-d)', background: 'rgba(0,180,140,.08)', borderRadius: 20, padding: '2px 8px' }}>
+                      🔒 Linked to account
+                    </span>
+                  </label>
+                  <input
+                    id="pt-email"
+                    type="email"
+                    value={form.email}
+                    readOnly
+                    style={lockedInputStyle}
+                  />
+                  <div style={{ fontSize: 11, color: 'var(--bk-muted)', marginTop: 4 }}>
+                    Your tickets will be tracked and replied to at this address
+                  </div>
+                </div>
+
+                {/* Phone — optional, editable */}
+                <div>
+                  <label htmlFor="pt-phone" className="pt-label">Phone Number (optional)</label>
+                  <input
+                    id="pt-phone"
+                    type="tel"
+                    placeholder="+91 99000 00000"
+                    value={form.phone}
+                    onChange={(e) => setForm(f => ({ ...f, phone: e.target.value }))}
+                    style={inputStyle}
+                  />
+                </div>
+
+                {/* Query */}
+                <div>
+                  <label htmlFor="pt-message" className="pt-label">Your Query</label>
                   <textarea
+                    id="pt-message"
                     placeholder="Describe your concern, symptoms, or question..."
                     required
                     rows={5}
                     value={form.message}
-                    onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))}
-                    style={{ width: '100%', padding: '11px 14px', borderRadius: 12, border: '1.5px solid var(--line)', fontSize: 14, fontFamily: 'var(--font-body)', background: '#fff', color: 'var(--ink)', resize: 'vertical', outline: 'none', boxSizing: 'border-box' }}
+                    onChange={(e) => setForm(f => ({ ...f, message: e.target.value }))}
+                    style={{ ...inputStyle, resize: 'vertical' }}
                   />
                 </div>
+
                 {submitError && <div style={{ color: '#EF4444', fontSize: 13, background: '#FEF2F2', padding: '10px 14px', borderRadius: 10 }}>{submitError}</div>}
                 <button
                   type="submit"
@@ -197,6 +261,7 @@ export default function PatientPortal() {
             <div style={{ display: 'flex', gap: 10, marginBottom: 24 }}>
               <input
                 type="text"
+                aria-label="Ticket ID"
                 placeholder="Enter your Ticket ID"
                 value={trackId}
                 onChange={(e) => setTrackId(e.target.value)}

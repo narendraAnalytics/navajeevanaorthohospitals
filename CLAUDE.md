@@ -34,9 +34,13 @@ black --check app/
 **Frontend** — run from `frontend/`:
 
 ```powershell
-npm run dev     # dev server on :3000
-npm run build   # production build check
+npm run dev        # dev server on :3000
+npm run build      # production build check
+npm run db:push    # push schema changes to Neon (creates/alters frontend_users table ONLY)
+npm run db:studio  # Drizzle Studio — browse frontend_users table in browser
 ```
+
+> **`db:push` warning:** `drizzle.config.ts` has `tablesFilter: ['frontend_users']`. Without this, drizzle-kit sees ALL tables in the shared Neon DB (including backend's `tickets`, `checkpoints`, etc.) and offers to drop them. Never remove the filter.
 
 ## Backend Architecture
 
@@ -111,6 +115,14 @@ Ticket lifecycle: `processing → pending_review → approved → emailed` (or `
 
 Short-term memory = `AsyncPostgresSaver` per `ticket_id`. Long-term memory = `AsyncPostgresStore` per `customer_id`.
 
+**Frontend-owned table** (managed by Drizzle, not backend):
+
+| Table | Purpose |
+|---|---|
+| `frontend_users` | Clerk user sync — `id` (text, Clerk user_xxx), `email`, `full_name`, `avatar_url` |
+
+Created via `npm run db:push` from `frontend/`. Schema in `frontend/src/db/schema.ts`.
+
 ## API Endpoints
 
 ```
@@ -153,8 +165,11 @@ NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
 NEXT_PUBLIC_CLERK_SIGN_IN_FORCE_REDIRECT_URL=/api/auth/sync
 NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL=/api/auth/sync
 NEXT_PUBLIC_CLERK_AFTER_SIGN_OUT_URL=/
+DATABASE_URL=postgresql://...  # direct Neon URL (no -pooler, no channel_binding) — for frontend user sync
 ```
 Note: `NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL` / `AFTER_SIGN_UP_URL` are **deprecated in Clerk v7** — use `FORCE_REDIRECT_URL` variants only.
+
+`DATABASE_URL` must be the **direct** Neon connection string — not the pooler URL. The `neon-http` Drizzle driver uses fetch, not WebSockets; pooler URL causes query failures.
 
 ## Frontend Architecture
 
@@ -175,8 +190,11 @@ All frontend code lives in `frontend/`. Stack: Next.js 16 + React 19 + Tailwind 
 | `frontend/src/app/globals.css` | All brand CSS — design tokens (CSS vars) + every landing page class |
 | `frontend/src/app/layout.tsx` | Sora + Plus Jakarta Sans fonts; `<ClerkProvider>` inside `<body>`; favicon via `metadata.icons` |
 | `frontend/src/proxy.ts` | Clerk middleware — protects `/patient` and `/admin`; public routes: `/`, `/sign-in`, `/sign-up`, `/api/auth/sync` |
-| `frontend/src/app/api/auth/sync/route.ts` | Post-login redirect to `/` (Clerk redirects here after sign-in/up) |
+| `frontend/src/app/api/auth/sync/route.ts` | Calls `getOrCreateUser()` then redirects to `/` — Clerk redirects here after sign-in/up |
 | `frontend/src/lib/api.ts` | Typed fetch wrapper for all backend endpoints |
+| `frontend/src/lib/auth.ts` | `getOrCreateUser()` — lazy Clerk→Neon sync; creates `frontend_users` row on first login |
+| `frontend/src/db/schema.ts` | Drizzle schema for `frontend_users` (Clerk user ID, email, full_name, avatar_url) |
+| `frontend/src/db/index.ts` | Neon HTTP client + Drizzle instance (`drizzle-orm/neon-http`) |
 | `frontend/src/components/Nav.tsx` | Glassmorphic nav — auth-aware: shows `Welcome [name]` + `<UserButton>` when signed in, hides Admin Portal |
 | `frontend/src/components/HeroSection.tsx` | 4-slide carousel + CTA buttons gated with `<SignInButton>` when signed out |
 | `frontend/src/components/RevealObserver.tsx` | IntersectionObserver — adds `.in` to `.reveal` elements on scroll; rendered once in `page.tsx` (client) |
@@ -190,6 +208,8 @@ All frontend code lives in `frontend/`. Stack: Next.js 16 + React 19 + Tailwind 
 - Hero uses a 4-slide Cloudinary carousel (URLs in `images.txt` at project root). `next.config.ts` whitelists `res.cloudinary.com` in `images.remotePatterns`.
 - `.reveal` elements start `opacity:0` and animate in via `RevealObserver.tsx`. Must render `<RevealObserver />` in any page that uses `.reveal`.
 - **Hero carousel pitfall:** never put a changing `key` on the `<img>` elements — it forces React to remount them on every slide change, causing flickers and stalls. CSS `opacity` transition on `.hero-slide.active` handles crossfade; images stay in DOM permanently.
+- **No inline styles in `page.tsx`:** dynamic gradient/background values are expressed as CSS classes (`bg-gi-teal`, `bg-gi-warm`, `bg-gi-violet`, `bg-gi-coral`, `bg-sc-*`) defined in `globals.css`. Data arrays hold class name strings, not style values.
+- **Form accessibility:** all `<label>` elements must have `htmlFor` linked to the input's `id`. Standalone inputs (e.g. track input) need `aria-label`. Label styling uses `.pt-label` CSS class — not inline style.
 
 ## Clerk Auth (frontend)
 
@@ -199,8 +219,9 @@ Clerk app ID: `app_3Eg6FM0HTdOA2XbRdiouZPemsef`. Auth is wired end-to-end:
 - **Components:** use `<Show when="signed-in">` / `<Show when="signed-out">` — never deprecated `<SignedIn>` / `<SignedOut>`
 - **`<UserButton />`** — no props needed; sign-out redirect handled by `NEXT_PUBLIC_CLERK_AFTER_SIGN_OUT_URL` env var. `afterSignOutUrl` prop does not exist in Clerk v7.
 - **`<SignInButton>`** — use `forceRedirectUrl` prop, not `redirectUrl` (deprecated).
-- **Nav behavior:** signed-out → Patient Portal triggers sign-in + Admin Portal visible. Signed-in → Welcome [name] + UserButton (profile pic/sign-out dropdown) + Admin Portal hidden.
-- **CTA buttons** in `HeroSection.tsx`: wrapped in `<SignInButton>` when `!isSignedIn`, navigate directly when signed in.
+- **Nav behavior:** signed-out → Patient Portal triggers sign-in + Admin Portal visible. Signed-in → Welcome [name] + UserButton (profile pic/sign-out dropdown) + Admin Portal hidden. "Patient Portal" label is a non-clickable `<span>` when signed in (not a link).
+- **CTA buttons** in `HeroSection.tsx`: "Book Appointment" and "Ask Our Care Team" are wrapped in `<SignInButton>` when signed out; both navigate to `/patient` when signed in.
+- **Patient portal form:** email auto-filled from Clerk and locked (`readOnly`, `cursor: not-allowed`); full name pre-filled but editable. Uses `useUser()` + `useEffect` to populate after Clerk loads. Tickets are tracked by email address.
 
 ## Deployment
 
@@ -226,4 +247,7 @@ Clerk app ID: `app_3Eg6FM0HTdOA2XbRdiouZPemsef`. Auth is wired end-to-end:
 | Phase 6 — Render + Vercel deployment | ✅ |
 | Phase 7 — Next.js frontend: landing page | ✅ |
 | Phase 7 — Next.js frontend: Clerk auth (sign-in/up, nav, CTA gates) | ✅ |
-| Phase 7 — Next.js frontend: patient portal + admin dashboard | 🔨 In Progress |
+| Phase 7 — Next.js frontend: patient portal (submit + track) | ✅ |
+| Phase 7 — Next.js frontend: Clerk→Neon user sync (frontend_users) | ✅ |
+| Phase 7 — Next.js frontend: patient form auto-fill from Clerk | ✅ |
+| Phase 7 — Next.js frontend: admin dashboard | 🔨 In Progress |

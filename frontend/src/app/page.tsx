@@ -5,20 +5,20 @@ import Footer from '@/components/Footer'
 import RevealObserver from '@/components/RevealObserver'
 
 const doctors = [
-  { n: 'Dr. Ravi Kumar', r: 'Senior Orthopedic Surgeon', m: '20+ Years Experience · Knee & Hip Specialist', c: 'var(--g-teal)', tag: 'Top Rated' },
-  { n: 'Dr. Priya Nair', r: 'Spine Surgeon', m: '15+ Years Experience · Spine Specialist', c: 'linear-gradient(120deg,#FB7BA8,#F472B6)', tag: 'Spine' },
-  { n: 'Dr. Suresh Babu', r: 'Sports Medicine Expert', m: '12+ Years Experience · Sports Injury Specialist', c: 'var(--g-warm)', tag: 'Sports' },
-  { n: 'Dr. Anitha Reddy', r: 'Joint Replacement Surgeon', m: '18+ Years Experience · Joint Replacement Expert', c: 'var(--g-violet)', tag: 'Joints' },
-  { n: 'Dr. Venkatesh', r: 'Trauma & Fracture Specialist', m: '14+ Years Experience · Trauma Care Expert', c: 'var(--g-teal)', tag: 'Trauma' },
+  { n: 'Dr. Ravi Kumar', r: 'Senior Orthopedic Surgeon', m: '20+ Years Experience · Knee & Hip Specialist', c: 'bg-gi-teal', tag: 'Top Rated' },
+  { n: 'Dr. Priya Nair', r: 'Spine Surgeon', m: '15+ Years Experience · Spine Specialist', c: 'bg-gi-coral', tag: 'Spine' },
+  { n: 'Dr. Suresh Babu', r: 'Sports Medicine Expert', m: '12+ Years Experience · Sports Injury Specialist', c: 'bg-gi-warm', tag: 'Sports' },
+  { n: 'Dr. Anitha Reddy', r: 'Joint Replacement Surgeon', m: '18+ Years Experience · Joint Replacement Expert', c: 'bg-gi-violet', tag: 'Joints' },
+  { n: 'Dr. Venkatesh', r: 'Trauma & Fracture Specialist', m: '14+ Years Experience · Trauma Care Expert', c: 'bg-gi-teal', tag: 'Trauma' },
 ]
 
 const specialties = [
-  { label: 'Knee Replacement',      sub: 'Robotic precision',   g: 'var(--g-teal)',   bg: '#e7ed9c' },
-  { label: 'Hip Replacement',       sub: 'Minimally invasive',  g: 'var(--g-warm)',   bg: '#fde8cf' },
-  { label: 'Spine Surgery',         sub: 'Advanced techniques', g: 'var(--g-warm)',   bg: '#fde2c8' },
-  { label: 'Sports Medicine',       sub: 'Return to play',      g: 'var(--g-teal)',   bg: '#d0f5e8' },
-  { label: 'Trauma Care',           sub: '24/7 emergency',      g: 'var(--g-violet)', bg: '#ede0ff' },
-  { label: 'Physiotherapy & Rehab', sub: 'Faster recovery',     g: 'var(--g-teal)',   bg: '#c8eedd' },
+  { label: 'Knee Replacement',      sub: 'Robotic precision',   g: 'bg-gi-teal',   bg: 'bg-sc-lime' },
+  { label: 'Hip Replacement',       sub: 'Minimally invasive',  g: 'bg-gi-warm',   bg: 'bg-sc-peach' },
+  { label: 'Spine Surgery',         sub: 'Advanced techniques', g: 'bg-gi-warm',   bg: 'bg-sc-salmon' },
+  { label: 'Sports Medicine',       sub: 'Return to play',      g: 'bg-gi-teal',   bg: 'bg-sc-mint' },
+  { label: 'Trauma Care',           sub: '24/7 emergency',      g: 'bg-gi-violet', bg: 'bg-sc-lavender' },
+  { label: 'Physiotherapy & Rehab', sub: 'Faster recovery',     g: 'bg-gi-teal',   bg: 'bg-sc-teal-lt' },
 ]
 
 const specIconPaths = [
@@ -31,18 +31,18 @@ const specIconPaths = [
 ]
 
 const whyItems = [
-  { icon: 'shield', g: 'var(--g-teal)', title: 'Advanced Orthopedic Care', desc: 'State-of-the-art technology for accurate diagnosis and effective treatment.' },
-  { icon: 'ai', g: 'linear-gradient(120deg,#FB7BA8,#F472B6)', title: 'AI-Assisted Patient Support', desc: '24/7 AI support for instant answers and quick assistance.' },
-  { icon: 'team', g: 'var(--g-warm)', title: 'Expert Surgeons', desc: 'Highly experienced specialists with a proven track record.' },
-  { icon: 'building', g: 'var(--g-violet)', title: 'World-Class Facilities', desc: 'Modern infrastructure with advanced operation theatres.' },
+  { icon: 'shield', g: 'bg-gi-teal',   title: 'Advanced Orthopedic Care',    desc: 'State-of-the-art technology for accurate diagnosis and effective treatment.' },
+  { icon: 'ai',    g: 'bg-gi-coral',   title: 'AI-Assisted Patient Support',  desc: '24/7 AI support for instant answers and quick assistance.' },
+  { icon: 'team',  g: 'bg-gi-warm',    title: 'Expert Surgeons',              desc: 'Highly experienced specialists with a proven track record.' },
+  { icon: 'building', g: 'bg-gi-violet', title: 'World-Class Facilities',     desc: 'Modern infrastructure with advanced operation theatres.' },
 ]
 
 const journey = [
-  { g: 'var(--g-warm)', label: 'Book Appointment', sub: 'Online or call' },
-  { g: 'linear-gradient(120deg,#FB7BA8,#F472B6)', label: 'Doctor Consultation', sub: 'Expert assessment' },
-  { g: 'var(--g-teal)', label: 'Diagnostic Tests', sub: 'Precise imaging' },
-  { g: 'var(--g-violet)', label: 'Treatment Plan', sub: 'Personalised path' },
-  { g: 'var(--g-warm)', label: 'Recovery & Rehab', sub: 'Back to life' },
+  { g: 'bg-gi-warm',   label: 'Book Appointment',   sub: 'Online or call' },
+  { g: 'bg-gi-coral',  label: 'Doctor Consultation', sub: 'Expert assessment' },
+  { g: 'bg-gi-teal',   label: 'Diagnostic Tests',    sub: 'Precise imaging' },
+  { g: 'bg-gi-violet', label: 'Treatment Plan',       sub: 'Personalised path' },
+  { g: 'bg-gi-warm',   label: 'Recovery & Rehab',     sub: 'Back to life' },
 ]
 
 export default function LandingPage() {
@@ -69,8 +69,8 @@ export default function LandingPage() {
               </div>
               <div className="spec-grid">
                 {specialties.map(({ label, sub, g, bg }, i) => (
-                  <div key={label} className={`spec-card reveal d${i + 1}`} style={{ background: bg }}>
-                    <div className="si" style={{ background: g }}>
+                  <div key={label} className={`spec-card reveal d${i + 1} ${bg}`}>
+                    <div className={`si ${g}`}>
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                         <path d={specIconPaths[i]} />
                       </svg>
@@ -92,7 +92,7 @@ export default function LandingPage() {
                 <div className="eyebrow te-warm">Our Team</div>
                 <h2>Meet Our<br /><span className="te-warm">Specialists</span></h2>
                 <p>Experienced orthopedic surgeons committed to your recovery.</p>
-                <button className="bbtn warm" style={{ marginTop: 18 }}>
+                <button className="bbtn warm mt-18">
                   View All Doctors
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}>
                     <path d="M5 12h14M13 6l6 6-6 6" />
@@ -103,7 +103,7 @@ export default function LandingPage() {
                 {doctors.map(({ n, r, m, c, tag }, i) => (
                   <div key={n} className={`doc-card reveal d${i + 1}`}>
                     <div className="doc-photo">
-                      <span className="ribbon" style={{ background: c }}>{tag}</span>
+                      <span className={`ribbon ${c}`}>{tag}</span>
                       <div className="ph">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
                           <circle cx={12} cy={9} r={4} />
@@ -115,7 +115,7 @@ export default function LandingPage() {
                       <h4>{n}</h4>
                       <div className="role">{r}</div>
                       <div className="meta">{m}</div>
-                      <div className="uline" style={{ background: c }} />
+                      <div className={`uline ${c}`} />
                     </div>
                   </div>
                 ))}
@@ -136,7 +136,7 @@ export default function LandingPage() {
               <div className="bento-grid">
                 {whyItems.map(({ g, title, desc }, i) => (
                   <div key={title} className={`bento-cell reveal d${i + 1}`}>
-                    <div className="bi" style={{ background: g }}>
+                    <div className={`bi ${g}`}>
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                         <path d="M12 3l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V7z" />
                         <path d="M9 12l2 2 4-4" />
@@ -162,9 +162,9 @@ export default function LandingPage() {
               </div>
               <div className="journey">
                 {journey.map(({ g, label, sub }, i) => (
-                  <div key={label} style={{ display: 'contents' }}>
+                  <div key={label} className="d-contents">
                     <div className={`jstep reveal d${i + 1}`}>
-                      <div className="jc" style={{ background: g }}>
+                      <div className={`jc ${g}`}>
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                           <rect x={3} y={4} width={18} height={17} rx={3} />
                           <path d="M3 9h18M8 2v4m8-4v4" />
