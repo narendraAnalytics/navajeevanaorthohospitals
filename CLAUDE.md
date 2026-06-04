@@ -106,7 +106,7 @@ Neon PostgreSQL (project `navajeevanaorthohospitals`, ID `autumn-tree-81633917`)
 
 | Table | Purpose |
 |---|---|
-| `tickets` | One row per ticket — status, urgency, route, confidence_score |
+| `tickets` | One row per ticket — `customer_name`, `customer_email`, `customer_phone`, `reviewed_by`, status, urgency, route, confidence_score |
 | `replies` | All versions: `ai_draft` → `edited_reply` → `final_sent_reply` |
 | `escalations` | Staff brief + `assigned_to` |
 | `agent_logs` | Per-node JSONB decisions |
@@ -114,6 +114,8 @@ Neon PostgreSQL (project `navajeevanaorthohospitals`, ID `autumn-tree-81633917`)
 Ticket lifecycle: `processing → pending_review → approved → emailed` (or `escalated_to_senior` / `resolved`).
 
 Short-term memory = `AsyncPostgresSaver` per `ticket_id`. Long-term memory = `AsyncPostgresStore` per `customer_id`.
+
+**`customer_id` = patient's email address** — derived in the route handler from `body.customer_email`. This ensures all tickets from the same patient share long-term memory in AsyncPostgresStore. `subject` is auto-derived from the first 60 chars of the message.
 
 **Frontend-owned table** (managed by Drizzle, not backend):
 
@@ -128,6 +130,7 @@ Created via `npm run db:push` from `frontend/`. Schema in `frontend/src/db/schem
 ```
 POST  /ticket                       -- submit ticket (202, graph runs in background)
 GET   /ticket/{id}                  -- poll result
+GET   /tickets/by-email/{email}     -- all tickets for a patient email, newest first
 
 GET   /review/pending               -- tickets awaiting HITL review
 GET   /review/{ticket_id}           -- full ticket + AI draft
@@ -140,6 +143,12 @@ GET   /tickets/all
 GET   /ticket/{id}/brief            -- escalation brief
 PATCH /ticket/{id}/resolve
 ```
+
+**`POST /ticket` request body** (matches `SubmitTicketInput` on frontend):
+```json
+{ "customer_name": "...", "customer_email": "...", "customer_phone": "...", "message": "..." }
+```
+`customer_id` and `subject` are derived server-side — never sent by the client.
 
 ## Environment Variables
 
@@ -222,6 +231,7 @@ Clerk app ID: `app_3Eg6FM0HTdOA2XbRdiouZPemsef`. Auth is wired end-to-end:
 - **Nav behavior:** signed-out → Patient Portal triggers sign-in + Admin Portal visible. Signed-in → Welcome [name] + UserButton (profile pic/sign-out dropdown) + Admin Portal hidden. "Patient Portal" label is a non-clickable `<span>` when signed in (not a link).
 - **CTA buttons** in `HeroSection.tsx`: "Book Appointment" and "Ask Our Care Team" are wrapped in `<SignInButton>` when signed out; both navigate to `/patient` when signed in.
 - **Patient portal form:** email auto-filled from Clerk and locked (`readOnly`, `cursor: not-allowed`); full name pre-filled but editable. Uses `useUser()` + `useEffect` to populate after Clerk loads. Tickets are tracked by email address.
+- **Patient portal track tab:** mode toggle "By Ticket ID" / "By Email". Email mode pre-fills locked Clerk email and calls `GET /tickets/by-email/{email}`; shows a clickable list of all past tickets. ID mode unchanged. `getTicketsByEmail()` in `api.ts`.
 
 ## Deployment
 
@@ -250,4 +260,6 @@ Clerk app ID: `app_3Eg6FM0HTdOA2XbRdiouZPemsef`. Auth is wired end-to-end:
 | Phase 7 — Next.js frontend: patient portal (submit + track) | ✅ |
 | Phase 7 — Next.js frontend: Clerk→Neon user sync (frontend_users) | ✅ |
 | Phase 7 — Next.js frontend: patient form auto-fill from Clerk | ✅ |
+| Phase 7 — Next.js frontend: ticket→email link (customer_id = email, DB columns) | ✅ |
+| Phase 7 — Next.js frontend: track by email (GET /tickets/by-email) | ✅ |
 | Phase 7 — Next.js frontend: admin dashboard | 🔨 In Progress |
