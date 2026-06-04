@@ -88,7 +88,7 @@ export default function Nav() {
               </svg>
               Patient Portal
             </Link>
-            <UserButton afterSignOutUrl="/" />
+            <UserButton />
           </Show>
           <Show when="signed-out">
             <SignInButton mode="redirect" forceRedirectUrl="/api/auth/sync">
