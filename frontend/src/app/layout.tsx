@@ -17,10 +17,18 @@ const jakarta = Plus_Jakarta_Sans({
   display: 'swap',
 })
 
+const LOGO_URL =
+  'https://res.cloudinary.com/dkqbzwicr/image/upload/q_auto/f_auto/v1780555373/logo_xr4zab.png'
+
 export const metadata: Metadata = {
   title: 'Navajeevana Ortho Hospitals — Advanced Orthopedic Care',
   description:
     'World-class orthopedic care in Bhimavaram, Andhra Pradesh. Joint replacement, spine surgery, sports medicine, physiotherapy & more.',
+  icons: {
+    icon: LOGO_URL,
+    shortcut: LOGO_URL,
+    apple: LOGO_URL,
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
