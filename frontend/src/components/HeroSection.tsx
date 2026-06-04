@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { useUser, SignInButton } from '@clerk/nextjs'
+import { useRouter } from 'next/navigation'
 
 const SLIDES = [
   'https://res.cloudinary.com/dkqbzwicr/image/upload/q_auto/f_auto/v1780555374/bannerimage1_b8zcjn.png',
@@ -49,6 +51,8 @@ function AnimatedCounter({ target, decimals = 0, suffix = '', comma = false, del
 
 export default function HeroSection() {
   const [activeIdx, setActiveIdx] = useState(0)
+  const { isSignedIn } = useUser()
+  const router = useRouter()
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -152,18 +156,40 @@ export default function HeroSection() {
             </p>
 
             <div className="hero-ctas">
-              <button className="bbtn warm lg">
-                📅&nbsp; Book Appointment
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}>
-                  <path d="M5 12h14M13 6l6 6-6 6" />
-                </svg>
-              </button>
-              <button className="bbtn outline lg">
-                Meet Our Specialists
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}>
-                  <path d="M5 12h14M13 6l6 6-6 6" />
-                </svg>
-              </button>
+              {isSignedIn ? (
+                <button className="bbtn warm lg" onClick={() => router.push('/patient')}>
+                  📅&nbsp; Book Appointment
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}>
+                    <path d="M5 12h14M13 6l6 6-6 6" />
+                  </svg>
+                </button>
+              ) : (
+                <SignInButton mode="redirect" forceRedirectUrl="/patient">
+                  <button className="bbtn warm lg">
+                    📅&nbsp; Book Appointment
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}>
+                      <path d="M5 12h14M13 6l6 6-6 6" />
+                    </svg>
+                  </button>
+                </SignInButton>
+              )}
+              {isSignedIn ? (
+                <button className="bbtn outline lg" onClick={() => document.getElementById('doctors')?.scrollIntoView({ behavior: 'smooth' })}>
+                  Meet Our Specialists
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}>
+                    <path d="M5 12h14M13 6l6 6-6 6" />
+                  </svg>
+                </button>
+              ) : (
+                <SignInButton mode="redirect" forceRedirectUrl="/#doctors">
+                  <button className="bbtn outline lg">
+                    Meet Our Specialists
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}>
+                      <path d="M5 12h14M13 6l6 6-6 6" />
+                    </svg>
+                  </button>
+                </SignInButton>
+              )}
             </div>
 
             <div className="stat-cards">

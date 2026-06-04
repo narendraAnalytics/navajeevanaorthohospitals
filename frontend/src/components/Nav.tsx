@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useUser, SignOutButton, SignInButton, Show } from '@clerk/nextjs'
 
 const links = [
   { href: '#home', label: 'Home' },
@@ -19,6 +20,7 @@ export default function Nav() {
   const shellRef = useRef<HTMLDivElement>(null)
   const [activeSection, setActiveSection] = useState('home')
   const lastY = useRef(0)
+  const { user } = useUser()
 
   useEffect(() => {
     const nav = navRef.current
@@ -75,14 +77,33 @@ export default function Nav() {
         </div>
 
         <div className="nav-cta">
-          <Link className="ghost-pill" href="/patient">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width={14} height={14}>
-              <circle cx={12} cy={8} r={4} />
-              <path d="M4 21c0-4 4-6 8-6s8 2 8 6" />
-            </svg>
-            Patient Portal
-          </Link>
-          <Link className="bbtn violet" href="/admin">Admin Portal</Link>
+          <Show when="signed-in">
+            <span className="nav-welcome">
+              Welcome, {user?.firstName || user?.username || 'User'}
+            </span>
+            <Link className="ghost-pill" href="/patient">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width={14} height={14}>
+                <circle cx={12} cy={8} r={4} />
+                <path d="M4 21c0-4 4-6 8-6s8 2 8 6" />
+              </svg>
+              Patient Portal
+            </Link>
+            <SignOutButton redirectUrl="/">
+              <button className="bbtn outline">Sign Out</button>
+            </SignOutButton>
+          </Show>
+          <Show when="signed-out">
+            <SignInButton mode="redirect" forceRedirectUrl="/api/auth/sync">
+              <button className="ghost-pill">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width={14} height={14}>
+                  <circle cx={12} cy={8} r={4} />
+                  <path d="M4 21c0-4 4-6 8-6s8 2 8 6" />
+                </svg>
+                Patient Portal
+              </button>
+            </SignInButton>
+            <Link className="bbtn violet" href="/admin">Admin Portal</Link>
+          </Show>
           <button className="nav-burger" aria-label="Menu">
             <span />
           </button>

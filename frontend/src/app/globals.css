@@ -224,6 +224,7 @@
 .nav-links a.active { color: var(--teal-d); }
 .nav-links a.active::after { content: ""; position: absolute; left: 50%; bottom: 3px; transform: translateX(-50%); width: 16px; height: 2.5px; border-radius: 2px; background: var(--g-teal); }
 .nav-cta { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
+.nav-welcome { font-size: 12px; font-weight: 600; color: var(--ink-2); white-space: nowrap; padding: 0 4px; }
 .ghost-pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--ink-2); padding: 8px 12px; border-radius: 30px; border: 1px solid var(--line); background: rgba(255,255,255,.5); transition: .25s; white-space: nowrap; text-decoration: none; }
 .ghost-pill:hover { border-color: var(--teal); color: var(--teal-d); }
 .bbtn { display: inline-flex; align-items: center; gap: 7px; font-family: var(--font-body); font-weight: 700; font-size: 12.5px; border: none; cursor: pointer; border-radius: 30px; padding: 10px 16px; color: #fff; position: relative; overflow: hidden; transition: transform .2s cubic-bezier(.2,.8,.2,1),box-shadow .25s; white-space: nowrap; text-decoration: none; }
