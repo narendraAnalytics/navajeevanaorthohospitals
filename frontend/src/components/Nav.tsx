@@ -9,12 +9,10 @@ const links = [
   { href: '#doctors', label: 'Doctors' },
   { href: '#specialties', label: 'Services' },
   { href: '#treatments', label: 'Treatments' },
-  { href: '#appointments', label: 'Appointments' },
-  { href: '#insurance', label: 'Insurance' },
   { href: '#contact', label: 'Contact' },
 ]
 
-const sectionIds = ['home', 'doctors', 'specialties', 'treatments', 'appointments', 'insurance', 'contact']
+const sectionIds = ['home', 'doctors', 'specialties', 'treatments', 'contact']
 
 export default function Nav() {
   const navRef = useRef<HTMLElement>(null)
@@ -84,12 +82,6 @@ export default function Nav() {
             </svg>
             Patient Portal
           </Link>
-          <button className="bbtn warm">
-            Book Appointment
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}>
-              <path d="M5 12h14M13 6l6 6-6 6" />
-            </svg>
-          </button>
           <Link className="bbtn violet" href="/admin">Admin Portal</Link>
           <button className="nav-burger" aria-label="Menu">
             <span />
