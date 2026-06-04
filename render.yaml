@@ -15,7 +15,7 @@ services:
       - key: CHROMA_MODE
         value: local
       - key: ALLOWED_ORIGIN
-        value: http://localhost:3000
+        value: https://navajeevanaorthohospitals.vercel.app
       - key: GROQ_API_KEY
         sync: false
       - key: TAVILY_API_KEY
