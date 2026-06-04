@@ -57,7 +57,7 @@ export default function Nav() {
     <div className="nav-shell" ref={shellRef}>
       <nav className="bnav" ref={navRef}>
         <a className="brand-logo" href="#home">
-          <Image src="/assets/logo.png" alt="Navajeevana logo" width={38} height={38} style={{ borderRadius: '50%' }} />
+          <Image src="https://res.cloudinary.com/dkqbzwicr/image/upload/q_auto/f_auto/v1780555373/logo_xr4zab.png" alt="Navajeevana logo" width={38} height={38} style={{ borderRadius: '50%' }} />
           <span className="bt">
             <b>Navajeevana</b>
             <span>Ortho Hospitals · Healing Mobility</span>

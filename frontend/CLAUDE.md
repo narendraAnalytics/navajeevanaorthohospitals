@@ -33,20 +33,28 @@ Fonts loaded in `src/app/layout.tsx`:
 
 ## Hero Section
 
-`HeroSection.tsx` uses a full-width banner image layout (no carousel):
+`HeroSection.tsx` uses a 3-slide crossfade carousel with Ken Burns effect:
 
 ```
 <header class="hero">
-  <div class="hero-banner-bg" />       ← /assets/bannerimage.png, absolute cover
-  <div class="hero-banner-overlay" />  ← ivory gradient L→R (text readability)
-  <div class="hero-content-wrap">      ← flex, padding: 140px 26px 80px 60px
-    <div class="hero-left">            ← max-width 560px, left-aligned
+  <div class="hero-carousel">           ← 3 slides, Cloudinary URLs, absolute cover
+    <div class="hero-slide [active]">   ← opacity transition 1.2s; active img runs kenburns
+      <img src="cloudinary-url" />
+    </div>
+    ...
+  </div>
+  <div class="hero-dot-nav">            ← dot indicators, bottom-right, z-index:2
+  <div class="hero-banner-overlay" />   ← ivory gradient L→R (text readability), z-index:1
+  <div class="hero-content-wrap">       ← flex, z-index:3, padding: 140px 26px 80px 60px
+    <div class="hero-left">             ← max-width 560px, left-aligned
       trust-chip · h1 · spec-row · tline · hero-ctas · stat-cards
     </div>
   </div>
 </header>
 ```
 
+- Slides auto-advance every 5500ms; pauses on hover
+- Images hosted on Cloudinary (URLs in `images.txt` at project root)
 - `hero-content-wrap` must NOT wrap a `.bwrap` div — use direct padding for horizontal offset
 - Animated stat counters use `AnimatedCounter` (easing counter with configurable delay)
 - `h1` font: `clamp(30px, 3.2vw, 44px)` — keeps "Advanced Orthopedic" on one line

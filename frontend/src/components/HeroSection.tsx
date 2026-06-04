@@ -1,6 +1,13 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
+
+const SLIDES = [
+  'https://res.cloudinary.com/dkqbzwicr/image/upload/q_auto/f_auto/v1780555374/bannerimage1_b8zcjn.png',
+  'https://res.cloudinary.com/dkqbzwicr/image/upload/q_auto/f_auto/v1780555373/bannerimage3_bi89lk.png',
+  'https://res.cloudinary.com/dkqbzwicr/image/upload/q_auto/f_auto/v1780555372/bannerimage2_rmncs2.png',
+  'https://res.cloudinary.com/dkqbzwicr/image/upload/q_auto/f_auto/v1780575743/bannerimage4_srk9ls.png',
+]
 
 interface CounterProps {
   target: number
@@ -41,9 +48,66 @@ function AnimatedCounter({ target, decimals = 0, suffix = '', comma = false, del
 }
 
 export default function HeroSection() {
+  const [activeIdx, setActiveIdx] = useState(0)
+  const [activeGen, setActiveGen] = useState(0)
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const isHovered = useRef(false)
+
+  const startInterval = useCallback(() => {
+    if (intervalRef.current) clearInterval(intervalRef.current)
+    intervalRef.current = setInterval(() => {
+      setActiveIdx(i => (i + 1) % SLIDES.length)
+      setActiveGen(g => g + 1)
+    }, 5500)
+  }, [])
+
+  useEffect(() => {
+    startInterval()
+
+    const handleVisibility = () => {
+      if (document.hidden) {
+        if (intervalRef.current) clearInterval(intervalRef.current)
+      } else if (!isHovered.current) {
+        startInterval()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current)
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
+  }, [startInterval])
+
   return (
-    <header className="hero" id="home" data-screen-label="Hero">
-      <div className="hero-banner-bg" />
+    <header
+      className="hero"
+      id="home"
+      data-screen-label="Hero"
+      onMouseEnter={() => { isHovered.current = true; if (intervalRef.current) clearInterval(intervalRef.current) }}
+      onMouseLeave={() => { isHovered.current = false; startInterval() }}
+    >
+      {/* Carousel */}
+      <div className="hero-carousel">
+        {SLIDES.map((src, i) => (
+          <div key={i} className={`hero-slide${activeIdx === i ? ' active' : ''}`}>
+            <img key={activeIdx === i ? activeGen : i} src={src} alt="" aria-hidden="true" />
+          </div>
+        ))}
+      </div>
+
+      {/* Dot nav */}
+      <div className="hero-dot-nav">
+        {SLIDES.map((_, i) => (
+          <button
+            key={i}
+            className={`hero-dot${activeIdx === i ? ' active' : ''}`}
+            onClick={() => { setActiveIdx(i); setActiveGen(g => g + 1) }}
+            aria-label={`Slide ${i + 1}`}
+          />
+        ))}
+      </div>
+
       <div className="hero-banner-overlay" />
 
       <div className="hero-content-wrap">
