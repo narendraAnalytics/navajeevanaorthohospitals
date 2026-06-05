@@ -195,7 +195,7 @@ All frontend code lives in `frontend/`. Stack: Next.js 16 + React 19 + Tailwind 
 |---|---|
 | `/` | Landing page — server component, imports client section components |
 | `/patient/intro` | Animated branded transition page — SVG ring + logo + checkmark + pills + progress bar; auto-redirects to `/patient` after 3.5 s. Shown to signed-in users from hero CTAs. |
-| `/patient` | Patient portal — submit ticket + track by ID or email. Background orbs, hero badge, polished glass card, name+phone side-by-side, trust row footer. |
+| `/patient` | **"Care Hub"** — submit ticket + track by ID or email. Floating pill nav (`position:fixed`, `border-radius:60px`, centered with side margins). Background: ivory `#FFFBF7` + orbs + dot-grid overlay. Hero badge, polished glass card, name+phone side-by-side, trust row footer. |
 | `/patient/processing/[ticket_id]` | Live agent pipeline visualization — polls `/ticket/{id}/logs` every 1.5 s, animates 8 nodes waiting→running→done, shows completion card |
 | `/admin` | Admin dashboard — HITL review queue, approve/edit/send email |
 | `/api/send-email` | Server-side Next.js route — sends HTML email via Resend, then marks backend ticket as `emailed` |
@@ -277,3 +277,4 @@ Clerk app ID: `app_3Eg6FM0HTdOA2XbRdiouZPemsef`. Auth is wired end-to-end:
 | Phase 7 — Next.js frontend: Resend email integration (/api/send-email route) | ✅ |
 | Phase 7 — Next.js frontend: patient portal intro transition (/patient/intro) | ✅ |
 | Phase 7 — Next.js frontend: patient portal design enhancement (orbs, badge, grid, trust row) | ✅ |
+| Phase 7 — Next.js frontend: patient portal floating pill nav + "Care Hub" rename | ✅ |
