@@ -219,10 +219,10 @@ export default function PatientPortal() {
               Patient Support · 24 / 7
             </div>
             <h1 style={{ fontFamily: 'var(--font-head)', fontSize: 'clamp(30px,5vw,46px)', fontWeight: 800, letterSpacing: '-.03em', lineHeight: 1.06, color: 'var(--ink)' }}>
-              Patient{' '}
-              <span style={{ background: 'var(--g-teal)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Portal</span>
+              Care{' '}
+              <span style={{ background: 'var(--g-teal)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Hub</span>
             </h1>
-            <p style={{ color: 'var(--bk-muted)', marginTop: 10, fontSize: 15, fontWeight: 500 }}>Submit a query or track your existing support ticket</p>
+            <p style={{ color: 'var(--bk-muted)', marginTop: 10, fontSize: 15, fontWeight: 500 }}>Ask our care team a question or track your existing query</p>
           </div>
 
           {/* Tabs */}
