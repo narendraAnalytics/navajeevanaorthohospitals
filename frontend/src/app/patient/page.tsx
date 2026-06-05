@@ -175,6 +175,13 @@ export default function PatientPortal() {
         .pt-badge-dot { width: 7px; height: 7px; border-radius: 50%; background: #10B981; display: inline-block; animation: blink 1.8s ease-in-out infinite; }
 
         .email-ticket-row:hover { box-shadow: 0 8px 24px -10px rgba(16,42,40,.18) !important; }
+
+        .pt-bg::after {
+          content: "";
+          position: absolute; inset: 0;
+          background-image: radial-gradient(rgba(16,42,40,.055) 1px, transparent 1px);
+          background-size: 38px 38px;
+        }
       `}</style>
 
       {/* Background orbs */}

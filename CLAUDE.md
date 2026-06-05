@@ -194,7 +194,8 @@ All frontend code lives in `frontend/`. Stack: Next.js 16 + React 19 + Tailwind 
 | Route | Purpose |
 |---|---|
 | `/` | Landing page — server component, imports client section components |
-| `/patient` | Patient portal — submit ticket + track by ID or email |
+| `/patient/intro` | Animated branded transition page — SVG ring + logo + checkmark + pills + progress bar; auto-redirects to `/patient` after 3.5 s. Shown to signed-in users from hero CTAs. |
+| `/patient` | Patient portal — submit ticket + track by ID or email. Background orbs, hero badge, polished glass card, name+phone side-by-side, trust row footer. |
 | `/patient/processing/[ticket_id]` | Live agent pipeline visualization — polls `/ticket/{id}/logs` every 1.5 s, animates 8 nodes waiting→running→done, shows completion card |
 | `/admin` | Admin dashboard — HITL review queue, approve/edit/send email |
 | `/api/send-email` | Server-side Next.js route — sends HTML email via Resend, then marks backend ticket as `emailed` |
@@ -237,7 +238,7 @@ Clerk app ID: `app_3Eg6FM0HTdOA2XbRdiouZPemsef`. Auth is wired end-to-end:
 - **`<UserButton />`** — no props needed; sign-out redirect handled by `NEXT_PUBLIC_CLERK_AFTER_SIGN_OUT_URL` env var. `afterSignOutUrl` prop does not exist in Clerk v7.
 - **`<SignInButton>`** — use `forceRedirectUrl` prop, not `redirectUrl` (deprecated).
 - **Nav behavior:** signed-out → Patient Portal triggers sign-in + Admin Portal visible. Signed-in → Welcome [name] + UserButton (profile pic/sign-out dropdown) + Admin Portal hidden. "Patient Portal" label is a non-clickable `<span>` when signed in (not a link).
-- **CTA buttons** in `HeroSection.tsx`: "Book Appointment" and "Ask Our Care Team" are wrapped in `<SignInButton>` when signed out; both navigate to `/patient` when signed in.
+- **CTA buttons** in `HeroSection.tsx`: "Book Appointment" and "Ask Our Care Team" are wrapped in `<SignInButton>` when signed out; both navigate to `/patient/intro` when signed in (intro transition page → auto-redirects to `/patient`). The `forceRedirectUrl` on `<SignInButton>` stays as `/patient` — no intro for first-login flow.
 - **Patient portal form:** email auto-filled from Clerk and locked (`readOnly`, `cursor: not-allowed`); full name pre-filled but editable. Uses `useUser()` + `useEffect` to populate after Clerk loads. Tickets are tracked by email address.
 - **Patient portal track tab:** mode toggle "By Ticket ID" / "By Email". Email mode pre-fills locked Clerk email and calls `GET /tickets/by-email/{email}`; shows a clickable list of all past tickets. ID mode unchanged. `getTicketsByEmail()` in `api.ts`.
 - **Submit flow:** after `POST /ticket` succeeds, the patient portal redirects to `/patient/processing/{ticket_id}` — not an inline success card. The processing page polls `GET /ticket/{id}/logs` and animates each of the 8 agents as they complete.
@@ -274,3 +275,5 @@ Clerk app ID: `app_3Eg6FM0HTdOA2XbRdiouZPemsef`. Auth is wired end-to-end:
 | Phase 7 — Next.js frontend: admin dashboard (HITL review, approve/edit/send) | ✅ |
 | Phase 7 — Next.js frontend: live agent pipeline page (/patient/processing/[id]) | ✅ |
 | Phase 7 — Next.js frontend: Resend email integration (/api/send-email route) | ✅ |
+| Phase 7 — Next.js frontend: patient portal intro transition (/patient/intro) | ✅ |
+| Phase 7 — Next.js frontend: patient portal design enhancement (orbs, badge, grid, trust row) | ✅ |
