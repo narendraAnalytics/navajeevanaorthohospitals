@@ -58,7 +58,8 @@ npm run db:studio  # Drizzle Studio — browse frontend_users table in browser
 
 - **Safety Checker** is keyword-only (no LLM). Never convert to LLM-based.
 - **Tavily** is a tool node — no LLM call inside it.
-- `orchestrator` and `memory_manager` are `async` (inject `AsyncPostgresStore`). Always use `graph.ainvoke()`, never `graph.invoke()`.
+- `orchestrator` and `memory_manager` are `async` (inject `AsyncPostgresStore`). Never use `graph.invoke()` — synchronous invocation fails on async nodes.
+- **Graph is streamed, not invoked**: `_run_graph` in `tickets.py` uses `graph.astream(stream_mode="updates")` so each node's output dict is captured as it completes. After the stream, `graph.aget_state(config)` reads the final accumulated state from the checkpointer. This is what writes `agent_logs` rows in real time — do not revert to `ainvoke`.
 - `TicketState` uses `Annotated[List[dict], operator.add]` on `classifications`, `safety_flags`, `rag_results` so parallel agents can write without overwriting.
 
 ## LLM Tiers
@@ -109,7 +110,7 @@ Neon PostgreSQL (project `navajeevanaorthohospitals`, ID `autumn-tree-81633917`)
 | `tickets` | One row per ticket — `customer_name`, `customer_email`, `customer_phone`, `reviewed_by`, status, urgency, route, confidence_score |
 | `replies` | All versions: `ai_draft` → `edited_reply` → `final_sent_reply` |
 | `escalations` | Staff brief + `assigned_to` |
-| `agent_logs` | Per-node JSONB decisions |
+| `agent_logs` | Per-node decisions written in real time during graph streaming — `node_name`, `decision`, `confidence_score`, `created_at` |
 
 Ticket lifecycle: `processing → pending_review → approved → emailed` (or `escalated_to_senior` / `resolved`).
 
@@ -130,6 +131,7 @@ Created via `npm run db:push` from `frontend/`. Schema in `frontend/src/db/schem
 ```
 POST  /ticket                       -- submit ticket (202, graph runs in background)
 GET   /ticket/{id}                  -- poll result
+GET   /ticket/{id}/logs             -- agent execution logs for live pipeline view (poll while processing)
 GET   /tickets/by-email/{email}     -- all tickets for a patient email, newest first
 
 GET   /review/pending               -- tickets awaiting HITL review
@@ -175,6 +177,9 @@ NEXT_PUBLIC_CLERK_SIGN_IN_FORCE_REDIRECT_URL=/api/auth/sync
 NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL=/api/auth/sync
 NEXT_PUBLIC_CLERK_AFTER_SIGN_OUT_URL=/
 DATABASE_URL=postgresql://...  # direct Neon URL (no -pooler, no channel_binding) — for frontend user sync
+RESEND_API_KEY=re_...           # server-side only (no NEXT_PUBLIC_ prefix) — used by /api/send-email route
+RESEND_FROM_EMAIL=admin@...     # verified sender domain on Resend
+RESEND_FROM_NAME=NAVAJEEVANAORTHO
 ```
 Note: `NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL` / `AFTER_SIGN_UP_URL` are **deprecated in Clerk v7** — use `FORCE_REDIRECT_URL` variants only.
 
@@ -189,8 +194,11 @@ All frontend code lives in `frontend/`. Stack: Next.js 16 + React 19 + Tailwind 
 | Route | Purpose |
 |---|---|
 | `/` | Landing page — server component, imports client section components |
-| `/patient` | Patient portal — submit ticket, poll status with auto-refresh |
+| `/patient` | Patient portal — submit ticket + track by ID or email |
+| `/patient/processing/[ticket_id]` | Live agent pipeline visualization — polls `/ticket/{id}/logs` every 1.5 s, animates 8 nodes waiting→running→done, shows completion card |
 | `/admin` | Admin dashboard — HITL review queue, approve/edit/send email |
+| `/api/send-email` | Server-side Next.js route — sends HTML email via Resend, then marks backend ticket as `emailed` |
+| `/api/auth/sync` | Clerk post-login hook — syncs user to `frontend_users` via `getOrCreateUser()` |
 
 **Key files:**
 
@@ -200,7 +208,7 @@ All frontend code lives in `frontend/`. Stack: Next.js 16 + React 19 + Tailwind 
 | `frontend/src/app/layout.tsx` | Sora + Plus Jakarta Sans fonts; `<ClerkProvider>` inside `<body>`; favicon via `metadata.icons` |
 | `frontend/src/proxy.ts` | Clerk middleware — protects `/patient` and `/admin`; public routes: `/`, `/sign-in`, `/sign-up`, `/api/auth/sync` |
 | `frontend/src/app/api/auth/sync/route.ts` | Calls `getOrCreateUser()` then redirects to `/` — Clerk redirects here after sign-in/up |
-| `frontend/src/lib/api.ts` | Typed fetch wrapper for all backend endpoints |
+| `frontend/src/lib/api.ts` | Typed fetch wrapper for all backend endpoints. `sendEmail()` posts to `/api/send-email` (Next.js route), not the backend directly. |
 | `frontend/src/lib/auth.ts` | `getOrCreateUser()` — lazy Clerk→Neon sync; creates `frontend_users` row on first login |
 | `frontend/src/db/schema.ts` | Drizzle schema for `frontend_users` (Clerk user ID, email, full_name, avatar_url) |
 | `frontend/src/db/index.ts` | Neon HTTP client + Drizzle instance (`drizzle-orm/neon-http`) |
@@ -232,6 +240,7 @@ Clerk app ID: `app_3Eg6FM0HTdOA2XbRdiouZPemsef`. Auth is wired end-to-end:
 - **CTA buttons** in `HeroSection.tsx`: "Book Appointment" and "Ask Our Care Team" are wrapped in `<SignInButton>` when signed out; both navigate to `/patient` when signed in.
 - **Patient portal form:** email auto-filled from Clerk and locked (`readOnly`, `cursor: not-allowed`); full name pre-filled but editable. Uses `useUser()` + `useEffect` to populate after Clerk loads. Tickets are tracked by email address.
 - **Patient portal track tab:** mode toggle "By Ticket ID" / "By Email". Email mode pre-fills locked Clerk email and calls `GET /tickets/by-email/{email}`; shows a clickable list of all past tickets. ID mode unchanged. `getTicketsByEmail()` in `api.ts`.
+- **Submit flow:** after `POST /ticket` succeeds, the patient portal redirects to `/patient/processing/{ticket_id}` — not an inline success card. The processing page polls `GET /ticket/{id}/logs` and animates each of the 8 agents as they complete.
 
 ## Deployment
 
@@ -262,4 +271,6 @@ Clerk app ID: `app_3Eg6FM0HTdOA2XbRdiouZPemsef`. Auth is wired end-to-end:
 | Phase 7 — Next.js frontend: patient form auto-fill from Clerk | ✅ |
 | Phase 7 — Next.js frontend: ticket→email link (customer_id = email, DB columns) | ✅ |
 | Phase 7 — Next.js frontend: track by email (GET /tickets/by-email) | ✅ |
-| Phase 7 — Next.js frontend: admin dashboard | 🔨 In Progress |
+| Phase 7 — Next.js frontend: admin dashboard (HITL review, approve/edit/send) | ✅ |
+| Phase 7 — Next.js frontend: live agent pipeline page (/patient/processing/[id]) | ✅ |
+| Phase 7 — Next.js frontend: Resend email integration (/api/send-email route) | ✅ |
