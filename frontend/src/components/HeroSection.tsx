@@ -157,7 +157,7 @@ export default function HeroSection() {
 
             <div className="hero-ctas">
               {isSignedIn ? (
-                <button className="bbtn warm lg" onClick={() => router.push('/patient')}>
+                <button className="bbtn warm lg" onClick={() => router.push('/patient/intro')}>
                   📅&nbsp; Book Appointment
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}>
                     <path d="M5 12h14M13 6l6 6-6 6" />
@@ -174,7 +174,7 @@ export default function HeroSection() {
                 </SignInButton>
               )}
               {isSignedIn ? (
-                <button className="bbtn outline lg" onClick={() => router.push('/patient')}>
+                <button className="bbtn outline lg" onClick={() => router.push('/patient/intro')}>
                   Ask Our Care Team
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}>
                     <path d="M5 12h14M13 6l6 6-6 6" />

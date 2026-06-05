@@ -1,13 +1,34 @@
- Warning  Found data-loss statements:
-· You're about to delete checkpoint_migrations table with 10 items
-· You're about to delete tickets table with 1 items
-· You're about to delete store_migrations table with 4 items
-· You're about to delete checkpoint_blobs table with 8 items
-· You're about to delete checkpoints table with 7 items
-· You're about to delete checkpoint_writes table with 42 items
+ Pipeline display order (matches graph topology):
 
-THIS ACTION WILL CAUSE DATA LOSS AND CANNOT BE REVERTED
+ Row 1 (single):   orchestrator
+ Row 2 (parallel): intent_classifier | safety_checker | rag_retriever
+ Row 3 (single):   confidence_evaluator
+ Row 4 (branch):   reply_writer  OR  tavily_search → reply_writer  OR  escalation_packager
+ Row 5 (single):   memory_manager
 
-Do you still want to push changes?
-  No, abort
-❯ Yes, I want to remove 6 tables, 
+  Display labels mapping:
+
+ ┌──────────────────────┬──────────────────────┬──────┐
+ │      node_name       │    Display label     │ Icon │
+ ├──────────────────────┼──────────────────────┼──────┤
+ │ orchestrator         │ Intake Coordinator   │ 🏥   │
+ ├──────────────────────┼──────────────────────┼──────┤
+ │ intent_classifier    │ Intent Classifier    │ 🧠   │
+ ├──────────────────────┼──────────────────────┼──────┤
+ │ safety_checker       │ Safety Checker       │ 🛡️    │
+ ├──────────────────────┼──────────────────────┼──────┤
+ │ rag_retriever        │ Knowledge Base       │ 📚   │
+ ├──────────────────────┼──────────────────────┼──────┤
+ │ confidence_evaluator │ Confidence Evaluator │ ⚖️    │
+ ├──────────────────────┼──────────────────────┼──────┤
+ │ tavily_search        │ Web Search           │ 🌐   │
+ ├──────────────────────┼──────────────────────┼──────┤
+ │ reply_writer         │ Reply Writer         │ ✍️    │
+ ├──────────────────────┼──────────────────────┼──────┤
+ │ escalation_packager  │ Escalation Packager  │ 🚨   │
+ ├──────────────────────┼──────────────────────┼──────┤
+ │ memory_manager       │ Memory Manager       │ 💾   │
+ └──────────────────────┴──────────────────────┴──────┘
+
+frontend/src/app/patient/processing/[ticket_id]/page.tsx │ CREATE: agent pipeline visualization  
+
