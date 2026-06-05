@@ -192,24 +192,26 @@ export default function PatientPortal() {
       </div>
 
       <div className="pt-root" style={{ minHeight: '100vh', background: 'var(--ivory)', fontFamily: 'var(--font-body)', color: 'var(--ink)', position: 'relative', zIndex: 1 }}>
-        {/* Nav */}
-        <div style={{ background: 'rgba(255,255,255,.58)', backdropFilter: 'blur(22px) saturate(1.4)', borderBottom: '1px solid rgba(255,255,255,.8)', boxShadow: '0 14px 40px -16px rgba(16,42,40,.15)', padding: '10px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 50 }}>
-          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-            <Image src="https://res.cloudinary.com/dkqbzwicr/image/upload/q_auto/f_auto/v1780555373/logo_xr4zab.png" alt="logo" width={36} height={36} style={{ borderRadius: '50%', boxShadow: '0 2px 10px rgba(17,181,164,.22)' }} />
-            <div>
-              <div style={{ fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 14, background: 'var(--g-teal)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Navajeevana</div>
-              <div style={{ fontSize: 10, color: 'var(--bk-muted)' }}>Ortho Hospitals</div>
-            </div>
-          </Link>
-          <Link href="/" style={{ fontSize: 13, color: 'var(--teal-d)', textDecoration: 'none', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 30, transition: 'background .2s' }}
-            onMouseOver={e => (e.currentTarget.style.background = 'rgba(17,181,164,.1)')}
-            onMouseOut={e => (e.currentTarget.style.background = 'transparent')}>
-            <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M11 6l-6 6 6 6" /></svg>
-            Back to Home
-          </Link>
+        {/* Nav shell — floating pill */}
+        <div style={{ position: 'fixed', top: 14, left: 0, right: 0, zIndex: 60, display: 'flex', justifyContent: 'center', padding: '0 14px' }}>
+          <nav style={{ width: 'min(1100px, 100%)', display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px 8px 14px', borderRadius: 60, background: 'rgba(255,255,255,.58)', backdropFilter: 'blur(22px) saturate(1.4)', WebkitBackdropFilter: 'blur(22px) saturate(1.4)', border: '1px solid rgba(255,255,255,.8)', boxShadow: '0 14px 40px -16px rgba(16,42,40,.25), inset 0 1px 0 rgba(255,255,255,.9)' }}>
+            <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
+              <Image src="https://res.cloudinary.com/dkqbzwicr/image/upload/q_auto/f_auto/v1780555373/logo_xr4zab.png" alt="logo" width={36} height={36} style={{ borderRadius: '50%', boxShadow: '0 2px 10px rgba(17,181,164,.22)' }} />
+              <div>
+                <div style={{ fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 14, background: 'var(--g-teal)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Navajeevana</div>
+                <div style={{ fontSize: 10, color: 'var(--bk-muted)', letterSpacing: '.03em' }}>Ortho Hospitals · Healing Mobility</div>
+              </div>
+            </Link>
+            <Link href="/" style={{ marginLeft: 'auto', fontSize: 13, color: 'var(--teal-d)', textDecoration: 'none', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 30, transition: 'background .2s' }}
+              onMouseOver={e => (e.currentTarget.style.background = 'rgba(17,181,164,.1)')}
+              onMouseOut={e => (e.currentTarget.style.background = 'transparent')}>
+              <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M11 6l-6 6 6 6" /></svg>
+              Back to Home
+            </Link>
+          </nav>
         </div>
 
-        <div style={{ maxWidth: 680, margin: '0 auto', padding: '60px 24px 80px' }}>
+        <div style={{ maxWidth: 680, margin: '0 auto', padding: '130px 24px 80px' }}>
           {/* Hero */}
           <div style={{ textAlign: 'center', marginBottom: 36 }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 12, fontWeight: 700, letterSpacing: '.05em', textTransform: 'uppercase', color: '#059669', background: 'rgba(16,185,129,.09)', border: '1px solid rgba(16,185,129,.2)', padding: '6px 14px', borderRadius: 30, marginBottom: 18 }}>
