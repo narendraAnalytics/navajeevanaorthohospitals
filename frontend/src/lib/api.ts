@@ -61,6 +61,21 @@ export interface SubmitTicketResponse {
   message: string
 }
 
+export interface AgentLog {
+  node_name: string
+  decision: string
+  confidence_score: number | null
+  created_at: string | null
+}
+
+export interface TicketProgress {
+  ticket_id: string
+  status: string
+  route_decision: string | null
+  confidence_score: number | null
+  logs: AgentLog[]
+}
+
 // ---- patient ----
 
 export const submitTicket = (body: SubmitTicketInput) =>
@@ -70,6 +85,9 @@ export const getTicket = (id: string) => req<Ticket>(`/ticket/${id}`)
 
 export const getTicketsByEmail = (email: string) =>
   req<Ticket[]>(`/tickets/by-email/${encodeURIComponent(email)}`)
+
+export const getTicketProgress = (id: string) =>
+  req<TicketProgress>(`/ticket/${id}/logs`)
 
 // ---- review (admin) ----
 
@@ -87,7 +105,14 @@ export const editTicket = (id: string, edited_reply: string) =>
   })
 
 export const sendEmail = (id: string) =>
-  req<{ message: string }>(`/review/${id}/send-email`, { method: 'POST' })
+  fetch('/api/send-email', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ticket_id: id }),
+  }).then(async (r) => {
+    if (!r.ok) throw new Error(await r.text().catch(() => r.statusText))
+    return r.json() as Promise<{ message: string }>
+  })
 
 export const assignTicket = (id: string, assigned_to: string) =>
   req<{ message: string }>(`/review/${id}/assign`, {

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useUser } from '@clerk/nextjs'
 import { submitTicket, getTicket, getTicketsByEmail, type Ticket } from '@/lib/api'
 
@@ -34,11 +35,11 @@ const lockedInputStyle: React.CSSProperties = {
 
 export default function PatientPortal() {
   const { user } = useUser()
+  const router = useRouter()
   const [tab, setTab] = useState<Tab>('submit')
 
   const [form, setForm] = useState({ name: '', email: '', phone: '', message: '' })
   const [submitting, setSubmitting] = useState(false)
-  const [submitted, setSubmitted] = useState<{ ticket_id: string } | null>(null)
   const [submitError, setSubmitError] = useState('')
 
   const [trackId, setTrackId] = useState('')
@@ -73,7 +74,7 @@ export default function PatientPortal() {
         customer_phone: form.phone || undefined,
         message: form.message,
       })
-      setSubmitted(res)
+      router.push(`/patient/processing/${res.ticket_id}`)
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'Submission failed')
     } finally {
@@ -170,35 +171,7 @@ export default function PatientPortal() {
         {/* Submit tab */}
         {tab === 'submit' && (
           <div style={{ background: 'rgba(255,255,255,.72)', backdropFilter: 'blur(14px)', borderRadius: 24, padding: '32px 28px', border: '1px solid var(--glass-brd)', boxShadow: 'var(--shadow-soft)' }}>
-            {submitted ? (
-              <div style={{ textAlign: 'center', padding: '20px 0' }}>
-                <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--g-teal)', display: 'grid', placeItems: 'center', margin: '0 auto 20px' }}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2.5} width={28} height={28}><path d="M5 12l5 5L20 7" /></svg>
-                </div>
-                <h2 style={{ fontFamily: 'var(--font-head)', fontSize: 22, marginBottom: 10 }}>Query Submitted!</h2>
-                <p style={{ color: 'var(--bk-muted)', marginBottom: 20, lineHeight: 1.6 }}>
-                  Our team will review your query and respond within 24 hours.
-                </p>
-                <div style={{ background: 'linear-gradient(140deg,#EEFBF5,#F3FBFF)', borderRadius: 16, padding: '16px 20px', marginBottom: 24 }}>
-                  <div style={{ fontSize: 12, color: 'var(--bk-muted)', marginBottom: 6 }}>Your Ticket ID</div>
-                  <div style={{ fontFamily: 'var(--font-head)', fontSize: 20, fontWeight: 700, color: 'var(--teal-d)', letterSpacing: '.04em' }}>{submitted.ticket_id}</div>
-                  <div style={{ fontSize: 12, color: 'var(--bk-muted)', marginTop: 6 }}>Save this ID to track your query status</div>
-                </div>
-                <button
-                  onClick={() => {
-                    const tid = submitted.ticket_id
-                    setSubmitted(null)
-                    setForm(f => ({ name: f.name, email: f.email, phone: '', message: '' }))
-                    setTab('track')
-                    setTrackId(tid)
-                  }}
-                  style={{ background: 'var(--g-teal)', color: '#fff', border: 'none', borderRadius: 30, padding: '11px 24px', fontWeight: 700, fontSize: 13.5, cursor: 'pointer' }}
-                >
-                  Track This Ticket
-                </button>
-              </div>
-            ) : (
-              <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
                 <h2 style={{ fontFamily: 'var(--font-head)', fontSize: 18, marginBottom: 4 }}>Tell Us How We Can Help</h2>
 
                 {/* Full Name — editable, pre-filled */}
@@ -271,7 +244,6 @@ export default function PatientPortal() {
                   {submitting ? 'Submitting...' : 'Submit Query →'}
                 </button>
               </form>
-            )}
           </div>
         )}
 

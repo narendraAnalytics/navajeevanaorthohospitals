@@ -19,6 +19,7 @@ import {
 } from '@/lib/api'
 
 type View = 'queue' | 'all' | 'escalations'
+type EmailState = 'idle' | 'loading' | 'success' | 'error'
 
 const urgencyColor = { low: '#10B981', medium: '#F59E0B', high: '#EF4444' }
 const routeColor = { auto_reply: '#0D9488', web_search: '#3B82F6', escalate: '#EF4444' }
@@ -36,6 +37,122 @@ function Badge({ label, color }: { label: string; color: string }) {
   )
 }
 
+// Render bold markdown (**text**) as <strong>
+function RichText({ text }: { text: string }) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g)
+  return (
+    <>
+      {parts.map((p, i) =>
+        p.startsWith('**') && p.endsWith('**')
+          ? <strong key={i}>{p.slice(2, -2)}</strong>
+          : <span key={i}>{p}</span>
+      )}
+    </>
+  )
+}
+
+const BRIEF_HEADERS = [
+  'ISSUE SUMMARY', 'PATIENT HISTORY', 'SAFETY FLAGS TRIGGERED',
+  'SUGGESTED ACTION', 'PATIENT SENTIMENT', 'URGENCY',
+]
+
+function parseEscalationBrief(text: string): { section: string; content: string }[] {
+  const results: { section: string; content: string }[] = []
+  const pattern = new RegExp(`(${BRIEF_HEADERS.join('|')})`, 'g')
+  const parts = text.split(pattern)
+  for (let i = 1; i < parts.length; i += 2) {
+    results.push({ section: parts[i].trim(), content: (parts[i + 1] ?? '').trim() })
+  }
+  return results.length > 0 ? results : [{ section: '', content: text }]
+}
+
+const URGENCY_EMOJI: Record<string, { color: string; bg: string }> = {
+  '🔴': { color: '#991B1B', bg: '#FEF2F2' },
+  '🟠': { color: '#92400E', bg: '#FFF7ED' },
+  '🟡': { color: '#78350F', bg: '#FFFBEB' },
+  '🟢': { color: '#065F46', bg: '#ECFDF5' },
+}
+
+function EscalationBriefPanel({ text }: { text: string }) {
+  const sections = parseEscalationBrief(text)
+
+  if (sections.length === 1 && sections[0].section === '') {
+    return (
+      <div style={{ background: '#FEF2F2', borderRadius: 12, padding: '14px 16px', fontSize: 13, color: '#1E293B', lineHeight: 1.65, border: '1px solid #FECACA', whiteSpace: 'pre-wrap' }}>
+        {text}
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {sections.map(({ section, content }) => {
+        if (section === 'URGENCY') {
+          const emojiKey = Object.keys(URGENCY_EMOJI).find(e => content.includes(e))
+          const style = emojiKey ? URGENCY_EMOJI[emojiKey] : { color: '#475569', bg: '#F8FAFC' }
+          return (
+            <div key={section} style={{ background: style.bg, border: `1px solid ${style.color}30`, borderRadius: 10, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '.05em', minWidth: 100 }}>Urgency</span>
+              <span style={{ fontSize: 14, fontWeight: 800, color: style.color }}>{content}</span>
+            </div>
+          )
+        }
+        if (section === 'SAFETY FLAGS TRIGGERED') {
+          const flags = content.split(/[\n,]/).map(f => f.trim()).filter(Boolean)
+          return (
+            <div key={section} style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 10, padding: '10px 14px' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#EF4444', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 8 }}>Safety Flags</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {flags.length > 0 && flags[0] !== 'None' && flags[0] !== 'N/A' ? flags.map((f, i) => (
+                  <span key={i} style={{ background: '#EF4444', color: '#fff', borderRadius: 20, padding: '3px 10px', fontSize: 11, fontWeight: 700 }}>{f}</span>
+                )) : (
+                  <span style={{ color: '#64748B', fontSize: 12 }}>None triggered</span>
+                )}
+              </div>
+            </div>
+          )
+        }
+        if (section === 'SUGGESTED ACTION') {
+          return (
+            <div key={section} style={{ background: '#FFFBEB', border: '1px solid #FCD34D', borderRadius: 10, padding: '10px 14px' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#78350F', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 6 }}>Suggested Action</div>
+              <div style={{ fontSize: 13, color: '#1E293B', fontWeight: 600, lineHeight: 1.5 }}>{content}</div>
+            </div>
+          )
+        }
+        return (
+          <div key={section} style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 10, padding: '10px 14px' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 5 }}>{section}</div>
+            <div style={{ fontSize: 13, color: '#334155', lineHeight: 1.55 }}>{content}</div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function AIDraftPanel({ draft, route }: { draft: string; route: string | null }) {
+  const isWeb = draft.startsWith('[Web Search Result]')
+  const isEscalation = draft.toLowerCase().startsWith('dear patient') || draft.toLowerCase().startsWith('dear ')
+  const borderColor = isEscalation ? '#EF4444' : isWeb ? '#3B82F6' : '#0D9488'
+  const badgeColor = isEscalation ? '#FEF2F2' : isWeb ? '#EFF6FF' : '#ECFDF5'
+  const badgeText = isEscalation ? 'Escalation Reply' : isWeb ? '🌐 Web Source' : '✦ AI Draft'
+  const badgeTextColor = isEscalation ? '#991B1B' : isWeb ? '#1D4ED8' : '#065F46'
+  const wordCount = draft.trim().split(/\s+/).length
+
+  return (
+    <div style={{ background: '#FAFAFA', borderRadius: 12, border: `1px solid ${borderColor}30`, borderLeft: `4px solid ${borderColor}`, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: badgeColor, borderBottom: `1px solid ${borderColor}20` }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: badgeTextColor }}>{badgeText}</span>
+        <span style={{ fontSize: 11, color: '#94A3B8' }}>~{wordCount} words</span>
+      </div>
+      <div style={{ padding: '14px 16px', fontSize: 13.5, color: '#1E293B', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+        <RichText text={draft} />
+      </div>
+    </div>
+  )
+}
+
 export default function AdminDashboard() {
   const [view, setView] = useState<View>('queue')
   const [queue, setQueue] = useState<TicketReview[]>([])
@@ -47,6 +164,8 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true)
   const [actionMsg, setActionMsg] = useState('')
   const [actionErr, setActionErr] = useState('')
+  const [emailState, setEmailState] = useState<EmailState>('idle')
+  const [emailError, setEmailError] = useState('')
 
   const loadQueue = async () => {
     setLoading(true)
@@ -65,6 +184,7 @@ export default function AdminDashboard() {
 
   const selectTicket = async (id: string) => {
     setActionMsg(''); setActionErr(''); setBrief(null); setEditMode(false)
+    setEmailState('idle'); setEmailError('')
     const t = await getTicketReview(id)
     setSelected(t)
     setEditText(t.ai_draft ?? '')
@@ -77,24 +197,34 @@ export default function AdminDashboard() {
 
   const handleApprove = async () => {
     if (!selected) return
+    setEmailState('loading')
+    setEmailError('')
     try {
       await approveTicket(selected.ticket_id)
       await sendEmail(selected.ticket_id)
+      setEmailState('success')
       flash('✓ Approved and email sent to patient.')
-      setSelected(null)
-      loadQueue()
-    } catch (e) { flash(String(e), true) }
+      setTimeout(() => { setSelected(null); setEmailState('idle'); loadQueue() }, 2500)
+    } catch (e) {
+      setEmailState('error')
+      setEmailError(e instanceof Error ? e.message : String(e))
+    }
   }
 
   const handleEdit = async () => {
     if (!selected || !editText.trim()) return
+    setEmailState('loading')
+    setEmailError('')
     try {
       await editTicket(selected.ticket_id, editText)
       await sendEmail(selected.ticket_id)
+      setEmailState('success')
       flash('✓ Edited reply sent to patient.')
-      setSelected(null)
-      loadQueue()
-    } catch (e) { flash(String(e), true) }
+      setTimeout(() => { setSelected(null); setEmailState('idle'); loadQueue() }, 2500)
+    } catch (e) {
+      setEmailState('error')
+      setEmailError(e instanceof Error ? e.message : String(e))
+    }
   }
 
   const handleEscalate = async () => {
@@ -250,7 +380,7 @@ export default function AdminDashboard() {
                   <h2 style={{ fontSize: 16, fontWeight: 700, color: '#0F172A', margin: '0 0 4px' }}>{selected.customer_name}</h2>
                   <div style={{ fontSize: 12, color: '#64748B' }}>{selected.customer_email}</div>
                 </div>
-                <button onClick={() => { setSelected(null); setBrief(null) }} style={{ background: '#F1F5F9', border: 'none', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', fontSize: 16, color: '#64748B' }}>×</button>
+                <button onClick={() => { setSelected(null); setBrief(null); setEmailState('idle') }} style={{ background: '#F1F5F9', border: 'none', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', fontSize: 16, color: '#64748B' }}>×</button>
               </div>
 
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
@@ -277,9 +407,7 @@ export default function AdminDashboard() {
                       style={{ width: '100%', padding: '12px 14px', borderRadius: 12, border: '1.5px solid #0D9488', fontSize: 13.5, lineHeight: 1.65, resize: 'vertical', outline: 'none', color: '#1E293B', boxSizing: 'border-box' }}
                     />
                   ) : (
-                    <div style={{ background: 'linear-gradient(140deg,#ECFDF5,#F0FDFA)', borderRadius: 12, padding: '14px 16px', fontSize: 13.5, color: '#1E293B', lineHeight: 1.65, border: '1px solid #A7F3D0', whiteSpace: 'pre-wrap' }}>
-                      {selected.ai_draft}
-                    </div>
+                    <AIDraftPanel draft={selected.ai_draft} route={selected.route} />
                   )}
                 </div>
               )}
@@ -287,9 +415,21 @@ export default function AdminDashboard() {
               {brief && (
                 <div style={{ marginBottom: 20 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: '#EF4444', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8 }}>Escalation Brief</div>
-                  <div style={{ background: '#FEF2F2', borderRadius: 12, padding: '14px 16px', fontSize: 13, color: '#1E293B', lineHeight: 1.65, border: '1px solid #FECACA', whiteSpace: 'pre-wrap' }}>
-                    {brief.brief}
-                  </div>
+                  <EscalationBriefPanel text={brief.brief} />
+                </div>
+              )}
+
+              {/* Email send feedback */}
+              {emailState === 'error' && (
+                <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 10, padding: '10px 14px', marginBottom: 12, fontSize: 13, color: '#991B1B' }}>
+                  ⚠ Email failed: {emailError}
+                  <button onClick={() => setEmailState('idle')} style={{ marginLeft: 10, fontSize: 11, color: '#EF4444', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700 }}>Retry</button>
+                </div>
+              )}
+
+              {emailState === 'success' && (
+                <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: 10, padding: '10px 14px', marginBottom: 12, fontSize: 13, color: '#065F46', fontWeight: 600 }}>
+                  ✓ Email delivered to patient successfully
                 </div>
               )}
 
@@ -300,19 +440,34 @@ export default function AdminDashboard() {
                     <>
                       <button
                         onClick={handleApprove}
-                        style={{ background: 'linear-gradient(120deg,#13B5A4,#0E9F6E)', color: '#fff', border: 'none', borderRadius: 12, padding: '12px 0', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
+                        disabled={emailState === 'loading' || emailState === 'success'}
+                        style={{
+                          background: emailState === 'success' ? '#10B981' : emailState === 'loading' ? '#6B7280' : 'linear-gradient(120deg,#13B5A4,#0E9F6E)',
+                          color: '#fff', border: 'none', borderRadius: 12, padding: '12px 0',
+                          fontWeight: 700, fontSize: 14, cursor: emailState === 'loading' || emailState === 'success' ? 'not-allowed' : 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                          transition: 'background .3s',
+                        }}
                       >
-                        ✓ Approve & Send Email
+                        {emailState === 'loading' ? (
+                          <><Spinner /> Sending Email…</>
+                        ) : emailState === 'success' ? (
+                          '✓ Email Sent'
+                        ) : (
+                          '✓ Approve & Send Email'
+                        )}
                       </button>
                       <button
                         onClick={() => setEditMode(true)}
-                        style={{ background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE', borderRadius: 12, padding: '12px 0', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
+                        disabled={emailState === 'loading'}
+                        style={{ background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE', borderRadius: 12, padding: '12px 0', fontWeight: 700, fontSize: 14, cursor: 'pointer', opacity: emailState === 'loading' ? .5 : 1 }}
                       >
                         ✎ Edit Reply & Send
                       </button>
                       <button
                         onClick={handleEscalate}
-                        style={{ background: '#FEF2F2', color: '#EF4444', border: '1px solid #FECACA', borderRadius: 12, padding: '12px 0', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
+                        disabled={emailState === 'loading'}
+                        style={{ background: '#FEF2F2', color: '#EF4444', border: '1px solid #FECACA', borderRadius: 12, padding: '12px 0', fontWeight: 700, fontSize: 14, cursor: 'pointer', opacity: emailState === 'loading' ? .5 : 1 }}
                       >
                         ↑ View Escalation Brief
                       </button>
@@ -321,12 +476,25 @@ export default function AdminDashboard() {
                     <>
                       <button
                         onClick={handleEdit}
-                        style={{ background: 'linear-gradient(120deg,#3B82F6,#2563EB)', color: '#fff', border: 'none', borderRadius: 12, padding: '12px 0', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
+                        disabled={emailState === 'loading' || emailState === 'success'}
+                        style={{
+                          background: emailState === 'success' ? '#10B981' : emailState === 'loading' ? '#6B7280' : 'linear-gradient(120deg,#3B82F6,#2563EB)',
+                          color: '#fff', border: 'none', borderRadius: 12, padding: '12px 0',
+                          fontWeight: 700, fontSize: 14, cursor: emailState === 'loading' || emailState === 'success' ? 'not-allowed' : 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                        }}
                       >
-                        ✓ Send Edited Reply
+                        {emailState === 'loading' ? (
+                          <><Spinner /> Sending Email…</>
+                        ) : emailState === 'success' ? (
+                          '✓ Email Sent'
+                        ) : (
+                          '✓ Send Edited Reply'
+                        )}
                       </button>
                       <button
-                        onClick={() => { setEditMode(false); setEditText(selected.ai_draft ?? '') }}
+                        onClick={() => { setEditMode(false); setEditText(selected.ai_draft ?? ''); setEmailState('idle') }}
+                        disabled={emailState === 'loading'}
                         style={{ background: '#F1F5F9', color: '#475569', border: 'none', borderRadius: 12, padding: '12px 0', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}
                       >
                         Cancel
@@ -348,6 +516,16 @@ export default function AdminDashboard() {
           )}
         </div>
       </main>
+
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg) } }
+      `}</style>
     </div>
+  )
+}
+
+function Spinner() {
+  return (
+    <span style={{ width: 16, height: 16, border: '2.5px solid rgba(255,255,255,.3)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block', animation: 'spin .7s linear infinite', flexShrink: 0 }} />
   )
 }

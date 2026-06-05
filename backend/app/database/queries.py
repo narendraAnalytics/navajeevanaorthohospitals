@@ -241,3 +241,14 @@ async def log_agent_decision(
         json.dumps(input_data or {}),
         json.dumps(output_data or {}),
     )
+
+
+async def get_agent_logs(pool: asyncpg.Pool, ticket_id: str) -> list[dict]:
+    rows = await pool.fetch(
+        """SELECT node_name, decision, confidence_score, created_at
+           FROM agent_logs
+           WHERE ticket_id = $1
+           ORDER BY created_at ASC""",
+        ticket_id,
+    )
+    return [dict(r) for r in rows]

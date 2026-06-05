@@ -1,7 +1,8 @@
 """Ticket router — patient-facing endpoints.
 
-POST /ticket  — submit a new ticket; graph runs in background, returns ticket_id immediately
-GET  /ticket/{id} — poll for result
+POST /ticket          — submit ticket; graph runs in background
+GET  /ticket/{id}     — poll for result
+GET  /ticket/{id}/logs — agent execution progress (for live pipeline view)
 """
 import logging
 from uuid import uuid4
@@ -9,8 +10,10 @@ from uuid import uuid4
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 
 from app.database.queries import (
+    get_agent_logs,
     get_ticket_review_detail,
     get_tickets_by_email,
+    log_agent_decision,
     save_escalation,
     save_reply,
     save_ticket,
@@ -22,21 +25,70 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Tickets"])
 
+_NODE_NAMES = {
+    "orchestrator", "intent_classifier", "safety_checker", "rag_retriever",
+    "confidence_evaluator", "tavily_search", "reply_writer",
+    "escalation_packager", "memory_manager",
+}
+
+
+def _node_decision(node: str, output: dict) -> str:
+    """Extract a human-readable decision string from a node's output dict."""
+    if node == "orchestrator":
+        return str(output.get("urgency") or "unknown")
+    if node == "intent_classifier":
+        clsf = output.get("classifications") or []
+        return clsf[0].get("category", "unknown") if clsf else "unknown"
+    if node == "safety_checker":
+        flags = output.get("safety_flags") or []
+        return f"flagged:{len(flags)}" if flags else "safe"
+    if node == "rag_retriever":
+        results = output.get("rag_results") or []
+        if results:
+            best = max((r.get("similarity_score", 0) for r in results), default=0)
+            return f"score:{best:.2f}"
+        return "no_results"
+    if node == "confidence_evaluator":
+        return str(output.get("route_decision") or "unknown")
+    if node == "tavily_search":
+        return str(output.get("route_decision") or "searched")
+    if node == "reply_writer":
+        return str(output.get("final_status") or "drafted")
+    if node == "escalation_packager":
+        return "escalated"
+    if node == "memory_manager":
+        return "stored"
+    return "done"
+
 
 async def _run_graph(pool, graph, ticket_id: str, state: dict) -> None:
-    """Background task: invoke LangGraph, persist results to DB."""
+    """Background task: stream LangGraph events, log each node, persist results."""
     try:
-        result = await graph.ainvoke(
-            state,
-            config={"configurable": {"thread_id": ticket_id}},
-        )
-        final_status = result.get("final_status") or "pending_review"
+        config = {"configurable": {"thread_id": ticket_id}}
+
+        # Stream node-level updates so we can write agent_logs in real time
+        async for chunk in graph.astream(state, config=config, stream_mode="updates"):
+            for node_name, output in chunk.items():
+                if node_name in _NODE_NAMES and isinstance(output, dict):
+                    decision = _node_decision(node_name, output)
+                    confidence = output.get("confidence_score")
+                    try:
+                        await log_agent_decision(
+                            pool, ticket_id, node_name, decision, confidence, None, None
+                        )
+                    except Exception as log_err:
+                        logger.warning(f"[Graph] Log write failed for {node_name}: {log_err}")
+
+        # Read final accumulated state from checkpointer
+        snapshot = await graph.aget_state(config)
+        result: dict = dict(snapshot.values) if snapshot and snapshot.values else {}
+
         await update_ticket_status(
             pool,
             ticket_id,
             urgency=result.get("urgency"),
-            category=result.get("classifications", [{}])[0].get("category") if result.get("classifications") else None,
-            sentiment=result.get("classifications", [{}])[0].get("sentiment") if result.get("classifications") else None,
+            category=(result.get("classifications") or [{}])[0].get("category") if result.get("classifications") else None,
+            sentiment=(result.get("classifications") or [{}])[0].get("sentiment") if result.get("classifications") else None,
             confidence_score=result.get("confidence_score"),
             route_decision=result.get("route_decision"),
             final_status="pending_review",
@@ -50,7 +102,7 @@ async def _run_graph(pool, graph, ticket_id: str, state: dict) -> None:
                 brief=result["escalation_brief"],
                 reason=result.get("escalation_reason") or "",
             )
-        logger.info(f"[Graph] Ticket {ticket_id} done — status=pending_review, route={result.get('route_decision')}")
+        logger.info(f"[Graph] Ticket {ticket_id} done — route={result.get('route_decision')}")
     except Exception as exc:
         logger.error(f"[Graph] Ticket {ticket_id} failed: {exc}", exc_info=True)
         await update_ticket_status(pool, ticket_id, final_status="error")
@@ -110,6 +162,29 @@ async def get_tickets_by_email_route(email: str, request: Request):
     pool = request.app.state.pool
     rows = await get_tickets_by_email(pool, email)
     return rows
+
+
+@router.get("/ticket/{ticket_id}/logs", tags=["Tickets"])
+async def get_ticket_logs(ticket_id: str, request: Request):
+    """Return agent execution logs for live pipeline view. Poll until status != 'processing'."""
+    pool = request.app.state.pool
+    logs = await get_agent_logs(pool, ticket_id)
+    row = await get_ticket_review_detail(pool, ticket_id)
+    return {
+        "ticket_id": ticket_id,
+        "status": row.get("final_status") or "processing" if row else "processing",
+        "route_decision": row.get("route_decision") if row else None,
+        "confidence_score": row.get("confidence_score") if row else None,
+        "logs": [
+            {
+                "node_name": r["node_name"],
+                "decision": r["decision"],
+                "confidence_score": r["confidence_score"],
+                "created_at": r["created_at"].isoformat() if r.get("created_at") else None,
+            }
+            for r in logs
+        ],
+    }
 
 
 @router.get("/ticket/{ticket_id}", response_model=TicketDetail, tags=["Tickets"])
