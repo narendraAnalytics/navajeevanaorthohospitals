@@ -776,13 +776,6 @@ export default function AdminDashboard() {
                         </div>
                       )}
 
-                      {/* Escalation brief */}
-                      {brief && (
-                        <div style={{ background: '#FFF5F5', borderRadius: 14, border: '1px solid #FECACA', padding: '20px 24px' }}>
-                          <div style={{ fontSize: 10, fontWeight: 700, color: '#EF4444', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 12 }}>Escalation Brief</div>
-                          <EscalationBriefPanel text={brief.brief} />
-                        </div>
-                      )}
                     </div>
 
                     {/* RIGHT — meta + actions */}
@@ -837,10 +830,12 @@ export default function AdminDashboard() {
                                 style={{ background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE', borderRadius: 10, padding: '11px 0', fontWeight: 700, fontSize: 13.5, cursor: 'pointer' }}>
                                 ✎ Edit Reply &amp; Send
                               </button>
-                              <button onClick={handleEscalate} disabled={emailState === 'loading'}
-                                style={{ background: '#FEF2F2', color: '#EF4444', border: '1px solid #FECACA', borderRadius: 10, padding: '11px 0', fontWeight: 700, fontSize: 13.5, cursor: 'pointer' }}>
-                                ↑ View Escalation Brief
-                              </button>
+                              {(selected.route === 'escalate' || selected.status === 'escalated' || selected.status === 'escalated_to_senior') && !brief && (
+                                <button onClick={handleEscalate} disabled={emailState === 'loading'}
+                                  style={{ background: '#FEF2F2', color: '#EF4444', border: '1px solid #FECACA', borderRadius: 10, padding: '11px 0', fontWeight: 700, fontSize: 13.5, cursor: 'pointer' }}>
+                                  ↑ View Escalation Brief
+                                </button>
+                              )}
                             </>
                           ) : (
                             <>
@@ -863,6 +858,14 @@ export default function AdminDashboard() {
                           style={{ background: '#F8FAFC', color: '#475569', border: '1px solid #E2E8F0', borderRadius: 10, padding: '11px 0', fontWeight: 700, fontSize: 13.5, cursor: 'pointer', width: '100%' }}>
                           Mark as Resolved
                         </button>
+                      )}
+
+                      {/* Escalation brief — right sidebar */}
+                      {brief && (
+                        <div style={{ background: '#FFF5F5', borderRadius: 14, border: '1px solid #FECACA', padding: '18px 20px' }}>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: '#EF4444', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 10 }}>Escalation Brief</div>
+                          <EscalationBriefPanel text={brief.brief} />
+                        </div>
                       )}
                     </div>
                   </div>
