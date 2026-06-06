@@ -111,10 +111,12 @@ async def get_ticket_review_detail(pool: asyncpg.Pool, ticket_id: str) -> dict |
                   t.final_status, t.final_status AS status,
                   t.reviewed_by, t.created_at, t.updated_at,
                   r.reply_text AS ai_draft, r.reply_type,
+                  re.reply_text AS edited_reply,
                   rfs.reply_text AS final_sent_reply,
                   e.escalation_brief, e.escalation_reason, e.assigned_to
            FROM tickets t
            LEFT JOIN replies r ON r.ticket_id = t.id AND r.reply_type = 'ai_draft'
+           LEFT JOIN replies re ON re.ticket_id = t.id AND re.reply_type = 'edited_reply'
            LEFT JOIN replies rfs ON rfs.ticket_id = t.id AND rfs.reply_type = 'final_sent_reply'
            LEFT JOIN escalations e ON e.ticket_id = t.id
            WHERE t.id = $1""",

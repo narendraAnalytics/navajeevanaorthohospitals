@@ -38,6 +38,7 @@ class TicketReviewDetail(BaseModel):
     status: str
     final_status: Optional[str] = None
     ai_draft: Optional[str] = None
+    edited_reply: Optional[str] = None
     final_sent_reply: Optional[str] = None
     escalation_brief: Optional[str] = None
     escalation_reason: Optional[str] = None
