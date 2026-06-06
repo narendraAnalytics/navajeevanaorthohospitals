@@ -190,7 +190,7 @@ export default function AdminLogin() {
         .adm-right {
           background: #F8FAFB;
           display: flex; align-items: flex-start; justify-content: center;
-          padding: 64px 32px 24px;
+          padding: 20px 32px 24px;
           position: relative; overflow-y: auto;
         }
         .adm-right::-webkit-scrollbar { width: 4px; }
@@ -343,7 +343,7 @@ export default function AdminLogin() {
         .adm-sec-note p { font-size: 11.5px; color: #A0B4C0; font-weight: 500; line-height: 1.5; }
 
         .adm-back {
-          position: absolute; top: 22px; left: 26px;
+          position: absolute; top: 22px; left: 2px;
           display: inline-flex; align-items: center; gap: 6px;
           font-size: 12.5px; font-weight: 600; color: #7E93A7;
           text-decoration: none; padding: 8px 12px; border-radius: 30px;
