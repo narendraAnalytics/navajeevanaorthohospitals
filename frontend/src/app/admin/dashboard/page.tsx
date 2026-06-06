@@ -636,181 +636,236 @@ export default function AdminDashboard() {
 
           {/* REVIEW QUEUE */}
           {dashView === 'queue' && (
-            <div style={{ display: 'flex', flex: 1, height: '100%' }}>
-              <div style={{ flex: selected ? '0 0 380px' : 1, overflowY: 'auto', borderRight: selected ? '1px solid #E2E8F0' : 'none' }}>
-                <div style={{ background: '#fff', borderBottom: '1px solid #E2E8F0', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div>
-                    <h2 style={{ fontSize: 16, fontWeight: 700, color: '#0F172A', margin: 0 }}>Review Queue</h2>
-                    <p style={{ fontSize: 12, color: '#64748B', margin: '2px 0 0' }}>AI-drafted replies awaiting your approval</p>
-                  </div>
-                  <button onClick={loadQueue} style={{ background: '#F1F5F9', border: 'none', borderRadius: 8, padding: '7px 14px', fontSize: 12, color: '#475569', cursor: 'pointer', fontWeight: 600 }}>↻ Refresh</button>
-                </div>
-                {loading ? (
-                  <div style={{ padding: 40, textAlign: 'center', color: '#94A3B8' }}>Loading...</div>
-                ) : queue.length === 0 ? (
-                  <div style={{ padding: 60, textAlign: 'center' }}>
-                    <div style={{ fontSize: 40, marginBottom: 16 }}>✓</div>
-                    <div style={{ fontSize: 16, fontWeight: 700, color: '#0F172A', marginBottom: 8 }}>Queue is clear!</div>
-                    <div style={{ fontSize: 13, color: '#64748B' }}>All tickets reviewed. Great work.</div>
-                  </div>
-                ) : (
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
-                        {['Ticket ID','Patient / Email','Phone','Query Preview','Urgency','AI Decision','Status','Submitted','Action'].map(h => (
-                          <th key={h} style={{ padding: '10px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '.04em', whiteSpace: 'nowrap' }}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {queue.map(t => {
-                        const isSelected = selected?.ticket_id === t.ticket_id
-                        const created = new Date(t.created_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-                        const preview = t.original_message ? t.original_message.slice(0, 55) + (t.original_message.length > 55 ? '…' : '') : '—'
-                        const statusActionLabel: Record<string, { label: string; color: string }> = {
-                          pending_review: { label: 'Awaiting Review', color: '#3B82F6' },
-                          approved: { label: 'Approved', color: '#10B981' },
-                          emailed: { label: 'Email Sent ✓', color: '#10B981' },
-                          escalated: { label: 'Escalated', color: '#EF4444' },
-                          escalated_to_senior: { label: 'Escalated', color: '#EF4444' },
-                          resolved: { label: 'Resolved', color: '#6B7280' },
-                          processing: { label: 'Processing…', color: '#F59E0B' },
-                        }
-                        const sa = statusActionLabel[t.status] ?? { label: t.status, color: '#6B7280' }
-                        return (
-                          <tr key={t.ticket_id} onClick={() => selectTicket(t.ticket_id)} style={{ borderBottom: '1px solid #F1F5F9', cursor: 'pointer', background: isSelected ? '#F0FDFA' : '#fff' }}>
-                            <td style={{ padding: '10px 12px', fontSize: 11, fontWeight: 700, color: '#0D9488', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>{t.ticket_id.slice(0, 12)}…</td>
-                            <td style={{ padding: '10px 12px', minWidth: 140 }}>
-                              <div style={{ fontSize: 12.5, fontWeight: 700, color: '#0F172A' }}>{t.customer_name}</div>
-                              <div style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>{t.customer_email}</div>
-                            </td>
-                            <td style={{ padding: '10px 12px', fontSize: 11.5, color: '#475569' }}>{t.customer_phone ?? '—'}</td>
-                            <td style={{ padding: '10px 12px', fontSize: 12, color: '#334155', maxWidth: 200 }}>{preview}</td>
-                            <td style={{ padding: '10px 12px' }}><Badge label={t.urgency} color={urgencyColor[t.urgency] ?? '#6B7280'} /></td>
-                            <td style={{ padding: '10px 12px' }}>{t.route ? <Badge label={routeLabel[t.route] ?? t.route} color={routeColor[t.route] ?? '#6B7280'} /> : <span style={{ color: '#94A3B8', fontSize: 11 }}>Processing</span>}</td>
-                            <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
-                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: `${sa.color}15`, color: sa.color, border: `1px solid ${sa.color}40`, borderRadius: 20, padding: '3px 9px', fontSize: 11, fontWeight: 700 }}>
-                                <span style={{ width: 6, height: 6, borderRadius: '50%', background: sa.color, flexShrink: 0 }} />
-                                {sa.label}
-                              </span>
-                            </td>
-                            <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748B', whiteSpace: 'nowrap' }}>{created}</td>
-                            <td style={{ padding: '10px 12px' }}>
-                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#F0FDFA', color: '#0D9488', border: '1px solid #99F6E4', borderRadius: 8, padding: '4px 10px', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>
-                                Review →
-                              </span>
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-
-              {/* Detail panel */}
-              {selected && (
-                <div style={{ flex: 1, padding: 28, overflowY: 'auto' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
+              {!selected ? (
+                /* ── QUEUE LIST ── */
+                <div style={{ flex: 1, overflowY: 'auto' }}>
+                  <div style={{ background: '#fff', borderBottom: '1px solid #E2E8F0', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div>
-                      <h2 style={{ fontSize: 16, fontWeight: 700, color: '#0F172A', margin: '0 0 4px' }}>{selected.customer_name}</h2>
-                      <div style={{ fontSize: 12, color: '#64748B' }}>{selected.customer_email}</div>
-                      {selected.customer_phone && <div style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>📞 {selected.customer_phone}</div>}
+                      <h2 style={{ fontSize: 16, fontWeight: 700, color: '#0F172A', margin: 0 }}>Review Queue</h2>
+                      <p style={{ fontSize: 12, color: '#64748B', margin: '2px 0 0' }}>AI-drafted replies awaiting your approval</p>
                     </div>
-                    <button onClick={() => { setSelected(null); setBrief(null); setEmailState('idle') }} style={{ background: '#F1F5F9', border: 'none', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', fontSize: 16, color: '#64748B' }}>×</button>
+                    <button onClick={loadQueue} style={{ background: '#F1F5F9', border: 'none', borderRadius: 8, padding: '7px 14px', fontSize: 12, color: '#475569', cursor: 'pointer', fontWeight: 600 }}>↻ Refresh</button>
                   </div>
-                  {/* Meta info row */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, marginBottom: 16, background: '#F8FAFC', borderRadius: 12, padding: '10px 14px', border: '1px solid #E2E8F0' }}>
-                    <div><div style={{ fontSize: 9.5, color: '#94A3B8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 3 }}>Urgency</div><Badge label={selected.urgency} color={urgencyColor[selected.urgency] ?? '#6B7280'} /></div>
-                    <div><div style={{ fontSize: 9.5, color: '#94A3B8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 3 }}>AI Decision</div>{selected.route ? <Badge label={routeLabel[selected.route] ?? selected.route} color={routeColor[selected.route] ?? '#6B7280'} /> : <span style={{ fontSize: 11, color: '#94A3B8' }}>—</span>}</div>
-                    <div><div style={{ fontSize: 9.5, color: '#94A3B8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 3 }}>Status</div><Badge label={(selected.status ?? '').replace(/_/g, ' ')} color={statusColor[selected.status ?? ''] ?? '#6B7280'} /></div>
-                    <div><div style={{ fontSize: 9.5, color: '#94A3B8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 3 }}>Confidence</div><span style={{ fontSize: 13, fontWeight: 800, color: '#0F172A' }}>{selected.confidence_score != null ? (selected.confidence_score * 100).toFixed(0) + '%' : '—'}</span></div>
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16, fontSize: 11.5, color: '#475569' }}>
-                    <div style={{ background: '#F8FAFC', borderRadius: 10, padding: '8px 12px', border: '1px solid #E2E8F0' }}>
-                      <span style={{ color: '#94A3B8', fontWeight: 700, fontSize: 10, textTransform: 'uppercase', letterSpacing: '.05em' }}>Ticket ID</span>
-                      <div style={{ fontFamily: 'monospace', fontWeight: 700, color: '#0D9488', marginTop: 3 }}>{selected.ticket_id}</div>
+                  {loading ? (
+                    <div style={{ padding: 40, textAlign: 'center', color: '#94A3B8' }}>Loading...</div>
+                  ) : queue.length === 0 ? (
+                    <div style={{ padding: 60, textAlign: 'center' }}>
+                      <div style={{ fontSize: 40, marginBottom: 16 }}>✓</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: '#0F172A', marginBottom: 8 }}>Queue is clear!</div>
+                      <div style={{ fontSize: 13, color: '#64748B' }}>All tickets reviewed. Great work.</div>
                     </div>
-                    <div style={{ background: '#F8FAFC', borderRadius: 10, padding: '8px 12px', border: '1px solid #E2E8F0' }}>
-                      <span style={{ color: '#94A3B8', fontWeight: 700, fontSize: 10, textTransform: 'uppercase', letterSpacing: '.05em' }}>Submitted</span>
-                      <div style={{ fontWeight: 600, color: '#334155', marginTop: 3 }}>{new Date(selected.created_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
-                    </div>
-                  </div>
-                  <div style={{ marginBottom: 20 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8 }}>Patient Query</div>
-                    <div style={{ background: '#F8FAFC', borderRadius: 12, padding: '14px 16px', fontSize: 13.5, color: '#1E293B', lineHeight: 1.65, border: '1px solid #E2E8F0', whiteSpace: 'pre-wrap' }}>{selected.original_message}</div>
-                  </div>
-                  {selected.final_sent_reply && (
-                    <div style={{ marginBottom: 20 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: '#065F46', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8 }}>✓ Reply Sent to Patient</div>
-                      <div style={{ background: '#ECFDF5', borderRadius: 12, padding: '14px 16px', fontSize: 13, color: '#1E293B', lineHeight: 1.65, border: '1px solid #A7F3D0', whiteSpace: 'pre-wrap' }}>{selected.final_sent_reply}</div>
-                    </div>
+                  ) : (
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
+                          {['Ticket ID','Patient / Email','Phone','Query Preview','Urgency','AI Decision','Status','Submitted','Action'].map(h => (
+                            <th key={h} style={{ padding: '10px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '.04em', whiteSpace: 'nowrap' }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {queue.map(t => {
+                          const created = new Date(t.created_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                          const preview = t.original_message ? t.original_message.slice(0, 55) + (t.original_message.length > 55 ? '…' : '') : '—'
+                          const statusActionLabel: Record<string, { label: string; color: string }> = {
+                            pending_review: { label: 'Awaiting Review', color: '#3B82F6' },
+                            approved: { label: 'Approved', color: '#10B981' },
+                            emailed: { label: 'Email Sent ✓', color: '#10B981' },
+                            escalated: { label: 'Escalated', color: '#EF4444' },
+                            escalated_to_senior: { label: 'Escalated', color: '#EF4444' },
+                            resolved: { label: 'Resolved', color: '#6B7280' },
+                            processing: { label: 'Processing…', color: '#F59E0B' },
+                          }
+                          const sa = statusActionLabel[t.status] ?? { label: t.status, color: '#6B7280' }
+                          return (
+                            <tr key={t.ticket_id} onClick={() => selectTicket(t.ticket_id)} style={{ borderBottom: '1px solid #F1F5F9', cursor: 'pointer', background: '#fff' }}
+                              onMouseEnter={e => (e.currentTarget.style.background = '#F0FDFA')}
+                              onMouseLeave={e => (e.currentTarget.style.background = '#fff')}>
+                              <td style={{ padding: '10px 12px', fontSize: 11, fontWeight: 700, color: '#0D9488', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>{t.ticket_id.slice(0, 12)}…</td>
+                              <td style={{ padding: '10px 12px', minWidth: 140 }}>
+                                <div style={{ fontSize: 12.5, fontWeight: 700, color: '#0F172A' }}>{t.customer_name}</div>
+                                <div style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>{t.customer_email}</div>
+                              </td>
+                              <td style={{ padding: '10px 12px', fontSize: 11.5, color: '#475569' }}>{t.customer_phone ?? '—'}</td>
+                              <td style={{ padding: '10px 12px', fontSize: 12, color: '#334155', maxWidth: 200 }}>{preview}</td>
+                              <td style={{ padding: '10px 12px' }}><Badge label={t.urgency} color={urgencyColor[t.urgency] ?? '#6B7280'} /></td>
+                              <td style={{ padding: '10px 12px' }}>{t.route ? <Badge label={routeLabel[t.route] ?? t.route} color={routeColor[t.route] ?? '#6B7280'} /> : <span style={{ color: '#94A3B8', fontSize: 11 }}>Processing</span>}</td>
+                              <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: `${sa.color}15`, color: sa.color, border: `1px solid ${sa.color}40`, borderRadius: 20, padding: '3px 9px', fontSize: 11, fontWeight: 700 }}>
+                                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: sa.color, flexShrink: 0 }} />
+                                  {sa.label}
+                                </span>
+                              </td>
+                              <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748B', whiteSpace: 'nowrap' }}>{created}</td>
+                              <td style={{ padding: '10px 12px' }}>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#F0FDFA', color: '#0D9488', border: '1px solid #99F6E4', borderRadius: 8, padding: '4px 10px', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                                  Review →
+                                </span>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
                   )}
-                  {selected.ai_draft && (
-                    <div style={{ marginBottom: 24 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8 }}>AI Draft Reply</div>
-                      {editMode ? (
-                        <textarea aria-label="Edit reply text" placeholder="Edit the AI draft reply..." value={editText} onChange={e => setEditText(e.target.value)} rows={8}
-                          style={{ width: '100%', padding: '12px 14px', borderRadius: 12, border: '1.5px solid #0D9488', fontSize: 13.5, lineHeight: 1.65, resize: 'vertical', outline: 'none', color: '#1E293B', boxSizing: 'border-box' }} />
-                      ) : (
-                        <AIDraftPanel draft={selected.ai_draft} route={selected.route} />
-                      )}
-                    </div>
-                  )}
-                  {brief && (
-                    <div style={{ marginBottom: 20 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: '#EF4444', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8 }}>Escalation Brief</div>
-                      <EscalationBriefPanel text={brief.brief} />
-                    </div>
-                  )}
-                  {emailState === 'error' && (
-                    <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 10, padding: '10px 14px', marginBottom: 12, fontSize: 13, color: '#991B1B' }}>
-                      ⚠ Email failed: {emailError}
-                      <button onClick={() => setEmailState('idle')} style={{ marginLeft: 10, fontSize: 11, color: '#EF4444', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700 }}>Retry</button>
-                    </div>
-                  )}
-                  {emailState === 'success' && (
-                    <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: 10, padding: '10px 14px', marginBottom: 12, fontSize: 13, color: '#065F46', fontWeight: 600 }}>
-                      ✓ Email delivered to patient successfully
-                    </div>
-                  )}
-                  {selected.status !== 'emailed' && selected.status !== 'resolved' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      {!editMode ? (
-                        <>
-                          <button onClick={handleApprove} disabled={emailState === 'loading' || emailState === 'success'}
-                            style={{ background: emailState === 'success' ? '#10B981' : emailState === 'loading' ? '#6B7280' : 'linear-gradient(120deg,#13B5A4,#0E9F6E)', color: '#fff', border: 'none', borderRadius: 12, padding: '12px 0', fontWeight: 700, fontSize: 14, cursor: emailState === 'loading' || emailState === 'success' ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                            {emailState === 'loading' ? <><Spinner /> Sending Email…</> : emailState === 'success' ? '✓ Email Sent' : '✓ Approve & Send Email'}
-                          </button>
-                          <button onClick={() => setEditMode(true)} disabled={emailState === 'loading'}
-                            style={{ background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE', borderRadius: 12, padding: '12px 0', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
-                            ✎ Edit Reply &amp; Send
-                          </button>
-                          <button onClick={handleEscalate} disabled={emailState === 'loading'}
-                            style={{ background: '#FEF2F2', color: '#EF4444', border: '1px solid #FECACA', borderRadius: 12, padding: '12px 0', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
-                            ↑ View Escalation Brief
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button onClick={handleEdit} disabled={emailState === 'loading' || emailState === 'success'}
-                            style={{ background: emailState === 'success' ? '#10B981' : emailState === 'loading' ? '#6B7280' : 'linear-gradient(120deg,#3B82F6,#2563EB)', color: '#fff', border: 'none', borderRadius: 12, padding: '12px 0', fontWeight: 700, fontSize: 14, cursor: emailState === 'loading' || emailState === 'success' ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                            {emailState === 'loading' ? <><Spinner /> Sending Email…</> : emailState === 'success' ? '✓ Email Sent' : '✓ Send Edited Reply'}
-                          </button>
-                          <button onClick={() => { setEditMode(false); setEditText(selected.ai_draft ?? ''); setEmailState('idle') }} disabled={emailState === 'loading'}
-                            style={{ background: '#F1F5F9', color: '#475569', border: 'none', borderRadius: 12, padding: '12px 0', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
-                            Cancel
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  )}
-                  {(selected.status === 'escalated' || selected.status === 'escalated_to_senior') && (
-                    <button onClick={() => handleResolve(selected.ticket_id)}
-                      style={{ width: '100%', background: '#F1F5F9', color: '#475569', border: 'none', borderRadius: 12, padding: '12px 0', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
-                      Mark as Resolved
+                </div>
+              ) : (
+                /* ── FULL-WIDTH DETAIL VIEW ── */
+                <div style={{ flex: 1, overflowY: 'auto', background: '#F1F5F9' }}>
+                  {/* Top bar */}
+                  <div style={{ background: '#fff', borderBottom: '1px solid #E2E8F0', padding: '12px 24px', display: 'flex', alignItems: 'center', gap: 12, position: 'sticky', top: 0, zIndex: 10 }}>
+                    <button onClick={() => { setSelected(null); setBrief(null); setEmailState('idle'); setEditMode(false) }}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#F1F5F9', border: 'none', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 700, color: '#475569', cursor: 'pointer' }}>
+                      ← Back to Queue
                     </button>
-                  )}
+                    <span style={{ fontFamily: 'monospace', fontSize: 11, fontWeight: 700, color: '#0D9488', background: '#F0FDFA', border: '1px solid #99F6E4', borderRadius: 6, padding: '3px 8px' }}>{selected.ticket_id}</span>
+                    <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Badge label={selected.urgency} color={urgencyColor[selected.urgency] ?? '#6B7280'} />
+                      {selected.route && <Badge label={routeLabel[selected.route] ?? selected.route} color={routeColor[selected.route] ?? '#6B7280'} />}
+                      <Badge label={(selected.status ?? '').replace(/_/g, ' ')} color={statusColor[selected.status ?? ''] ?? '#6B7280'} />
+                    </div>
+                  </div>
+
+                  {/* Two-column body */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 20, padding: '24px', maxWidth: 1180, margin: '0 auto' }}>
+
+                    {/* LEFT — patient info + content */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+                      {/* Patient header card */}
+                      <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #E2E8F0', padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 18 }}>
+                        <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'linear-gradient(135deg,#13B5A4,#0E9F6E)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <span style={{ fontSize: 20, fontWeight: 800, color: '#fff' }}>{(selected.customer_name ?? '?')[0].toUpperCase()}</span>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 18, fontWeight: 800, color: '#0F172A', marginBottom: 3 }}>{selected.customer_name ?? '—'}</div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, fontSize: 12.5, color: '#64748B' }}>
+                            <span>✉ {selected.customer_email}</span>
+                            {selected.customer_phone && <span>📞 {selected.customer_phone}</span>}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Patient query card */}
+                      <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #E2E8F0', padding: '20px 24px' }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 12 }}>Patient Query</div>
+                        <div style={{ fontSize: 14, color: '#1E293B', lineHeight: 1.75, whiteSpace: 'pre-wrap', minHeight: 60 }}>
+                          {selected.original_message || <span style={{ color: '#94A3B8', fontStyle: 'italic' }}>No message text available</span>}
+                        </div>
+                      </div>
+
+                      {/* Reply sent */}
+                      {selected.final_sent_reply && (
+                        <div style={{ background: '#ECFDF5', borderRadius: 14, border: '1px solid #A7F3D0', padding: '20px 24px' }}>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: '#065F46', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 12 }}>✓ Reply Sent to Patient</div>
+                          <div style={{ fontSize: 13.5, color: '#1E293B', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{selected.final_sent_reply}</div>
+                        </div>
+                      )}
+
+                      {/* AI draft / edit */}
+                      {selected.ai_draft && (
+                        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #E2E8F0', padding: '20px 24px' }}>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 12 }}>AI Draft Reply</div>
+                          {editMode ? (
+                            <textarea aria-label="Edit reply text" placeholder="Edit the AI draft reply..." value={editText} onChange={e => setEditText(e.target.value)} rows={10}
+                              style={{ width: '100%', padding: '14px 16px', borderRadius: 12, border: '1.5px solid #0D9488', fontSize: 13.5, lineHeight: 1.7, resize: 'vertical', outline: 'none', color: '#1E293B', boxSizing: 'border-box', fontFamily: 'inherit' }} />
+                          ) : (
+                            <AIDraftPanel draft={selected.ai_draft} route={selected.route} />
+                          )}
+                        </div>
+                      )}
+
+                      {/* Escalation brief */}
+                      {brief && (
+                        <div style={{ background: '#FFF5F5', borderRadius: 14, border: '1px solid #FECACA', padding: '20px 24px' }}>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: '#EF4444', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 12 }}>Escalation Brief</div>
+                          <EscalationBriefPanel text={brief.brief} />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* RIGHT — meta + actions */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+                      {/* Meta card */}
+                      <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #E2E8F0', padding: '18px 20px' }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 14 }}>Ticket Details</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                          {[
+                            { lbl: 'Urgency', val: <Badge label={selected.urgency} color={urgencyColor[selected.urgency] ?? '#6B7280'} /> },
+                            { lbl: 'AI Decision', val: selected.route ? <Badge label={routeLabel[selected.route] ?? selected.route} color={routeColor[selected.route] ?? '#6B7280'} /> : <span style={{ color: '#94A3B8', fontSize: 11 }}>—</span> },
+                            { lbl: 'Status', val: <Badge label={(selected.status ?? '').replace(/_/g, ' ')} color={statusColor[selected.status ?? ''] ?? '#6B7280'} /> },
+                            { lbl: 'Confidence', val: <span style={{ fontSize: 14, fontWeight: 800, color: '#0F172A' }}>{selected.confidence_score != null ? (selected.confidence_score * 100).toFixed(0) + '%' : '—'}</span> },
+                          ].map(({ lbl, val }) => (
+                            <div key={lbl} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                              <span style={{ fontSize: 11.5, color: '#64748B', fontWeight: 500 }}>{lbl}</span>
+                              {val}
+                            </div>
+                          ))}
+                          <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            <div style={{ fontSize: 10, color: '#94A3B8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.05em' }}>Submitted</div>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: '#334155' }}>{new Date(selected.created_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Email state messages */}
+                      {emailState === 'error' && (
+                        <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 12, padding: '12px 16px', fontSize: 12.5, color: '#991B1B' }}>
+                          ⚠ Email failed: {emailError}
+                          <button onClick={() => setEmailState('idle')} style={{ display: 'block', marginTop: 6, fontSize: 11, color: '#EF4444', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700, padding: 0 }}>Retry</button>
+                        </div>
+                      )}
+                      {emailState === 'success' && (
+                        <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: 12, padding: '12px 16px', fontSize: 12.5, color: '#065F46', fontWeight: 600 }}>
+                          ✓ Email delivered to patient
+                        </div>
+                      )}
+
+                      {/* Action buttons */}
+                      {selected.status !== 'emailed' && selected.status !== 'resolved' && (
+                        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #E2E8F0', padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 4 }}>Actions</div>
+                          {!editMode ? (
+                            <>
+                              <button onClick={handleApprove} disabled={emailState === 'loading' || emailState === 'success'}
+                                style={{ background: emailState === 'success' ? '#10B981' : emailState === 'loading' ? '#6B7280' : 'linear-gradient(120deg,#13B5A4,#0E9F6E)', color: '#fff', border: 'none', borderRadius: 10, padding: '11px 0', fontWeight: 700, fontSize: 13.5, cursor: emailState === 'loading' || emailState === 'success' ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                                {emailState === 'loading' ? <><Spinner /> Sending…</> : emailState === 'success' ? '✓ Email Sent' : '✓ Approve & Send Email'}
+                              </button>
+                              <button onClick={() => setEditMode(true)} disabled={emailState === 'loading'}
+                                style={{ background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE', borderRadius: 10, padding: '11px 0', fontWeight: 700, fontSize: 13.5, cursor: 'pointer' }}>
+                                ✎ Edit Reply &amp; Send
+                              </button>
+                              <button onClick={handleEscalate} disabled={emailState === 'loading'}
+                                style={{ background: '#FEF2F2', color: '#EF4444', border: '1px solid #FECACA', borderRadius: 10, padding: '11px 0', fontWeight: 700, fontSize: 13.5, cursor: 'pointer' }}>
+                                ↑ View Escalation Brief
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button onClick={handleEdit} disabled={emailState === 'loading' || emailState === 'success'}
+                                style={{ background: emailState === 'success' ? '#10B981' : emailState === 'loading' ? '#6B7280' : 'linear-gradient(120deg,#3B82F6,#2563EB)', color: '#fff', border: 'none', borderRadius: 10, padding: '11px 0', fontWeight: 700, fontSize: 13.5, cursor: emailState === 'loading' || emailState === 'success' ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                                {emailState === 'loading' ? <><Spinner /> Sending…</> : emailState === 'success' ? '✓ Email Sent' : '✓ Send Edited Reply'}
+                              </button>
+                              <button onClick={() => { setEditMode(false); setEditText(selected.ai_draft ?? ''); setEmailState('idle') }} disabled={emailState === 'loading'}
+                                style={{ background: '#F1F5F9', color: '#475569', border: 'none', borderRadius: 10, padding: '11px 0', fontWeight: 600, fontSize: 13.5, cursor: 'pointer' }}>
+                                Cancel
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Resolve button */}
+                      {(selected.status === 'escalated' || selected.status === 'escalated_to_senior') && (
+                        <button onClick={() => handleResolve(selected.ticket_id)}
+                          style={{ background: '#F8FAFC', color: '#475569', border: '1px solid #E2E8F0', borderRadius: 10, padding: '11px 0', fontWeight: 700, fontSize: 13.5, cursor: 'pointer', width: '100%' }}>
+                          Mark as Resolved
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
