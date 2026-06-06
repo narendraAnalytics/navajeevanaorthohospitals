@@ -31,6 +31,8 @@ ruff check app/
 black --check app/
 ```
 
+Test files: `tests/test_config.py`, `test_routes.py`, `test_safety_checker.py`, `test_graph_integration.py`, `test_groq_langgraph.py`, `test_memory_integration.py` (+ `conftest.py`).
+
 **Frontend** — run from `frontend/`:
 
 ```powershell
@@ -50,11 +52,15 @@ npm run db:studio  # Drizzle Studio — browse frontend_users table in browser
 [Orchestrator] → fan-out (parallel):
     [Intent Classifier]  [Safety Checker]  [RAG Retriever]
 → fan-in → [Confidence Evaluator] → 3 routes:
-    ├── auto_reply  → [Reply Writer]          (RAG score ≥ 0.70, no safety flags)
+    ├── auto_reply  → [Reply Writer]            (RAG score ≥ 0.70, no safety flags)
     ├── web_search  → [Tavily] → [Reply Writer] (RAG score < 0.70, Tavily ≥ 0.50)
-    └── escalate    → [Escalation Packager]   (any safety flag OR Tavily < 0.50)
+    └── escalate    → [Escalation Packager]     (any safety flag OR Tavily < 0.50)
 → [Memory Manager] → Human Review Queue
 ```
+
+Agent source files live in `backend/app/agent/nodes/` (one file per node). Graph wiring is in `backend/app/agent/graph.py`; routing conditions in `backend/app/agent/edges.py`; state definition in `backend/app/agent/state.py`.
+
+> **Graph node name:** the Confidence Evaluator is registered as `"confidence_eval"` in the graph but its `node_name` in `agent_logs` rows is `"confidence_evaluator"` — keep these in sync if renaming.
 
 - **Safety Checker** is keyword-only (no LLM). Never convert to LLM-based.
 - **Tavily** is a tool node — no LLM call inside it.
@@ -194,11 +200,12 @@ All frontend code lives in `frontend/`. Stack: Next.js 16 + React 19 + Tailwind 
 | Route | Purpose |
 |---|---|
 | `/` | Landing page — server component, imports client section components |
-| `/patient/intro` | Animated branded transition page — SVG ring + logo + checkmark + pills + progress bar; auto-redirects to `/patient` after 3.5 s. Shown to signed-in users from hero CTAs. |
-| `/patient` | **"Care Hub"** — submit ticket + track by ID or email. Floating pill nav (`position:fixed`, `border-radius:60px`, centered with side margins). Background: ivory `#FFFBF7` + orbs + dot-grid overlay. Hero badge, polished glass card, name+phone side-by-side, trust row footer. |
-| `/patient/processing/[ticket_id]` | Live agent pipeline visualization — polls `/ticket/{id}/logs` every 1.5 s, animates 8 nodes waiting→running→done, shows completion card |
+| `/patient/intro` | Branded entry animation — single ring-draw + teal checkmark badge + pills; auto-redirects to `/patient` after 4.15 s. Shown from hero CTAs when signed in. |
+| `/patient` | **"Care Hub"** — submit ticket + track by ID or email. Floating pill nav (`position:fixed`, `border-radius:60px`). Background: ivory `#FFFBF7` + orbs + dot-grid. |
+| `/patient/submit-transition/[ticket_id]` | AI handoff animation — dual counter-rotating SVG rings (coral outer, teal inner) + coral 🤖 badge + pills + progress bar; auto-redirects to `/patient/processing/[ticket_id]` after 3.85 s. Shown after successful form submission. |
+| `/patient/processing/[ticket_id]` | Live agent pipeline — polls `GET /ticket/{id}/logs` every 1.5 s; animates 9 nodes waiting→running→done with per-agent colored rings; shows glassmorphic completion card when done. |
 | `/admin` | Admin dashboard — HITL review queue, approve/edit/send email |
-| `/api/send-email` | Server-side Next.js route — sends HTML email via Resend, then marks backend ticket as `emailed` |
+| `/api/send-email` | Server-side route — sends HTML email via Resend, marks ticket as `emailed` |
 | `/api/auth/sync` | Clerk post-login hook — syncs user to `frontend_users` via `getOrCreateUser()` |
 
 **Key files:**
@@ -207,41 +214,32 @@ All frontend code lives in `frontend/`. Stack: Next.js 16 + React 19 + Tailwind 
 |---|---|
 | `frontend/src/app/globals.css` | All brand CSS — design tokens (CSS vars) + every landing page class |
 | `frontend/src/app/layout.tsx` | Sora + Plus Jakarta Sans fonts; `<ClerkProvider>` inside `<body>`; favicon via `metadata.icons` |
-| `frontend/src/proxy.ts` | Clerk middleware — protects `/patient` and `/admin`; public routes: `/`, `/sign-in`, `/sign-up`, `/api/auth/sync` |
-| `frontend/src/app/api/auth/sync/route.ts` | Calls `getOrCreateUser()` then redirects to `/` — Clerk redirects here after sign-in/up |
+| `frontend/src/proxy.ts` | Clerk middleware — protects all routes except `/`, `/sign-in`, `/sign-up`, `/api/auth/sync` |
+| `frontend/src/app/api/auth/sync/route.ts` | Calls `getOrCreateUser()` then redirects to `/patient` — Clerk redirects here after sign-in/up |
 | `frontend/src/lib/api.ts` | Typed fetch wrapper for all backend endpoints. `sendEmail()` posts to `/api/send-email` (Next.js route), not the backend directly. |
 | `frontend/src/lib/auth.ts` | `getOrCreateUser()` — lazy Clerk→Neon sync; creates `frontend_users` row on first login |
-| `frontend/src/db/schema.ts` | Drizzle schema for `frontend_users` (Clerk user ID, email, full_name, avatar_url) |
+| `frontend/src/db/schema.ts` | Drizzle schema for `frontend_users` |
 | `frontend/src/db/index.ts` | Neon HTTP client + Drizzle instance (`drizzle-orm/neon-http`) |
-| `frontend/src/components/Nav.tsx` | Glassmorphic nav — auth-aware: shows `Welcome [name]` + `<UserButton>` when signed in, hides Admin Portal |
-| `frontend/src/components/HeroSection.tsx` | 4-slide carousel + CTA buttons gated with `<SignInButton>` when signed out |
-| `frontend/src/components/RevealObserver.tsx` | IntersectionObserver — adds `.in` to `.reveal` elements on scroll; rendered once in `page.tsx` (client) |
-| `frontend/src/components/TestimonialsSection.tsx` | Testimonial carousel + AI feature card (client) |
-| `frontend/src/components/Footer.tsx` | 4-column dark footer (server) |
 
 **Design system notes:**
 - Brand CSS variables prefixed to avoid Tailwind 4 conflicts: `--bk-muted` (not `--muted`), `--brand-maxw` (not `--maxw`)
 - Landing page wrapper uses `className="brand-page"` — sets Sora/Jakarta fonts and ivory background
-- Tailwind is used for `/admin` and `/patient`; custom CSS classes for the landing page
-- Hero uses a 4-slide Cloudinary carousel (URLs in `images.txt` at project root). `next.config.ts` whitelists `res.cloudinary.com` in `images.remotePatterns`.
-- `.reveal` elements start `opacity:0` and animate in via `RevealObserver.tsx`. Must render `<RevealObserver />` in any page that uses `.reveal`.
-- **Hero carousel pitfall:** never put a changing `key` on the `<img>` elements — it forces React to remount them on every slide change, causing flickers and stalls. CSS `opacity` transition on `.hero-slide.active` handles crossfade; images stay in DOM permanently.
-- **No inline styles in `page.tsx`:** dynamic gradient/background values are expressed as CSS classes (`bg-gi-teal`, `bg-gi-warm`, `bg-gi-violet`, `bg-gi-coral`, `bg-sc-*`) defined in `globals.css`. Data arrays hold class name strings, not style values.
-- **Form accessibility:** all `<label>` elements must have `htmlFor` linked to the input's `id`. Standalone inputs (e.g. track input) need `aria-label`. Label styling uses `.pt-label` CSS class — not inline style.
+- Tailwind is used for `/admin` and `/patient`; custom CSS classes (inline `<style>`) for transition/animation pages
+- All animation pages share the same background: ivory `#FFFBF7` + three floating orbs (mint `#9DF0D6`, peach `#FFC9A3`/`#FFD0BB`) + `radial-gradient` dot-grid `::after`
+- Hero carousel pitfall: never put a changing `key` on `<img>` elements — CSS `opacity` transition on `.hero-slide.active` handles crossfade; images stay in DOM permanently
+- **Form accessibility:** all `<label>` elements must have `htmlFor`. Standalone inputs need `aria-label`. Label styling uses `.pt-label` CSS class.
 
 ## Clerk Auth (frontend)
 
 Clerk app ID: `app_3Eg6FM0HTdOA2XbRdiouZPemsef`. Auth is wired end-to-end:
 
-- **Middleware:** `src/proxy.ts` — this is the correct path for Next.js 16 with `src/` layout. File MUST be named `proxy.ts` per project convention (standard `middleware.ts` also works if needed).
+- **Middleware:** `src/proxy.ts` — MUST be named `proxy.ts` per project convention (not `middleware.ts`).
 - **Components:** use `<Show when="signed-in">` / `<Show when="signed-out">` — never deprecated `<SignedIn>` / `<SignedOut>`
-- **`<UserButton />`** — no props needed; sign-out redirect handled by `NEXT_PUBLIC_CLERK_AFTER_SIGN_OUT_URL` env var. `afterSignOutUrl` prop does not exist in Clerk v7.
+- **`<UserButton />`** — no props needed; sign-out redirect via `NEXT_PUBLIC_CLERK_AFTER_SIGN_OUT_URL`. `afterSignOutUrl` prop does not exist in Clerk v7.
 - **`<SignInButton>`** — use `forceRedirectUrl` prop, not `redirectUrl` (deprecated).
-- **Nav behavior:** signed-out → Patient Portal triggers sign-in + Admin Portal visible. Signed-in → Welcome [name] + UserButton (profile pic/sign-out dropdown) + Admin Portal hidden. "Patient Portal" label is a non-clickable `<span>` when signed in (not a link).
-- **CTA buttons** in `HeroSection.tsx`: "Book Appointment" and "Ask Our Care Team" are wrapped in `<SignInButton>` when signed out; both navigate to `/patient/intro` when signed in (intro transition page → auto-redirects to `/patient`). The `forceRedirectUrl` on `<SignInButton>` stays as `/patient` — no intro for first-login flow.
-- **Patient portal form:** email auto-filled from Clerk and locked (`readOnly`, `cursor: not-allowed`); full name pre-filled but editable. Uses `useUser()` + `useEffect` to populate after Clerk loads. Tickets are tracked by email address.
-- **Patient portal track tab:** mode toggle "By Ticket ID" / "By Email". Email mode pre-fills locked Clerk email and calls `GET /tickets/by-email/{email}`; shows a clickable list of all past tickets. ID mode unchanged. `getTicketsByEmail()` in `api.ts`.
-- **Submit flow:** after `POST /ticket` succeeds, the patient portal redirects to `/patient/processing/{ticket_id}` — not an inline success card. The processing page polls `GET /ticket/{id}/logs` and animates each of the 8 agents as they complete.
+- **Patient portal form:** email auto-filled from Clerk and locked (`readOnly`); full name pre-filled but editable. Uses `useUser()` + `useEffect`.
+- **Submit flow:** `POST /ticket` → redirect to `/patient/submit-transition/{ticket_id}` (AI handoff animation, ~3.85 s) → `/patient/processing/{ticket_id}` (live pipeline view).
+- **Track tab:** mode toggle "By Ticket ID" / "By Email". Email mode pre-fills locked Clerk email and calls `GET /tickets/by-email/{email}`.
 
 ## Deployment
 
@@ -252,7 +250,7 @@ Clerk app ID: `app_3Eg6FM0HTdOA2XbRdiouZPemsef`. Auth is wired end-to-end:
 
 **Backend (Render):** config in `render.yaml`. Uses `runtime: python` (not `env:`). Root dir = `backend`. Push to `main` → auto-deploy. Seed script runs on every build (upsert is idempotent).
 
-**Frontend (Vercel):** config in `vercel.json` (`{"framework": "nextjs"}`). Root directory set to `frontend` in Vercel dashboard. Push to `main` → auto-deploy. `rootDirectory` is a dashboard setting — do not add it to `vercel.json` (causes validation error).
+**Frontend (Vercel):** config in `vercel.json` (`{"framework": "nextjs"}`). Root directory set to `frontend` in Vercel dashboard — do not add `rootDirectory` to `vercel.json` (causes validation error).
 
 ## Build Progress
 
@@ -278,3 +276,5 @@ Clerk app ID: `app_3Eg6FM0HTdOA2XbRdiouZPemsef`. Auth is wired end-to-end:
 | Phase 7 — Next.js frontend: patient portal intro transition (/patient/intro) | ✅ |
 | Phase 7 — Next.js frontend: patient portal design enhancement (orbs, badge, grid, trust row) | ✅ |
 | Phase 7 — Next.js frontend: patient portal floating pill nav + "Care Hub" rename | ✅ |
+| Phase 7 — Next.js frontend: processing page redesign (colored rings, orbs, pill nav) | ✅ |
+| Phase 7 — Next.js frontend: submit-transition page (/patient/submit-transition/[id]) | ✅ |

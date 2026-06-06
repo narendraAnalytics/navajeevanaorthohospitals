@@ -1,34 +1,24 @@
- Pipeline display order (matches graph topology):
+Submit button spinner (patient.html)
 
- Row 1 (single):   orchestrator
- Row 2 (parallel): intent_classifier | safety_checker | rag_retriever
- Row 3 (single):   confidence_evaluator
- Row 4 (branch):   reply_writer  OR  tavily_search → reply_writer  OR  escalation_packager
- Row 5 (single):   memory_manager
+Indigo/purple → Teal gradient #13B5A4 → #0E9F6E (matches your brand)
+ai-transition.html (all blue/purple removed):
 
-  Display labels mapping:
+Outer spinning ring → Teal (#FFD0BB → #FF8A65 warm coral arc)
+Inner spinning ring → Teal (#6EE7B7 → #13B5A4)
+Ripple rings → Teal glow
+Glow halo → Teal
+AI badge → Coral (#FF8A65 → #FF6B7E)
+"Artho AI" headline gradient → Coral
+Progress bar → Teal (#13B5A4 → #0E9F6E → #6EE7B7)
+Pill 1 icon → Teal
+Pill 3 icon → Coral
+Background orb-b → Peach (was purple #C7BBFF)
+Deco stat card icon → Coral
+The full flow now: Submit → teal spinner → teal/coral overlay → ai-transition (teal+coral) → processing page
 
- ┌──────────────────────┬──────────────────────┬──────┐
- │      node_name       │    Display label     │ Icon │
- ├──────────────────────┼──────────────────────┼──────┤
- │ orchestrator         │ Intake Coordinator   │ 🏥   │
- ├──────────────────────┼──────────────────────┼──────┤
- │ intent_classifier    │ Intent Classifier    │ 🧠   │
- ├──────────────────────┼──────────────────────┼──────┤
- │ safety_checker       │ Safety Checker       │ 🛡️    │
- ├──────────────────────┼──────────────────────┼──────┤
- │ rag_retriever        │ Knowledge Base       │ 📚   │
- ├──────────────────────┼──────────────────────┼──────┤
- │ confidence_evaluator │ Confidence Evaluator │ ⚖️    │
- ├──────────────────────┼──────────────────────┼──────┤
- │ tavily_search        │ Web Search           │ 🌐   │
- ├──────────────────────┼──────────────────────┼──────┤
- │ reply_writer         │ Reply Writer         │ ✍️    │
- ├──────────────────────┼──────────────────────┼──────┤
- │ escalation_packager  │ Escalation Packager  │ 🚨   │
- ├──────────────────────┼──────────────────────┼──────┤
- │ memory_manager       │ Memory Manager       │ 💾   │
- └──────────────────────┴──────────────────────┴──────┘
-
-frontend/src/app/patient/processing/[ticket_id]/page.tsx │ CREATE: agent pipeline visualization  
-
+Progressive reveal — only Orchestrator shown first, then agents appear one group at a time
+Each agent is a colored circle with a spinning arc while running, solid green ring + checkmark when done
+9 unique colors per agent (teal, purple, orange, blue, amber, green, cyan, red, indigo)
+Connector lines fill with teal gradient as agents complete
+"Running in parallel" label appears when the 3 parallel agents start
+After all 8 finish (~12s) → glassmorphic completion card slides up with confidence bar + route badge + medical review note

@@ -1,0 +1,274 @@
+# Patient Query Flow — Navajeevana Ortho Hospitals
+# Complete end-to-end walkthrough: from submission to response
+
+---
+
+## 1. Patient Submits a Query
+
+**Where:** `/patient` — Care Hub page
+
+The patient fills in:
+- Full Name (pre-filled from Clerk account, editable)
+- Phone (optional)
+- Email (locked — pulled from Clerk, cannot be changed)
+- Query message (their question or concern)
+
+On submit, the frontend calls:
+  POST /ticket
+  Body: { customer_name, customer_email, customer_phone, message }
+
+The backend derives two fields server-side:
+- customer_id = customer_email  (links all tickets from same patient for long-term memory)
+- subject      = first 60 chars of message  (used as ticket title)
+
+The backend responds with { ticket_id: "NJH-2026-XXXX" } (HTTP 202).
+
+The frontend immediately redirects the patient to:
+  /patient/processing/{ticket_id}
+
+
+---
+
+## 2. Backend: Ticket Created & LangGraph Graph Started
+
+On receiving the POST /ticket request, the backend:
+1. Creates a row in the `tickets` table (status = "processing")
+2. Creates a row in `replies` table (blank — to be filled by agents)
+3. Starts the LangGraph 8-agent graph in the background using:
+     graph.astream(stream_mode="updates")
+   This streams each agent's output as it completes — real-time, not batch.
+4. Each agent writes a row to `agent_logs` as it finishes
+   (node_name, decision, confidence_score, created_at)
+
+The HTTP response returns immediately (202 Accepted) — the graph runs async.
+
+
+---
+
+## 3. Frontend: Live Pipeline Page
+
+**Where:** `/patient/processing/{ticket_id}`
+
+The page polls GET /ticket/{id}/logs every 1.5 seconds.
+
+The response includes:
+- status         (current ticket status)
+- logs           (list of completed agent logs)
+- route_decision (auto_reply | web_search | escalate — set after Confidence Evaluator)
+- confidence_score
+
+The page renders the 8-node pipeline and animates each node:
+  waiting → running → done
+as the agent_logs rows appear in real time.
+
+Polling stops automatically when status changes from "processing".
+Timeout fallback: if still processing after 120 seconds, shows a "Still working…" message.
+
+
+---
+
+## 4. The 8-Agent Pipeline (LangGraph StateGraph)
+
+Agents run in this order. Steps 2-4 run in PARALLEL:
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │                                                             │
+  │  [1] Orchestrator                                           │
+  │       Reads the patient message, sets urgency level         │
+  │       (low / medium / high)                                 │
+  │                                                             │
+  │       ↓ fan-out (parallel) ↓                               │
+  │                                                             │
+  │  [2] Intent Classifier    [3] Safety Checker   [4] RAG      │
+  │       Categorises the      Keyword-only scan    Retriever   │
+  │       query type           for safety flags     Searches    │
+  │       (appointment,        (no LLM — fast).     ChromaDB    │
+  │       billing, medical,    Flags if unsafe.     knowledge   │
+  │       general etc.)                             base across │
+  │                                                 9 doc       │
+  │                                                 collections.│
+  │                                                 Returns     │
+  │                                                 cosine      │
+  │                                                 similarity  │
+  │                                                 score.      │
+  │       ↓ fan-in ↓                                            │
+  │                                                             │
+  │  [5] Confidence Evaluator                                   │
+  │       Combines RAG score + safety flags to choose a route:  │
+  │                                                             │
+  │       Route A — auto_reply                                  │
+  │         RAG score ≥ 0.70 AND no safety flags               │
+  │         → Knowledge base has a good answer                  │
+  │         → Goes directly to Reply Writer                     │
+  │                                                             │
+  │       Route B — web_search                                  │
+  │         RAG score < 0.70 (KB doesn't have the answer)       │
+  │         → Tavily web search agent runs first                │
+  │         → If Tavily confidence ≥ 0.50 → Reply Writer        │
+  │         → If Tavily confidence < 0.50 → Escalate instead    │
+  │                                                             │
+  │       Route C — escalate                                    │
+  │         Safety flag triggered (e.g. emergency symptoms)     │
+  │         OR both RAG and Tavily confidence too low           │
+  │         → Escalation Packager prepares a staff brief        │
+  │                                                             │
+  │  [6a] Tavily Web Search   [6b] Reply Writer   [6c] Escal.  │
+  │        (Route B only)      (Routes A & B)      Packager    │
+  │        Searches the web    Drafts a response   (Route C)   │
+  │        for general info.   using KB or web     Prepares    │
+  │        Uses llama-3.3-70b  search results.     urgent      │
+  │        for synthesis.      Opens with brand    brief for   │
+  │                            prefix based on     senior      │
+  │                            route.              medical     │
+  │                                                staff.      │
+  │       ↓                                                     │
+  │                                                             │
+  │  [7] Memory Manager                                         │
+  │       Updates long-term patient memory in AsyncPostgresStore│
+  │       Keyed by customer_id (= patient email address)        │
+  │       Stores context for future visits by the same patient  │
+  │                                                             │
+  └─────────────────────────────────────────────────────────────┘
+
+After all agents complete, ticket status changes to "pending_review".
+
+
+---
+
+## 5. Knowledge Base (ChromaDB RAG)
+
+The RAG Retriever searches 9 document collections stored in ChromaDB:
+
+  appointment_faq           → Appointment booking, rescheduling
+  doctors_directory         → Doctor profiles, specialisations
+  escalation_rules          → Internal triage rules
+  hospital_information      → Location, hours, services, facilities
+  insurance_billing         → Insurance coverage, payment, billing
+  past_tickets              → Anonymised past patient Q&A (few-shot)
+  physiotherapy_rehabilitation → Physio services, exercises
+  post_surgery_care         → Recovery instructions, do's and don'ts
+  test_preparation          → Pre-procedure preparation instructions
+
+Documents are chunked on ## / ### headings. Similarity search uses cosine distance.
+
+If the RAG score is below 0.70, the Tavily web search agent is invoked to find
+general medical or health information from the public web.
+
+Reply prefix by route:
+  auto_reply  → "At Navajeevana Ortho Hospitals, ..."
+  web_search  → "[Web Search Result] The following is general information
+                 sourced from the web..."
+  escalate    → Urgency-aware patient acknowledgment (doctor will contact)
+
+
+---
+
+## 6. Status → pending_review
+
+Once the graph finishes, the ticket status is "pending_review".
+
+The patient's processing page now shows:
+  "Awaiting Medical Team Review"
+  "AI analysis complete — our team will review before sending."
+
+The admin dashboard (GET /review/pending) surfaces the ticket in the review queue.
+
+
+---
+
+## 7. Admin Review & Approval
+
+**Where:** `/admin` — Admin Dashboard
+
+The admin sees the ticket with:
+- Patient details (name, email, urgency)
+- The original patient message
+- The AI-drafted reply (from Reply Writer or Escalation Packager)
+- Confidence score and route taken
+
+Admin actions available:
+  PATCH /review/{id}/approve      → Mark approved as-is
+  PATCH /review/{id}/edit         → Save an edited version of the reply
+  POST  /review/{id}/send-email   → Send the final reply to the patient
+  PATCH /review/{id}/assign       → Assign ticket to a specific staff member
+
+When the admin clicks "Send Email":
+1. Frontend calls POST /api/send-email (Next.js server-side route)
+2. That route calls the Resend API with the HTML-formatted reply
+3. Email is sent from RESEND_FROM_EMAIL (verified sender domain)
+4. Backend ticket status updates to "emailed"
+
+
+---
+
+## 8. Patient Sees the Response (Auto-Update)
+
+After the pipeline completes, the processing page starts a background poll
+every 10 seconds using GET /ticket/{id}.
+
+When status changes to "approved" or "emailed":
+- The page fetches the full ticket review (original message + final reply)
+- The "Awaiting Review" card is replaced with a "Response Ready" card showing:
+
+  ┌──────────────────────────────────────────────┐
+  │  ✅  Response from Navajeevana Ortho Hospitals│
+  │  Ticket: NJH-2026-XXXX                       │
+  ├──────────────────────────────────────────────┤
+  │  Your Query                                   │
+  │  "Patient's original message here…"           │
+  ├──────────────────────────────────────────────┤
+  │  Our Response                                 │
+  │  At Navajeevana Ortho Hospitals, [reply]…    │
+  ├──────────────────────────────────────────────┤
+  │  📧 Reply also sent to patient@email.com      │
+  │  [Track Ticket]   [Submit Another Query]      │
+  └──────────────────────────────────────────────┘
+
+For escalated tickets, the card instead shows:
+  "A doctor will contact you directly within 2 hours."
+
+
+---
+
+## 9. Email Delivery (Resend)
+
+The email is sent via the Resend API from the Next.js server-side route
+`/api/send-email`. It is NOT sent directly by the FastAPI backend.
+
+Environment variables required:
+  RESEND_API_KEY      → Resend API key (server-side only)
+  RESEND_FROM_EMAIL   → Verified sender address (e.g. care@yourdomain.com)
+  RESEND_FROM_NAME    → Display name (e.g. NAVAJEEVANAORTHO)
+
+The email contains:
+- The ticket ID
+- The patient's original query (for reference)
+- The full approved/edited reply from the medical team
+- Contact details for follow-up
+
+
+---
+
+## Quick Status Reference
+
+  processing         → Graph is running (agents working)
+  pending_review     → Agents done; waiting for admin to review
+  approved           → Admin approved the AI draft (email not yet sent)
+  emailed            → Reply sent to patient's email
+  escalated          → Forwarded to senior medical staff (safety flag)
+  escalated_to_senior→ Same as escalated
+  resolved           → Ticket closed
+
+
+---
+
+## LLM Tiers Used
+
+  llm_pro   = llama-3.3-70b-versatile  → Escalation Packager (complex brief)
+  llm_flash = llama-3.1-8b-instant     → Orchestrator, Intent Classifier,
+                                          RAG Retriever, Reply Writer
+  llm_lite  = llama-3.1-8b-instant     → Memory Manager
+
+All LLM calls go through Groq API (low-latency inference).
+Safety Checker and Tavily Search do NOT make LLM calls — they are rule-based
+and API-based respectively.

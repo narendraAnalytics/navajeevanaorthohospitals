@@ -66,7 +66,7 @@ export default function PatientPortal() {
         customer_phone: form.phone || undefined,
         message: form.message,
       })
-      router.push(`/patient/processing/${res.ticket_id}`)
+      router.push(`/patient/submit-transition/${res.ticket_id}`)
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'Submission failed')
     } finally {
