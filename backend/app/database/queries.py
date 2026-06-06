@@ -86,8 +86,10 @@ async def save_escalation(
 async def get_pending_review_tickets(pool: asyncpg.Pool) -> list[dict]:
     rows = await pool.fetch(
         """SELECT t.id AS ticket_id, t.customer_id, t.customer_name, t.customer_email,
-                  t.subject, t.urgency, t.confidence_score, t.route_decision,
-                  t.final_status, t.created_at,
+                  t.customer_phone, t.subject, t.raw_text AS original_message,
+                  t.urgency, t.confidence_score,
+                  t.route_decision AS route,
+                  t.final_status AS status, t.created_at,
                   r.reply_text AS ai_draft,
                   e.escalation_brief
            FROM tickets t
@@ -102,13 +104,18 @@ async def get_pending_review_tickets(pool: asyncpg.Pool) -> list[dict]:
 async def get_ticket_review_detail(pool: asyncpg.Pool, ticket_id: str) -> dict | None:
     row = await pool.fetchrow(
         """SELECT t.id AS ticket_id, t.customer_id, t.customer_name, t.customer_email,
-                  t.subject, t.raw_text, t.urgency, t.category, t.sentiment,
-                  t.confidence_score, t.route_decision, t.final_status,
+                  t.customer_phone, t.subject, t.raw_text, t.raw_text AS original_message,
+                  t.urgency, t.category, t.sentiment,
+                  t.confidence_score,
+                  t.route_decision, t.route_decision AS route,
+                  t.final_status, t.final_status AS status,
                   t.reviewed_by, t.created_at, t.updated_at,
                   r.reply_text AS ai_draft, r.reply_type,
+                  rfs.reply_text AS final_sent_reply,
                   e.escalation_brief, e.escalation_reason, e.assigned_to
            FROM tickets t
            LEFT JOIN replies r ON r.ticket_id = t.id AND r.reply_type = 'ai_draft'
+           LEFT JOIN replies rfs ON rfs.ticket_id = t.id AND rfs.reply_type = 'final_sent_reply'
            LEFT JOIN escalations e ON e.ticket_id = t.id
            WHERE t.id = $1""",
         ticket_id,

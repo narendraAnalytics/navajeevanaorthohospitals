@@ -8,11 +8,13 @@ class PendingTicket(BaseModel):
     customer_id: str
     customer_name: Optional[str] = None
     customer_email: Optional[str] = None
+    customer_phone: Optional[str] = None
     subject: str
+    original_message: Optional[str] = None
     urgency: Optional[str] = None
     confidence_score: Optional[float] = None
-    route_decision: Optional[str] = None
-    final_status: str
+    route: Optional[str] = None
+    status: str
     ai_draft: Optional[str] = None
     escalation_brief: Optional[str] = None
     created_at: Optional[datetime] = None
@@ -23,15 +25,20 @@ class TicketReviewDetail(BaseModel):
     customer_id: str
     customer_name: Optional[str] = None
     customer_email: Optional[str] = None
+    customer_phone: Optional[str] = None
     subject: str
-    raw_text: str
+    original_message: Optional[str] = None
+    raw_text: Optional[str] = None
     urgency: Optional[str] = None
     category: Optional[str] = None
     sentiment: Optional[str] = None
     confidence_score: Optional[float] = None
+    route: Optional[str] = None
     route_decision: Optional[str] = None
-    final_status: str
+    status: str
+    final_status: Optional[str] = None
     ai_draft: Optional[str] = None
+    final_sent_reply: Optional[str] = None
     escalation_brief: Optional[str] = None
     escalation_reason: Optional[str] = None
     assigned_to: Optional[str] = None

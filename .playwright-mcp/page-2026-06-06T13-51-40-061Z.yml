@@ -1,0 +1,65 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e4]:
+        - img "logo" [ref=e5]
+        - generic [ref=e6]:
+          - strong [ref=e7]:
+            - text: Navajeevana
+            - text: Ortho Hospitals
+          - text: Admin Portal
+      - navigation [ref=e8]:
+        - button "Dashboard" [ref=e9] [cursor=pointer]:
+          - generic [ref=e10]:
+            - img [ref=e11]
+            - text: Dashboard
+        - button "Review Queue" [ref=e16] [cursor=pointer]:
+          - generic [ref=e17]:
+            - img [ref=e18]
+            - text: Review Queue
+        - button "Escalated" [ref=e20] [cursor=pointer]:
+          - generic [ref=e21]:
+            - img [ref=e22]
+            - text: Escalated
+        - button "All Tickets" [ref=e24] [cursor=pointer]:
+          - generic [ref=e25]:
+            - img [ref=e26]
+            - text: All Tickets
+        - link "Go to Website" [ref=e30] [cursor=pointer]:
+          - /url: /
+          - img [ref=e31]
+          - text: Go to Website
+      - generic [ref=e34]:
+        - generic [ref=e35]:
+          - generic [ref=e36]: AD
+          - generic [ref=e37]:
+            - strong [ref=e38]: ADMINNAVAJEEVANA
+            - text: Administrator
+            - generic [ref=e39]: Online
+        - button "Sign Out" [ref=e41] [cursor=pointer]:
+          - img [ref=e42]
+          - text: Sign Out
+    - generic [ref=e45]:
+      - banner [ref=e46]:
+        - generic [ref=e47]:
+          - img [ref=e49]
+          - generic [ref=e50]:
+            - strong [ref=e51]: Welcome back, ADMINNAVAJEEVANA
+            - paragraph [ref=e52]: AI Powered Patient Support · Smart Triage · Better Care
+        - generic [ref=e53]:
+          - generic [ref=e54]:
+            - img [ref=e55]
+            - text: Saturday, Jun 6, 2026
+          - generic [ref=e58]:
+            - img [ref=e59]
+            - text: 7:21 PM
+          - link "Back to Portal" [ref=e63] [cursor=pointer]:
+            - /url: /admin
+            - img [ref=e64]
+            - text: Back to Portal
+          - link "Go to Website" [ref=e66] [cursor=pointer]:
+            - /url: /
+            - img [ref=e67]
+            - text: Go to Website
+      - generic [ref=e71]: Loading dashboard...
+  - alert [ref=e72]

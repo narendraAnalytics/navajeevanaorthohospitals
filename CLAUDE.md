@@ -52,8 +52,8 @@ npm run db:studio  # Drizzle Studio — browse frontend_users table in browser
 [Orchestrator] → fan-out (parallel):
     [Intent Classifier]  [Safety Checker]  [RAG Retriever]
 → fan-in → [Confidence Evaluator] → 3 routes:
-    ├── auto_reply  → [Reply Writer]            (RAG score ≥ 0.70, no safety flags)
-    ├── web_search  → [Tavily] → [Reply Writer] (RAG score < 0.70, Tavily ≥ 0.50)
+    ├── auto_reply  → [Reply Writer]            (RAG score ≥ 0.65, no safety flags)
+    ├── web_search  → [Tavily] → [Reply Writer] (RAG score < 0.65, Tavily ≥ 0.50)
     └── escalate    → [Escalation Packager]     (any safety flag OR Tavily < 0.50)
 → [Memory Manager] → Human Review Queue
 ```
@@ -79,8 +79,8 @@ Agent source files live in `backend/app/agent/nodes/` (one file per node). Graph
 
 | Route | Trigger | `reply_text` opens with |
 |---|---|---|
-| `auto_reply` | RAG ≥ 0.70, no flags | "At Navajeevana Ortho Hospitals, ..." |
-| `web_reply` | RAG < 0.70, Tavily ≥ 0.50 | "[Web Search Result] The following is general information sourced from the web..." |
+| `auto_reply` | RAG ≥ 0.65, no flags | "At Navajeevana Ortho Hospitals, ..." |
+| `web_reply` | RAG < 0.65, Tavily ≥ 0.50 | "[Web Search Result] The following is general information sourced from the web..." |
 | `escalate` | Safety flag OR Tavily < 0.50 | Urgency-aware patient acknowledgment; full brief goes to staff |
 
 ## Knowledge Base
@@ -216,7 +216,7 @@ All frontend code lives in `frontend/`. Stack: Next.js 16 + React 19 + Tailwind 
 |---|---|
 | `frontend/src/app/globals.css` | All brand CSS — design tokens (CSS vars) + every landing page class |
 | `frontend/src/app/layout.tsx` | Sora + Plus Jakarta Sans fonts; `<ClerkProvider>` inside `<body>`; favicon via `metadata.icons` |
-| `frontend/src/proxy.ts` | Clerk middleware — protects all routes except `/`, `/sign-in`, `/sign-up`, `/api/auth/sync`, `/admin(.*)`. Admin uses its own sessionStorage auth, not Clerk. |
+| `frontend/src/proxy.ts` | Clerk middleware — protects all routes except `/`, `/sign-in`, `/sign-up`, `/api/auth/sync`, `/api/send-email`, `/admin(.*)`. Admin uses its own sessionStorage auth, not Clerk. |
 | `frontend/src/app/api/auth/sync/route.ts` | Calls `getOrCreateUser()` then redirects to `/patient` — Clerk redirects here after sign-in/up |
 | `frontend/src/lib/api.ts` | Typed fetch wrapper for all backend endpoints. `sendEmail()` posts to `/api/send-email` (Next.js route), not the backend directly. |
 | `frontend/src/lib/auth.ts` | `getOrCreateUser()` — lazy Clerk→Neon sync; creates `frontend_users` row on first login |
@@ -252,7 +252,13 @@ Clerk app ID: `app_3Eg6FM0HTdOA2XbRdiouZPemsef`. Auth is wired end-to-end:
 
 **Backend (Render):** config in `render.yaml`. Uses `runtime: python` (not `env:`). Root dir = `backend`. Push to `main` → auto-deploy. Seed script runs on every build (upsert is idempotent).
 
-**Frontend (Vercel):** config in `vercel.json` (`{"framework": "nextjs"}`). Root directory set to `frontend` in Vercel dashboard — do not add `rootDirectory` to `vercel.json` (causes validation error).
+> **CORS critical:** `ALLOWED_ORIGIN` in Render env vars **must** be `https://navajeevanaorthohospitals.vercel.app`. Default in `config.py` is `http://localhost:3000` — if this env var is missing from Render, all browser requests from Vercel are blocked with "Failed to fetch".
+
+> **Neon cold-start:** Render free tier sleeps after ~15 min idle. When it wakes, the `AsyncPostgresSaver` connection may be stale — Neon free tier terminates idle connections. If graph fails with `AdminShutdown`, restart the backend service.
+
+> **Root URL returns `{"detail":"Not Found"}`** — this is normal. FastAPI has no `/` route. Use `/docs` for Swagger UI.
+
+**Frontend (Vercel):** config in `vercel.json` (`{"framework": "nextjs"}`). Root directory set to `frontend` in Vercel dashboard — do not add `rootDirectory` to `vercel.json` (causes validation error). Env var changes in Vercel dashboard require a manual redeploy to take effect.
 
 ## Build Progress
 
@@ -282,3 +288,15 @@ Clerk app ID: `app_3Eg6FM0HTdOA2XbRdiouZPemsef`. Auth is wired end-to-end:
 | Phase 7 — Next.js frontend: submit-transition page (/patient/submit-transition/[id]) | ✅ |
 | Phase 7 — Next.js frontend: admin login gate (/admin/login, sessionStorage auth) | ✅ |
 | Phase 7 — Next.js frontend: admin home landing page (/admin, portal intro + mockup) | ✅ |
+| Phase 8 — Bug fixes + hardening | ✅ |
+| Phase 8 — Admin dashboard: Overview table expanded to 8 columns (email, subject, route, status) | ✅ |
+| Phase 8 — Admin dashboard: Recent Escalated Tickets filter includes route=escalate (not just status) | ✅ |
+| Phase 8 — Admin dashboard: Recent Escalated Tickets rows clickable → opens Review Queue detail panel | ✅ |
+| Phase 8 — Admin dashboard: reviewed_by hardcoded to ADMINNAVAJEEVANA in approve + edit calls | ✅ |
+| Phase 8 — Admin dashboard: action buttons visible for all non-terminal statuses | ✅ |
+| Phase 8 — Frontend: /api/send-email added to Clerk public routes (proxy.ts) | ✅ |
+| Phase 8 — Frontend: send-email falls back to customer_id if customer_email null | ✅ |
+| Phase 8 — Backend: GET /tickets/all SQL aliases (customer_id→customer_email, final_status→status, route_decision→route) | ✅ |
+| Phase 8 — Backend: TicketDetail + TicketSummary models updated to include customer_email, customer_name | ✅ |
+| Phase 8 — Backend: RAG confidence threshold lowered 0.70 → 0.65 (confidence_evaluator.py) | ✅ |
+| Phase 8 — Deployment: ALLOWED_ORIGIN env var corrected in Render to Vercel URL (was defaulting to localhost) | ✅ |

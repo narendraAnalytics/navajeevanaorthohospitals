@@ -1,0 +1,89 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - img
+      - img
+      - img
+      - generic [ref=e7]:
+        - generic [ref=e8]:
+          - img "Navajeevana logo" [ref=e9]
+          - generic [ref=e10]:
+            - strong [ref=e11]:
+              - text: NAVAJEEVANA
+              - emphasis [ref=e12]: ORTHO
+            - generic [ref=e13]: Hospital
+        - generic [ref=e14]: Advanced Care for Bones & Joints
+      - generic [ref=e15]:
+        - generic [ref=e16]: Secure Admin Portal
+        - heading "Powering Smarter Hospital Operations" [level=2] [ref=e18]:
+          - text: Powering
+          - text: Smarter
+          - emphasis [ref=e19]: Hospital
+          - text: Operations
+        - paragraph [ref=e20]: Manage patient queries, AI pipeline results, and hospital workflows from one secure dashboard.
+      - generic [ref=e22]:
+        - generic [ref=e23]:
+          - img [ref=e25]
+          - strong [ref=e28]:
+            - text: Secure
+            - text: Access
+          - generic [ref=e29]: Enterprise‑grade security
+        - generic [ref=e30]:
+          - img [ref=e32]
+          - strong [ref=e36]:
+            - text: Role
+            - text: Based
+          - generic [ref=e37]: Protected admin dashboard
+        - generic [ref=e38]:
+          - img [ref=e40]
+          - strong [ref=e43]:
+            - text: Real‑time
+            - text: Insights
+          - generic [ref=e44]: Monitor hospital operations
+    - generic [ref=e45]:
+      - link "Back to main site" [ref=e46] [cursor=pointer]:
+        - /url: /
+        - img [ref=e47]
+        - text: Back
+      - generic [ref=e49]:
+        - img [ref=e51]
+        - heading "Admin Login" [level=1] [ref=e54]
+        - paragraph [ref=e55]:
+          - text: Secure access to Navajeevana Ortho Hospitals
+          - text: administration panel
+        - generic [ref=e56]:
+          - generic [ref=e57]:
+            - generic [ref=e58]: Username
+            - generic [ref=e59]:
+              - generic:
+                - img
+              - textbox "Username" [ref=e60]: ADMINNAVAJEEVANA
+              - generic:
+                - img
+          - generic [ref=e61]:
+            - generic [ref=e62]: Password
+            - generic [ref=e63]:
+              - generic:
+                - img
+              - textbox "Password" [disabled] [ref=e64]:
+                - /placeholder: Enter your password
+                - text: admin@123
+              - button "Toggle password visibility" [ref=e65] [cursor=pointer]:
+                - img [ref=e66]
+          - generic [ref=e70]:
+            - generic [ref=e71] [cursor=pointer]:
+              - checkbox "Remember me" [checked]
+              - img [ref=e73]
+              - generic [ref=e75]: Remember me
+            - link "Forgot Password?" [ref=e76] [cursor=pointer]:
+              - /url: "#"
+          - button "Verifying credentials…" [disabled] [ref=e90]:
+            - img [ref=e91]
+            - text: Verifying credentials…
+        - generic [ref=e82]: Secure Admin Access
+        - generic [ref=e83]:
+          - img [ref=e85]
+          - paragraph [ref=e88]:
+            - text: This is a protected area. All activities are
+            - text: monitored and recorded.
+  - alert [ref=e89]

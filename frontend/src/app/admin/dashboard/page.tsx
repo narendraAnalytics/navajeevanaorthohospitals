@@ -159,16 +159,11 @@ function OverviewDashboard({ allTickets, onTicketClick }: { allTickets: Ticket[]
     const trendEsc   = dayKeys.map(k => allTickets.filter(t => t.created_at?.startsWith(k) && (t.route === 'escalate' || t.status?.includes('escalat'))).length)
     const trendInProg = dayKeys.map(k => allTickets.filter(t => t.created_at?.startsWith(k) && (t.status === 'processing' || t.status === 'pending_review')).length)
 
-    const recentEscalated = allTickets
-      .filter(t => t.route === 'escalate' || t.status === 'escalated' || t.status === 'escalated_to_senior')
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      .slice(0, 5)
-
     return {
       total, escalatedCount, autoResolved, inProgress, uniquePatients,
       autoReplyCount, webSearchCount, escalateCount, pendingCount,
       lowUrgency, medUrgency, highUrgency, avgConf, autoRate,
-      dayLabels, trendTotal, trendAuto, trendEsc, trendInProg, recentEscalated,
+      dayLabels, trendTotal, trendAuto, trendEsc, trendInProg,
     }
   }, [allTickets])
 
@@ -295,66 +290,29 @@ function OverviewDashboard({ allTickets, onTicketClick }: { allTickets: Ticket[]
         </div>
       </div>
 
-      {/* Mid row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 220px', gap: 12 }}>
-        {/* Recent escalated table */}
+      {/* Bottom row */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 220px 180px 1fr', gap: 12, paddingBottom: 2 }}>
+        {/* Agent Performance */}
         <div style={{ background: '#fff', borderRadius: 12, padding: '14px', border: '1px solid #E9EFF4' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-            <span style={{ fontSize: 11.5, fontWeight: 700, color: '#0F172A' }}>
-              Recent Escalated Tickets
-              {stats.escalatedCount > 0 && <span style={{ background: '#FEF2F2', color: '#DC2626', fontSize: 9.5, fontWeight: 700, padding: '2px 8px', borderRadius: 20, marginLeft: 6 }}>{stats.escalatedCount}</span>}
-            </span>
+          <div style={{ fontSize: 11.5, fontWeight: 700, color: '#0F172A', marginBottom: 12 }}>AI Agent Performance</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10 }}>
+            {[
+              { bg: '#F0FDF4', border: '#86EFAC', iC: '#16A34A', val: `${stats.autoRate}%`, lbl: 'Auto-Resolution Rate',
+                icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="17" height="17"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg> },
+              { bg: '#EFF6FF', border: '#BFDBFE', iC: '#2563EB', val: `${stats.escalatedCount}`, lbl: 'Total Escalated',
+                icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="17" height="17"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg> },
+              { bg: '#FAF5FF', border: '#DDD6FE', iC: '#7C3AED', val: stats.avgConf > 0 ? stats.avgConf.toFixed(2) : '—', lbl: 'Avg Confidence',
+                icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="17" height="17"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg> },
+              { bg: '#FFF7ED', border: '#FDBA74', iC: '#EA580C', val: `${stats.autoResolved}`, lbl: 'Resolved',
+                icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="17" height="17"><path d="M3 3v18h18"/><path d="M7 16l4-4 4 4 4-6"/></svg> },
+            ].map(({ bg, border, iC, val, lbl, icon }) => (
+              <div key={lbl} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 5 }}>
+                <div style={{ width: 42, height: 42, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: bg, border: `2px solid ${border}`, color: iC }}>{icon}</div>
+                <div style={{ fontFamily: '"Sora",system-ui', fontSize: 17, fontWeight: 800, color: '#0F172A', lineHeight: 1 }}>{val}</div>
+                <div style={{ fontSize: 9, color: '#94A3B8', fontWeight: 600, lineHeight: 1.3 }}>{lbl}</div>
+              </div>
+            ))}
           </div>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
-                {['ID','Patient','Email','Subject / Query','Urgency','Route','Status','Created'].map(h => (
-                  <th key={h} style={{ fontSize: 8.5, fontWeight: 700, color: '#94A3B8', textAlign: 'left', padding: '6px 8px', letterSpacing: '.05em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {stats.recentEscalated.length === 0 ? (
-                <tr>
-                  <td colSpan={8} style={{ padding: '28px 8px', textAlign: 'center', color: '#94A3B8', fontSize: 12 }}>No escalated tickets yet — great job!</td>
-                </tr>
-              ) : (
-                stats.recentEscalated.map(t => {
-                  const statusActionLabel: Record<string, { label: string; color: string }> = {
-                    pending_review: { label: 'Awaiting Review', color: '#3B82F6' },
-                    approved: { label: 'Approved', color: '#10B981' },
-                    emailed: { label: 'Email Sent ✓', color: '#10B981' },
-                    escalated: { label: 'Escalated', color: '#EF4444' },
-                    escalated_to_senior: { label: 'Escalated', color: '#EF4444' },
-                    resolved: { label: 'Resolved', color: '#6B7280' },
-                    processing: { label: 'Processing…', color: '#F59E0B' },
-                  }
-                  const sa = statusActionLabel[t.status] ?? { label: t.status, color: '#6B7280' }
-                  const subjectPreview = t.subject ? (t.subject.length > 45 ? t.subject.slice(0, 45) + '…' : t.subject) : '—'
-                  return (
-                    <tr key={t.ticket_id} onClick={() => onTicketClick(t.ticket_id)}
-                      style={{ borderBottom: '1px solid #F1F5F9', cursor: 'pointer' }}
-                      onMouseEnter={e => (e.currentTarget.style.background = '#F0FDFA')}
-                      onMouseLeave={e => (e.currentTarget.style.background = '')}>
-                      <td style={{ fontSize: 10, fontWeight: 700, color: '#0D9488', padding: '7px 8px', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>{t.ticket_id.slice(0, 10)}…</td>
-                      <td style={{ fontSize: 10.5, color: '#0F172A', fontWeight: 600, padding: '7px 8px', whiteSpace: 'nowrap' }}>{t.customer_name ?? '—'}</td>
-                      <td style={{ fontSize: 10, color: '#64748B', padding: '7px 8px', whiteSpace: 'nowrap' }}>{t.customer_email}</td>
-                      <td style={{ fontSize: 11, color: '#334155', padding: '7px 8px', maxWidth: 200 }}>{subjectPreview}</td>
-                      <td style={{ padding: '7px 8px' }}><Badge label={t.urgency} color={urgencyColor[t.urgency] ?? '#6B7280'} /></td>
-                      <td style={{ padding: '7px 8px' }}>{t.route ? <Badge label={routeLabel[t.route] ?? t.route} color={routeColor[t.route] ?? '#6B7280'} /> : <span style={{ color: '#94A3B8', fontSize: 10 }}>—</span>}</td>
-                      <td style={{ padding: '7px 8px', whiteSpace: 'nowrap' }}>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: `${sa.color}15`, color: sa.color, border: `1px solid ${sa.color}40`, borderRadius: 20, padding: '2px 8px', fontSize: 10, fontWeight: 700 }}>
-                          <span style={{ width: 5, height: 5, borderRadius: '50%', background: sa.color, flexShrink: 0 }} />
-                          {sa.label}
-                        </span>
-                      </td>
-                      <td style={{ fontSize: 10, color: '#94A3B8', padding: '7px 8px', whiteSpace: 'nowrap' }}>{new Date(t.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' })}</td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
         </div>
 
         {/* AI Confidence gauge */}
@@ -383,7 +341,6 @@ function OverviewDashboard({ allTickets, onTicketClick }: { allTickets: Ticket[]
           <div style={{ marginTop: 8, fontSize: 10.5, color: '#64748B', textAlign: 'center' }}>
             Based on <b>{allTickets.filter(t => t.confidence_score != null).length}</b> tickets
           </div>
-          {/* Urgency donut */}
           <div style={{ marginTop: 12, width: '100%' }}>
             <div style={{ fontSize: 10.5, fontWeight: 700, color: '#0F172A', marginBottom: 6 }}>By Urgency</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -399,32 +356,6 @@ function OverviewDashboard({ allTickets, onTicketClick }: { allTickets: Ticket[]
                 ))}
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 180px 1fr', gap: 12, paddingBottom: 2 }}>
-        {/* Agent Performance */}
-        <div style={{ background: '#fff', borderRadius: 12, padding: '14px', border: '1px solid #E9EFF4' }}>
-          <div style={{ fontSize: 11.5, fontWeight: 700, color: '#0F172A', marginBottom: 12 }}>AI Agent Performance</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10 }}>
-            {[
-              { bg: '#F0FDF4', border: '#86EFAC', iC: '#16A34A', val: `${stats.autoRate}%`, lbl: 'Auto-Resolution Rate',
-                icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="17" height="17"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg> },
-              { bg: '#EFF6FF', border: '#BFDBFE', iC: '#2563EB', val: `${stats.escalatedCount}`, lbl: 'Total Escalated',
-                icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="17" height="17"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg> },
-              { bg: '#FAF5FF', border: '#DDD6FE', iC: '#7C3AED', val: stats.avgConf > 0 ? stats.avgConf.toFixed(2) : '—', lbl: 'Avg Confidence',
-                icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="17" height="17"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg> },
-              { bg: '#FFF7ED', border: '#FDBA74', iC: '#EA580C', val: `${stats.autoResolved}`, lbl: 'Resolved',
-                icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="17" height="17"><path d="M3 3v18h18"/><path d="M7 16l4-4 4 4 4-6"/></svg> },
-            ].map(({ bg, border, iC, val, lbl, icon }) => (
-              <div key={lbl} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 5 }}>
-                <div style={{ width: 42, height: 42, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: bg, border: `2px solid ${border}`, color: iC }}>{icon}</div>
-                <div style={{ fontFamily: '"Sora",system-ui', fontSize: 17, fontWeight: 800, color: '#0F172A', lineHeight: 1 }}>{val}</div>
-                <div style={{ fontSize: 9, color: '#94A3B8', fontWeight: 600, lineHeight: 1.3 }}>{lbl}</div>
-              </div>
-            ))}
           </div>
         </div>
 
