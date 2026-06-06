@@ -1,0 +1,303 @@
+================================================================================
+  OrthoAI — Agent Pipeline Reference
+  Navajeevana Ortho Hospitals, Bhimavaram, Andhra Pradesh
+  Project: navajeevanaorthohospitals
+================================================================================
+
+PIPELINE FLOW
+─────────────────────────────────────────────────────────────────────────────
+
+  [1] ORCHESTRATOR
+         │
+         ├──────────────────────────────────┐
+         │                                  │                    │
+  [2] INTENT CLASSIFIER     [3] SAFETY CHECKER     [4] RAG RETRIEVER
+    (parallel fan-out — all 3 run simultaneously)
+         │                                  │                    │
+         └──────────────────────────────────┘
+                            │
+                 [5] CONFIDENCE EVALUATOR
+                   (fan-in — waits for all 3)
+                            │
+              ┌─────────────┼─────────────┐
+              │             │             │
+         auto_reply    web_search      escalate
+              │             │             │
+        [7] REPLY      [6] TAVILY    [8] ESCALATION
+         WRITER          SEARCH        PACKAGER
+              │             │             │
+              └──────[7] REPLY WRITER─────┘
+              (web_search path merges back)
+                            │
+                  [9] MEMORY MANAGER
+                    (always last)
+
+─────────────────────────────────────────────────────────────────────────────
+
+LLM MODELS  (defined in backend/app/llm_factory.py)
+─────────────────────────────────────────────────────────────────────────────
+
+  llm_pro   →  llama-3.3-70b-versatile   via Groq  (Escalation Packager only)
+  llm_flash →  llama-3.1-8b-instant      via Groq  (most agents)
+  llm_lite  →  llama-3.1-8b-instant      via Groq  (Memory Manager — same model, separate instance)
+
+─────────────────────────────────────────────────────────────────────────────
+
+AGENTS
+─────────────────────────────────────────────────────────────────────────────
+
+━━━ [1] ORCHESTRATOR ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Function  : orchestrator(state, store)
+  LLM       : llm_flash  →  llama-3.1-8b-instant
+  File      : backend/app/agent/nodes/orchestrator.py
+
+  What it does:
+    - Entry point for every ticket
+    - Loads patient's long-term medical history from AsyncPostgresStore
+      (keyed by customer_id = patient email address)
+    - Uses LLM to classify urgency of the incoming message
+
+  Writes to TicketState:
+    urgency              →  "critical" | "high" | "medium" | "low"
+    patient_history      →  concatenated prior facts from memory store
+    processing_started_at→  ISO timestamp
+
+  Decision log:
+    {"urgency": "medium", "urgency_reason": "Patient asking about OPD timings"}
+
+━━━ [2] INTENT CLASSIFIER ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Function  : intent_classifier(state)
+  LLM       : llm_flash  →  llama-3.1-8b-instant
+  File      : backend/app/agent/nodes/intent_classifier.py
+
+  What it does:
+    - Runs in parallel with Safety Checker and RAG Retriever
+    - Classifies the patient message into a category and extracts intent,
+      sentiment, and keywords for downstream routing
+
+  Categories:
+    appointment | test_prep | report | insurance | billing |
+    post_surgery | medication | emergency | general
+
+  Sentiments:
+    frustrated | anxious | neutral | hopeful | distressed
+
+  Writes to TicketState:
+    classifications (List[dict], operator.add — safe parallel write)
+      → {"category": str, "sub_category": str|null, "intent": str,
+         "sentiment": str, "keywords": List[str]}
+
+  Decision log:
+    {"category": "appointment", "sub_category": "OPD booking",
+     "intent": "Patient wants to book a first-time OPD appointment",
+     "sentiment": "neutral", "keywords": ["appointment", "knee"]}
+
+━━━ [3] SAFETY CHECKER ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Function  : check_safety(state)
+  LLM       : NONE  —  keyword-only, fully deterministic (no LLM call)
+  File      : backend/app/agent/nodes/safety_checker.py
+
+  What it does:
+    - Runs in parallel with Intent Classifier and RAG Retriever
+    - Scans message text for four keyword trigger sets:
+        MEDICATION  → insulin, warfarin, metformin, steroids, antibiotics…
+        SYMPTOM     → pain, swelling, fever, wound, discharge, infection…
+        EMERGENCY   → chest pain, can't breathe, severe, collapse, ambulance…
+        REPORT      → x-ray, mri, ct scan, lab report…
+    - Any match sets escalation_required = True
+    - The Confidence Evaluator gives safety flags the HIGHEST priority —
+      a flagged ticket is always escalated, regardless of RAG score
+
+  Writes to TicketState:
+    safety_flags (List[dict], operator.add — safe parallel write)
+      → {"flag_type": "medication"|"symptom"|"emergency"|"report",
+         "trigger_words": List[str], "escalation_required": bool}
+
+  Decision log:
+    {"flag_type": "medication", "trigger_words": ["insulin"],
+     "escalation_required": True}
+
+━━━ [4] RAG RETRIEVER ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Function  : rag_retriever(state)
+  LLM       : llm_flash  →  llama-3.1-8b-instant
+  File      : backend/app/agent/nodes/rag_retriever.py
+
+  What it does:
+    - Runs in parallel with Intent Classifier and Safety Checker
+    - Queries all 9 ChromaDB collections simultaneously (top-2 per collection)
+    - Uses cosine similarity; chunks were split on ## / ### headings at seed time
+    - LLM synthesizes the retrieved chunks into a coherent answer
+    - Returns similarity scores that drive the auto_reply vs web_search decision
+
+  ChromaDB Collections (9):
+    appointment_faq | doctors_directory | escalation_rules |
+    hospital_information | insurance_billing | past_tickets |
+    physiotherapy_rehabilitation | post_surgery_care | test_preparation
+
+  Writes to TicketState:
+    rag_results (List[dict], operator.add — safe parallel write)
+      → {"doc_id": str, "content": str, "similarity_score": float 0-1,
+         "collection_name": str}
+
+  Threshold used downstream:
+    similarity_score ≥ 0.70  →  auto_reply path
+    similarity_score < 0.70  →  web_search path (if no safety flags)
+
+━━━ [5] CONFIDENCE EVALUATOR ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Function  : confidence_evaluator(state)
+  LLM       : NONE  —  pure routing logic, no LLM call
+  File      : backend/app/agent/nodes/confidence_evaluator.py
+
+  What it does:
+    - Fan-in point — waits for all 3 parallel agents to finish
+    - Applies priority routing in strict order:
+        1. Any safety_flag with escalation_required=True  →  escalate
+        2. Best RAG similarity_score ≥ 0.70, no flags    →  auto_reply
+        3. RAG score < 0.70, no safety flags              →  web_search
+    - Sets the route_decision that controls graph branching
+
+  Writes to TicketState:
+    route_decision     →  "auto_reply" | "web_search" | "escalate"
+    confidence_score   →  float 0.0–1.0  (best RAG score or 0 if escalated)
+    escalation_reason  →  str | null
+
+  Decision log:
+    "[ConfidenceEval] ESCALATE — safety flags: ['medication']"
+    "[ConfidenceEval] AUTO_REPLY — score: 0.85"
+    "[ConfidenceEval] WEB_SEARCH — score: 0.62"
+
+━━━ [6] TAVILY SEARCH ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Function  : tavily_search(state)
+  LLM       : NONE  —  web search API only (Tavily), no LLM
+  File      : backend/app/agent/nodes/tavily_search.py
+
+  What it does:
+    - Runs only on the web_search path (RAG score was too low for auto_reply)
+    - Queries Tavily: patient message + "orthopedic hospital Andhra Pradesh"
+    - Applies quality gate on returned results:
+        best result score ≥ 0.50  →  route stays web_search → Reply Writer
+        score < 0.50 or no results →  route upgrades to escalate
+    - Ensures we never give the patient a poor-quality web-sourced answer
+
+  Writes to TicketState:
+    web_results     →  List[{"url": str, "content": str, "score": float}] | null
+    route_decision  →  updates to "web_reply" | "escalate"
+
+  Decision log:
+    "[Tavily] 3 results, best score: 0.72 — web_reply"
+    "[Tavily] No results returned — escalate"
+
+━━━ [7] REPLY WRITER ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Function  : reply_writer(state)
+  LLM       : llm_flash  →  llama-3.1-8b-instant  (temperature = 0.2)
+  File      : backend/app/agent/nodes/reply_writer.py
+
+  What it does:
+    - Runs on auto_reply path (uses KB content) and web_reply path (uses
+      Tavily results as general guidance)
+    - Writes warm, patient-friendly reply — never gives direct medical advice
+    - auto_reply opens with: "At Navajeevana Ortho Hospitals, ..."
+    - web_reply opens with: "[Web Search Result] The following is general
+      information sourced from the web..."
+
+  Writes to TicketState:
+    reply_text    →  str  (patient-facing reply)
+    sources_used  →  ["KB"] for auto_reply, or list of URLs for web_reply
+
+━━━ [8] ESCALATION PACKAGER ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Function  : escalation_packager(state)
+  LLM       : llm_pro  →  llama-3.3-70b-versatile  (ONLY agent using Pro tier)
+  File      : backend/app/agent/nodes/escalation_packager.py
+
+  What it does:
+    - Runs only on the escalate path
+    - Uses the most capable model because this brief goes directly to medical staff
+    - Produces TWO outputs simultaneously:
+        (a) Staff brief — structured triage summary with urgency emoji,
+            safety flags triggered, patient history, suggested action
+        (b) Patient acknowledgment — warm message telling the patient their
+            query has been received and a specialist will respond
+
+  Urgency emoji key in brief:
+    🔴 CRITICAL — life-threatening, immediate action
+    🟠 HIGH     — urgent, respond within hours
+    🟡 MEDIUM   — non-urgent, respond within 24 h
+    🟢 LOW      — general query, standard queue
+
+  Writes to TicketState:
+    escalation_brief  →  str  (staff-facing triage summary)
+    reply_text        →  str  (patient-facing acknowledgment)
+    final_status      →  "escalated"
+    sources_used      →  ["Escalation"]
+
+━━━ [9] MEMORY MANAGER ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Function  : memory_manager(state, store)   [async]
+  LLM       : llm_lite  →  llama-3.1-8b-instant  (separate instance)
+  File      : backend/app/agent/nodes/memory_manager.py
+
+  What it does:
+    - Always runs last, regardless of route taken
+    - Extracts only explicitly stated facts from the ticket — never infers
+    - Extracts: medical conditions, medications, procedures, allergies,
+      follow-up concerns
+    - Writes facts to AsyncPostgresStore under namespace
+      ("patient", customer_id) as "medical_history"
+    - These facts are loaded back by the Orchestrator on the patient's
+      NEXT ticket, giving the AI continuity across visits
+
+  Writes to TicketState:
+    None  (side effect only — writes to AsyncPostgresStore in Neon PostgreSQL)
+
+  Decision log:
+    "[MemoryManager] Stored 3 facts for patient@example.com"
+    "[MemoryManager] No new facts to store"
+
+─────────────────────────────────────────────────────────────────────────────
+
+ROUTE DECISION RULES  (set by Confidence Evaluator, updated by Tavily)
+─────────────────────────────────────────────────────────────────────────────
+
+  Priority 1 — ESCALATE
+    Trigger : Any safety flag with escalation_required = True
+    Path    : Escalation Packager → Memory Manager
+    Reply   : Warm patient acknowledgment; staff brief in DB
+
+  Priority 2 — AUTO_REPLY
+    Trigger : Best RAG similarity_score ≥ 0.70  AND  no safety flags
+    Path    : Reply Writer (KB mode) → Memory Manager
+    Reply   : KB-sourced answer, opens "At Navajeevana Ortho Hospitals..."
+
+  Priority 3 — WEB_SEARCH → web_reply or escalate
+    Trigger : RAG score < 0.70  AND  no safety flags
+    Path    : Tavily Search (quality gate) → Reply Writer or Escalation Packager
+    Reply   : Web-sourced (score ≥ 0.50) or escalated (score < 0.50)
+
+─────────────────────────────────────────────────────────────────────────────
+
+QUICK REFERENCE TABLE
+─────────────────────────────────────────────────────────────────────────────
+
+  #   Agent                 Function               LLM             Runs
+  ─   ───────────────────   ────────────────────   ─────────────   ─────────────────────
+  1   Orchestrator          orchestrator()         llm_flash       Always (entry)
+  2   Intent Classifier     intent_classifier()    llm_flash       Always (parallel)
+  3   Safety Checker        check_safety()         None            Always (parallel)
+  4   RAG Retriever         rag_retriever()        llm_flash       Always (parallel)
+  5   Confidence Evaluator  confidence_evaluator() None            Always (fan-in)
+  6   Tavily Search         tavily_search()        None            web_search path only
+  7   Reply Writer          reply_writer()         llm_flash       auto_reply + web_reply
+  8   Escalation Packager   escalation_packager()  llm_pro ★       escalate path only
+  9   Memory Manager        memory_manager()       llm_lite        Always (exit)
+
+  ★  llm_pro = llama-3.3-70b-versatile  (all others: llama-3.1-8b-instant)
+
+================================================================================
