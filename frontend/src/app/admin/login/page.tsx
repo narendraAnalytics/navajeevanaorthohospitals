@@ -189,8 +189,8 @@ export default function AdminLogin() {
         /* RIGHT */
         .adm-right {
           background: #F8FAFB;
-          display: flex; align-items: center; justify-content: center;
-          padding: 28px 32px;
+          display: flex; align-items: flex-start; justify-content: center;
+          padding: 64px 32px 24px;
           position: relative; overflow-y: auto;
         }
         .adm-right::-webkit-scrollbar { width: 4px; }
@@ -200,7 +200,8 @@ export default function AdminLogin() {
         .adm-card {
           background: #fff; border-radius: 28px;
           width: 100%; max-width: 430px;
-          padding: 44px 44px 36px;
+          padding: 36px 40px 28px;
+          margin: 0 auto;
           box-shadow:
             0 4px 6px -2px rgba(16,42,40,.04),
             0 20px 60px -20px rgba(16,42,40,.14);
@@ -216,7 +217,7 @@ export default function AdminLogin() {
           background: linear-gradient(145deg, #E8F8F6 0%, #D0F4EF 100%);
           border-radius: 20px;
           display: flex; align-items: center; justify-content: center;
-          margin: 0 auto 22px;
+          margin: 0 auto 14px;
           box-shadow: 0 8px 24px rgba(17,181,164,.15);
         }
         .adm-shield svg { width: 30px; height: 30px; color: #0D9488; }
@@ -229,10 +230,10 @@ export default function AdminLogin() {
         }
         .adm-sub {
           font-size: 13.5px; color: #7E93A7;
-          text-align: center; line-height: 1.6; margin-bottom: 32px;
+          text-align: center; line-height: 1.6; margin-bottom: 20px;
         }
 
-        .adm-field { margin-bottom: 18px; }
+        .adm-field { margin-bottom: 14px; }
         .adm-label {
           display: block; font-size: 13px; font-weight: 700;
           color: #1A2E3B; margin-bottom: 8px; letter-spacing: -.01em;
@@ -275,7 +276,7 @@ export default function AdminLogin() {
 
         .adm-row-extras {
           display: flex; align-items: center; justify-content: space-between;
-          margin-bottom: 24px; margin-top: 4px;
+          margin-bottom: 18px; margin-top: 4px;
         }
         .adm-check-wrap {
           display: flex; align-items: center; gap: 9px;
@@ -327,7 +328,7 @@ export default function AdminLogin() {
 
         .adm-divider {
           display: flex; align-items: center; gap: 12px;
-          margin: 22px 0 18px;
+          margin: 16px 0 12px;
         }
         .adm-divider::before, .adm-divider::after { content: ""; flex: 1; height: 1px; background: #E9EFF4; }
         .adm-divider span { font-size: 11.5px; font-weight: 600; color: #A0B4C0; white-space: nowrap; letter-spacing: .04em; }
@@ -532,21 +533,20 @@ export default function AdminLogin() {
 
                 {/* Remember + forgot */}
                 <div className="adm-row-extras">
-                  <div
-                    className="adm-check-wrap"
-                    role="checkbox"
-                    aria-checked={remember}
-                    tabIndex={0}
-                    onClick={() => setRemember(v => !v)}
-                    onKeyDown={e => e.key === ' ' && setRemember(v => !v)}
-                  >
+                  <label className="adm-check-wrap">
+                    <input
+                      type="checkbox"
+                      checked={remember}
+                      onChange={e => setRemember(e.target.checked)}
+                      style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }}
+                    />
                     <div className={`adm-check-box${remember ? ' checked' : ''}`}>
                       <svg viewBox="0 0 12 12" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M2 6l3 3 5-5"/>
                       </svg>
                     </div>
                     <span className="adm-check-label">Remember me</span>
-                  </div>
+                  </label>
                   <a className="adm-forgot" href="#" onClick={e => e.preventDefault()}>Forgot Password?</a>
                 </div>
 
