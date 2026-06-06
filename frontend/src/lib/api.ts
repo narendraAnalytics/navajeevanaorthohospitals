@@ -31,8 +31,10 @@ export interface TicketReview {
   status: string
   urgency: string
   route: string | null
+  confidence_score?: number | null
   customer_name: string
   customer_email: string
+  customer_phone?: string | null
   original_message: string
   ai_draft: string | null
   edited_reply: string | null
