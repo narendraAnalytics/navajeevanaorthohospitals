@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import {
@@ -154,6 +155,17 @@ function AIDraftPanel({ draft, route }: { draft: string; route: string | null })
 }
 
 export default function AdminDashboard() {
+  const router = useRouter()
+  const [authChecked, setAuthChecked] = useState(false)
+
+  useEffect(() => {
+    if (sessionStorage.getItem('adminAuth') !== '1') {
+      router.replace('/admin/login')
+    } else {
+      setAuthChecked(true)
+    }
+  }, [router])
+
   const [view, setView] = useState<View>('queue')
   const [queue, setQueue] = useState<TicketReview[]>([])
   const [allTickets, setAllTickets] = useState<Ticket[]>([])
@@ -245,6 +257,8 @@ export default function AdminDashboard() {
 
   const escalated = allTickets.filter((t) => t.status === 'escalated' || t.status === 'escalated_to_senior')
   const displayTickets = view === 'escalations' ? escalated : allTickets
+
+  if (!authChecked) return null
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif', background: '#F8FAFC' }}>
@@ -401,6 +415,8 @@ export default function AdminDashboard() {
                   <div style={{ fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8 }}>AI Draft Reply</div>
                   {editMode ? (
                     <textarea
+                      aria-label="Edit reply text"
+                      placeholder="Edit the AI draft reply..."
                       value={editText}
                       onChange={(e) => setEditText(e.target.value)}
                       rows={8}
