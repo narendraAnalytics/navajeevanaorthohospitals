@@ -264,7 +264,7 @@
 .hero-dot:hover:not(.active) { background: rgba(255,255,255,0.75); }
 
 .hero-banner-overlay { position: absolute; inset: 0; z-index: 1; background: linear-gradient(to right, rgba(248,252,250,0.97) 0%, rgba(248,252,250,0.92) 32%, rgba(248,252,250,0.55) 56%, rgba(248,252,250,0.10) 74%, transparent 85%); }
-.hero-content-wrap { position: relative; z-index: 3; min-height: 760px; display: flex; align-items: center; padding: 140px 26px 80px 60px; width: 100%; }
+.hero-content-wrap { position: relative; z-index: 3; min-height: 760px; display: flex; align-items: center; padding: 55px 26px 80px 60px; width: 100%; }
 .hero-left { max-width: 560px; width: 100%; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; }
 .trust-chip { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; color: var(--emerald-d); background: rgba(16,185,129,.1); border: 1px solid rgba(16,185,129,.22); padding: 7px 14px; border-radius: 30px; margin-bottom: 22px; }
 .trust-chip .dot { width: 16px; height: 16px; border-radius: 50%; background: var(--g-teal); display: grid; place-items: center; }
