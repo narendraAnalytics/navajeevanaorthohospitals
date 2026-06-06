@@ -147,7 +147,7 @@ export default function AdminHome() {
         .adh-tag-blue   { color: #2E9EF4; }
         .adh-tag-purple { background: linear-gradient(90deg,#A259FF,#FF7A00); -webkit-background-clip:text; background-clip:text; color:transparent; }
 
-        .adh-features { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-bottom: 0; flex-shrink: 0; }
+        .adh-features { display: grid; grid-template-columns: 1fr; gap: 9px; margin-bottom: 0; flex-shrink: 0; }
         .adh-feat-row {
           display: flex; align-items: flex-start; gap: 9px;
           padding: 9px 11px;
