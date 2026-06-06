@@ -204,7 +204,9 @@ All frontend code lives in `frontend/`. Stack: Next.js 16 + React 19 + Tailwind 
 | `/patient` | **"Care Hub"** — submit ticket + track by ID or email. Floating pill nav (`position:fixed`, `border-radius:60px`). Background: ivory `#FFFBF7` + orbs + dot-grid. |
 | `/patient/submit-transition/[ticket_id]` | AI handoff animation — dual counter-rotating SVG rings (coral outer, teal inner) + coral 🤖 badge + pills + progress bar; auto-redirects to `/patient/processing/[ticket_id]` after 3.85 s. Shown after successful form submission. |
 | `/patient/processing/[ticket_id]` | Live agent pipeline — polls `GET /ticket/{id}/logs` every 1.5 s; animates 9 nodes waiting→running→done with per-agent colored rings; shows glassmorphic completion card when done. |
-| `/admin` | Admin dashboard — HITL review queue, approve/edit/send email |
+| `/admin/login` | Admin login gate — custom username/password auth (not Clerk). Username: `ADMINNAVAJEEVANA`, password: `admin@123`. Sets `sessionStorage.adminAuth = '1'` on success. |
+| `/admin` | Admin home — branded landing page (portal intro, features, dashboard link, sign out). Guards itself: redirects to `/admin/login` if not authenticated. |
+| `/admin/dashboard` | Admin dashboard — HITL review queue, approve/edit/send email. Guards itself: redirects to `/admin/login` if `sessionStorage.adminAuth !== '1'`. |
 | `/api/send-email` | Server-side route — sends HTML email via Resend, marks ticket as `emailed` |
 | `/api/auth/sync` | Clerk post-login hook — syncs user to `frontend_users` via `getOrCreateUser()` |
 
@@ -214,7 +216,7 @@ All frontend code lives in `frontend/`. Stack: Next.js 16 + React 19 + Tailwind 
 |---|---|
 | `frontend/src/app/globals.css` | All brand CSS — design tokens (CSS vars) + every landing page class |
 | `frontend/src/app/layout.tsx` | Sora + Plus Jakarta Sans fonts; `<ClerkProvider>` inside `<body>`; favicon via `metadata.icons` |
-| `frontend/src/proxy.ts` | Clerk middleware — protects all routes except `/`, `/sign-in`, `/sign-up`, `/api/auth/sync` |
+| `frontend/src/proxy.ts` | Clerk middleware — protects all routes except `/`, `/sign-in`, `/sign-up`, `/api/auth/sync`, `/admin(.*)`. Admin uses its own sessionStorage auth, not Clerk. |
 | `frontend/src/app/api/auth/sync/route.ts` | Calls `getOrCreateUser()` then redirects to `/patient` — Clerk redirects here after sign-in/up |
 | `frontend/src/lib/api.ts` | Typed fetch wrapper for all backend endpoints. `sendEmail()` posts to `/api/send-email` (Next.js route), not the backend directly. |
 | `frontend/src/lib/auth.ts` | `getOrCreateUser()` — lazy Clerk→Neon sync; creates `frontend_users` row on first login |
@@ -233,7 +235,7 @@ All frontend code lives in `frontend/`. Stack: Next.js 16 + React 19 + Tailwind 
 
 Clerk app ID: `app_3Eg6FM0HTdOA2XbRdiouZPemsef`. Auth is wired end-to-end:
 
-- **Middleware:** `src/proxy.ts` — MUST be named `proxy.ts` per project convention (not `middleware.ts`).
+- **Middleware:** `src/proxy.ts` — MUST be named `proxy.ts` per project convention (not `middleware.ts`). `/admin(.*)` is excluded from Clerk — admin has its own login at `/admin/login` (sessionStorage-based).
 - **Components:** use `<Show when="signed-in">` / `<Show when="signed-out">` — never deprecated `<SignedIn>` / `<SignedOut>`
 - **`<UserButton />`** — no props needed; sign-out redirect via `NEXT_PUBLIC_CLERK_AFTER_SIGN_OUT_URL`. `afterSignOutUrl` prop does not exist in Clerk v7.
 - **`<SignInButton>`** — use `forceRedirectUrl` prop, not `redirectUrl` (deprecated).
@@ -278,3 +280,5 @@ Clerk app ID: `app_3Eg6FM0HTdOA2XbRdiouZPemsef`. Auth is wired end-to-end:
 | Phase 7 — Next.js frontend: patient portal floating pill nav + "Care Hub" rename | ✅ |
 | Phase 7 — Next.js frontend: processing page redesign (colored rings, orbs, pill nav) | ✅ |
 | Phase 7 — Next.js frontend: submit-transition page (/patient/submit-transition/[id]) | ✅ |
+| Phase 7 — Next.js frontend: admin login gate (/admin/login, sessionStorage auth) | ✅ |
+| Phase 7 — Next.js frontend: admin home landing page (/admin, portal intro + mockup) | ✅ |
