@@ -197,6 +197,8 @@ async def get_ticket(ticket_id: str, request: Request):
     return TicketDetail(
         ticket_id=row["ticket_id"],
         customer_id=row["customer_id"],
+        customer_email=row.get("customer_email") or row.get("customer_id"),
+        customer_name=row.get("customer_name"),
         subject=row["subject"],
         description=row.get("raw_text") or "",
         status=row.get("final_status") or "processing",

@@ -185,9 +185,9 @@ async def get_tickets_by_email(pool: asyncpg.Pool, email: str) -> list[dict]:
 
 async def get_all_tickets(pool: asyncpg.Pool) -> list[dict]:
     rows = await pool.fetch(
-        """SELECT t.id AS ticket_id, t.customer_id, t.customer_name, t.subject,
-                  t.urgency, t.final_status, t.route_decision, t.confidence_score,
-                  t.created_at, t.updated_at,
+        """SELECT t.id AS ticket_id, t.customer_id AS customer_email, t.customer_name, t.subject,
+                  t.urgency, t.final_status AS status, t.route_decision AS route,
+                  t.confidence_score, t.created_at, t.updated_at,
                   e.escalation_brief
            FROM tickets t
            LEFT JOIN escalations e ON e.ticket_id = t.id

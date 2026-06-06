@@ -4,7 +4,7 @@ from app.agent.state import TicketState
 
 logger = logging.getLogger(__name__)
 
-RAG_CONFIDENCE_THRESHOLD = 0.70
+RAG_CONFIDENCE_THRESHOLD = 0.65
 
 
 def confidence_evaluator(state: TicketState) -> dict:

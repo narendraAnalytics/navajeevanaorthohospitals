@@ -23,7 +23,7 @@ export interface Ticket {
   created_at: string
   subject?: string
   customer_name?: string
-  customer_email?: string
+  customer_email?: string | null
 }
 
 export interface TicketReview {
@@ -98,12 +98,15 @@ export const getPendingReview = () => req<TicketReview[]>('/review/pending')
 export const getTicketReview = (id: string) => req<TicketReview>(`/review/${id}`)
 
 export const approveTicket = (id: string) =>
-  req<{ message: string }>(`/review/${id}/approve`, { method: 'PATCH' })
+  req<{ message: string }>(`/review/${id}/approve`, {
+    method: 'PATCH',
+    body: JSON.stringify({ reviewed_by: 'ADMINNAVAJEEVANA' }),
+  })
 
 export const editTicket = (id: string, edited_reply: string) =>
   req<{ message: string }>(`/review/${id}/edit`, {
     method: 'PATCH',
-    body: JSON.stringify({ edited_reply }),
+    body: JSON.stringify({ edited_reply, reviewed_by: 'ADMINNAVAJEEVANA' }),
   })
 
 export const sendEmail = (id: string) =>

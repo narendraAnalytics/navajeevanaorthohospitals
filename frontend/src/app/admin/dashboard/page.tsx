@@ -131,7 +131,7 @@ function OverviewDashboard({ allTickets }: { allTickets: Ticket[] }) {
 
   const stats = useMemo(() => {
     const total = allTickets.length
-    const escalatedCount = allTickets.filter(t => t.status === 'escalated' || t.status === 'escalated_to_senior').length
+    const escalatedCount = allTickets.filter(t => t.route === 'escalate' || t.status === 'escalated' || t.status === 'escalated_to_senior').length
     const autoResolved = allTickets.filter(t => t.status === 'emailed' || t.status === 'approved').length
     const inProgress = allTickets.filter(t => t.status === 'processing' || t.status === 'pending_review').length
     const uniquePatients = new Set(allTickets.map(t => t.customer_email).filter(Boolean)).size
@@ -160,7 +160,7 @@ function OverviewDashboard({ allTickets }: { allTickets: Ticket[] }) {
     const trendInProg = dayKeys.map(k => allTickets.filter(t => t.created_at?.startsWith(k) && (t.status === 'processing' || t.status === 'pending_review')).length)
 
     const recentEscalated = allTickets
-      .filter(t => t.status === 'escalated' || t.status === 'escalated_to_senior')
+      .filter(t => t.route === 'escalate' || t.status === 'escalated' || t.status === 'escalated_to_senior')
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
       .slice(0, 5)
 
@@ -567,7 +567,7 @@ export default function AdminDashboard() {
     try { await resolveTicket(id); flash('✓ Ticket resolved.'); loadAll() } catch (e) { flash(String(e), true) }
   }
 
-  const escalated = allTickets.filter(t => t.status === 'escalated' || t.status === 'escalated_to_senior')
+  const escalated = allTickets.filter(t => t.route === 'escalate' || t.status === 'escalated' || t.status === 'escalated_to_senior')
   const displayTickets = dashView === 'escalations' ? escalated : allTickets
 
   const dateStr = now?.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', weekday: 'long' }) ?? ''
@@ -786,7 +786,7 @@ export default function AdminDashboard() {
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, marginBottom: 16, background: '#F8FAFC', borderRadius: 12, padding: '10px 14px', border: '1px solid #E2E8F0' }}>
                     <div><div style={{ fontSize: 9.5, color: '#94A3B8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 3 }}>Urgency</div><Badge label={selected.urgency} color={urgencyColor[selected.urgency] ?? '#6B7280'} /></div>
                     <div><div style={{ fontSize: 9.5, color: '#94A3B8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 3 }}>AI Decision</div>{selected.route ? <Badge label={routeLabel[selected.route] ?? selected.route} color={routeColor[selected.route] ?? '#6B7280'} /> : <span style={{ fontSize: 11, color: '#94A3B8' }}>—</span>}</div>
-                    <div><div style={{ fontSize: 9.5, color: '#94A3B8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 3 }}>Status</div><Badge label={selected.status.replace(/_/g, ' ')} color={statusColor[selected.status] ?? '#6B7280'} /></div>
+                    <div><div style={{ fontSize: 9.5, color: '#94A3B8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 3 }}>Status</div><Badge label={(selected.status ?? '').replace(/_/g, ' ')} color={statusColor[selected.status ?? ''] ?? '#6B7280'} /></div>
                     <div><div style={{ fontSize: 9.5, color: '#94A3B8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 3 }}>Confidence</div><span style={{ fontSize: 13, fontWeight: 800, color: '#0F172A' }}>{selected.confidence_score != null ? (selected.confidence_score * 100).toFixed(0) + '%' : '—'}</span></div>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16, fontSize: 11.5, color: '#475569' }}>
@@ -837,7 +837,7 @@ export default function AdminDashboard() {
                       ✓ Email delivered to patient successfully
                     </div>
                   )}
-                  {selected.status === 'pending_review' && (
+                  {selected.status !== 'emailed' && selected.status !== 'resolved' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       {!editMode ? (
                         <>

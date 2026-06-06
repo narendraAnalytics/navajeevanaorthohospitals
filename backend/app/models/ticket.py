@@ -42,6 +42,8 @@ class TicketResponse(BaseModel):
 class TicketDetail(BaseModel):
     ticket_id: str
     customer_id: str
+    customer_email: Optional[str] = None
+    customer_name: Optional[str] = None
     subject: str
     description: str
     status: TicketStatus

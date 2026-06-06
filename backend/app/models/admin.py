@@ -5,12 +5,12 @@ from pydantic import BaseModel, Field
 
 class TicketSummary(BaseModel):
     ticket_id: str
-    customer_id: str
+    customer_email: str
     customer_name: Optional[str] = None
-    subject: str
+    subject: Optional[str] = None
     urgency: Optional[str] = None
-    final_status: str
-    route_decision: Optional[str] = None
+    status: str
+    route: Optional[str] = None
     confidence_score: Optional[float] = None
     escalation_brief: Optional[str] = None
     created_at: Optional[datetime] = None

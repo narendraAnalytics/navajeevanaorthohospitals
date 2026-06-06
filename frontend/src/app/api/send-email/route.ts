@@ -88,11 +88,17 @@ export async function POST(req: NextRequest) {
     }
     const ticket = await ticketRes.json() as {
       customer_name: string
-      customer_email: string
+      customer_email: string | null
+      customer_id: string | null
       urgency: string
       ai_draft: string | null
       edited_reply: string | null
       final_sent_reply: string | null
+    }
+
+    const toEmail = ticket.customer_email || ticket.customer_id
+    if (!toEmail) {
+      return NextResponse.json({ error: 'No patient email address found on ticket' }, { status: 422 })
     }
 
     const reply = ticket.final_sent_reply ?? ticket.edited_reply ?? ticket.ai_draft
@@ -100,18 +106,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No reply available to send' }, { status: 422 })
     }
 
+    console.log(`[send-email] Sending to ${toEmail} for ticket ${ticket_id}`)
+
     // Send via Resend
     const { data, error } = await resend.emails.send({
       from: FROM,
-      to: ticket.customer_email,
+      to: toEmail,
       subject: 'Response to Your Query — Navajeevana Ortho Hospitals',
-      html: formatReplyHtml(reply, ticket.customer_name, ticket.urgency),
+      html: formatReplyHtml(reply, ticket.customer_name ?? 'Patient', ticket.urgency),
     })
 
     if (error) {
       console.error('[send-email] Resend error:', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
+
+    console.log(`[send-email] Resend accepted, message_id=${data?.id}`)
 
     // Mark ticket as emailed in backend
     await fetch(`${BACKEND}/review/${ticket_id}/send-email`, { method: 'POST' })
