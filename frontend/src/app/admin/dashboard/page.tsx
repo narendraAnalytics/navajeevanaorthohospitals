@@ -125,7 +125,7 @@ function StatCard({ label, value, iconBg, iconColor, icon }: { label: string; va
 
 // ─── overview dashboard ───────────────────────────────────────────────────────
 
-function OverviewDashboard({ allTickets }: { allTickets: Ticket[] }) {
+function OverviewDashboard({ allTickets, onTicketClick }: { allTickets: Ticket[]; onTicketClick: (id: string) => void }) {
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
 
@@ -332,7 +332,10 @@ function OverviewDashboard({ allTickets }: { allTickets: Ticket[] }) {
                   const sa = statusActionLabel[t.status] ?? { label: t.status, color: '#6B7280' }
                   const subjectPreview = t.subject ? (t.subject.length > 45 ? t.subject.slice(0, 45) + '…' : t.subject) : '—'
                   return (
-                    <tr key={t.ticket_id} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                    <tr key={t.ticket_id} onClick={() => onTicketClick(t.ticket_id)}
+                      style={{ borderBottom: '1px solid #F1F5F9', cursor: 'pointer' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = '#F0FDFA')}
+                      onMouseLeave={e => (e.currentTarget.style.background = '')}>
                       <td style={{ fontSize: 10, fontWeight: 700, color: '#0D9488', padding: '7px 8px', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>{t.ticket_id.slice(0, 10)}…</td>
                       <td style={{ fontSize: 10.5, color: '#0F172A', fontWeight: 600, padding: '7px 8px', whiteSpace: 'nowrap' }}>{t.customer_name ?? '—'}</td>
                       <td style={{ fontSize: 10, color: '#64748B', padding: '7px 8px', whiteSpace: 'nowrap' }}>{t.customer_email}</td>
@@ -693,7 +696,10 @@ export default function AdminDashboard() {
             loading ? (
               <div style={{ padding: 40, textAlign: 'center', color: '#94A3B8' }}>Loading dashboard...</div>
             ) : (
-              <OverviewDashboard allTickets={allTickets} />
+              <OverviewDashboard
+                allTickets={allTickets}
+                onTicketClick={(id) => { setDashView('queue'); selectTicket(id) }}
+              />
             )
           )}
 
