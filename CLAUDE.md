@@ -103,6 +103,20 @@ To add a new doc: create the `.md` → add to `COLLECTION_MAP` in `loader.py` �
 
 ChromaDB chunks on `## ` / `### ` headings. Cosine similarity space.
 
+## Review API Field Names (critical)
+
+`PendingTicket` and `TicketReviewDetail` models in `app/models/review.py` expose frontend-aligned field names — **not** the raw DB column names:
+
+| DB column | API field |
+|---|---|
+| `final_status` | `status` |
+| `route_decision` | `route` |
+| `raw_text` | `original_message` |
+
+The SQL queries in `get_pending_review_tickets` and `get_ticket_review_detail` (`app/database/queries.py`) use `AS` aliases to produce these names. The router logic (which checks `row["final_status"]`) uses the raw dict before Pydantic serialization — keep `t.final_status` in the SELECT alongside `t.final_status AS status`.
+
+`get_ticket_review_detail` has three reply joins: `reply_type='ai_draft'` → `ai_draft`, `reply_type='edited_reply'` → `edited_reply`, `reply_type='final_sent_reply'` → `final_sent_reply`. The `/api/send-email` route uses priority: `final_sent_reply ?? edited_reply ?? ai_draft`.
+
 ## FastAPI Lifespan (critical)
 
 `main.py` uses nested `async with` to own the checkpointer/store lifecycle for the full app lifetime. Never return early from inside these context managers — connection closes immediately. All routers access pool and graph via `request.app.state.pool` and `request.app.state.graph`.
@@ -206,7 +220,7 @@ All frontend code lives in `frontend/`. Stack: Next.js 16 + React 19 + Tailwind 
 | `/patient/processing/[ticket_id]` | Live agent pipeline — polls `GET /ticket/{id}/logs` every 1.5 s; animates 9 nodes waiting→running→done with per-agent colored rings; shows glassmorphic completion card when done. |
 | `/admin/login` | Admin login gate — custom username/password auth (not Clerk). Username: `ADMINNAVAJEEVANA`, password: `admin@123`. Sets `sessionStorage.adminAuth = '1'` on success. |
 | `/admin` | Admin home — branded landing page (portal intro, features, dashboard link, sign out). Guards itself: redirects to `/admin/login` if not authenticated. |
-| `/admin/dashboard` | Admin dashboard — HITL review queue, approve/edit/send email. Guards itself: redirects to `/admin/login` if `sessionStorage.adminAuth !== '1'`. |
+| `/admin/dashboard` | Admin dashboard — Overview (stats + charts), Review Queue (full-width ticket detail on select), Escalated, All Tickets. Guards itself: redirects to `/admin/login` if `sessionStorage.adminAuth !== '1'`. |
 | `/api/send-email` | Server-side route — sends HTML email via Resend, marks ticket as `emailed` |
 | `/api/auth/sync` | Clerk post-login hook — syncs user to `frontend_users` via `getOrCreateUser()` |
 
@@ -290,8 +304,6 @@ Clerk app ID: `app_3Eg6FM0HTdOA2XbRdiouZPemsef`. Auth is wired end-to-end:
 | Phase 7 — Next.js frontend: admin home landing page (/admin, portal intro + mockup) | ✅ |
 | Phase 8 — Bug fixes + hardening | ✅ |
 | Phase 8 — Admin dashboard: Overview table expanded to 8 columns (email, subject, route, status) | ✅ |
-| Phase 8 — Admin dashboard: Recent Escalated Tickets filter includes route=escalate (not just status) | ✅ |
-| Phase 8 — Admin dashboard: Recent Escalated Tickets rows clickable → opens Review Queue detail panel | ✅ |
 | Phase 8 — Admin dashboard: reviewed_by hardcoded to ADMINNAVAJEEVANA in approve + edit calls | ✅ |
 | Phase 8 — Admin dashboard: action buttons visible for all non-terminal statuses | ✅ |
 | Phase 8 — Frontend: /api/send-email added to Clerk public routes (proxy.ts) | ✅ |
@@ -300,3 +312,9 @@ Clerk app ID: `app_3Eg6FM0HTdOA2XbRdiouZPemsef`. Auth is wired end-to-end:
 | Phase 8 — Backend: TicketDetail + TicketSummary models updated to include customer_email, customer_name | ✅ |
 | Phase 8 — Backend: RAG confidence threshold lowered 0.70 → 0.65 (confidence_evaluator.py) | ✅ |
 | Phase 8 — Deployment: ALLOWED_ORIGIN env var corrected in Render to Vercel URL (was defaulting to localhost) | ✅ |
+| Phase 8 — Admin dashboard: Overview "Recent Escalated Tickets" section removed; AI Confidence gauge moved to bottom row (4-column grid) | ✅ |
+| Phase 8 — Admin dashboard: Review Queue switches to full-width two-column detail view on ticket select (← Back to Queue returns to list) | ✅ |
+| Phase 8 — Admin dashboard: Escalation Brief button only shown for escalated tickets; brief renders in right sidebar | ✅ |
+| Phase 8 — Backend: GET /review/pending returns customer_phone, original_message, status (was final_status), route (was route_decision) | ✅ |
+| Phase 8 — Backend: GET /review/{id} returns edited_reply, final_sent_reply, customer_phone, original_message, status, route | ✅ |
+| Phase 8 — Frontend: Send Edited Reply now sends the edited text (was sending AI draft due to missing edited_reply join) | ✅ |
