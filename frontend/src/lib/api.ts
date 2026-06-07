@@ -147,10 +147,18 @@ export interface Doctor {
 }
 
 export interface AppointmentSlot {
-  id: string
+  slot_id: string
   slot_time: string
-  slot_label: string
+  label: string
   status: string
+}
+
+interface SlotsResponse {
+  doctor_id: string
+  doctor_name: string
+  date: string
+  slots: AppointmentSlot[]
+  note?: string
 }
 
 export interface BookAppointmentPayload {
@@ -192,7 +200,8 @@ export interface Appointment {
 export const getDoctors = () => req<Doctor[]>('/doctors')
 
 export const getAvailableSlots = (doctor_id: string, date: string) =>
-  req<AppointmentSlot[]>(`/appointment/slots/${doctor_id}?date=${date}`)
+  req<SlotsResponse>(`/appointment/slots/${doctor_id}?date=${date}`)
+    .then(r => r.slots)
 
 export const bookAppointment = (payload: BookAppointmentPayload) =>
   req<AppointmentResult>('/appointment/book', {

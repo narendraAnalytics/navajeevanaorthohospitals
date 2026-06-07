@@ -193,7 +193,7 @@ function BookingModal({
       setError('Please fill in all required fields.')
       return
     }
-    const selectedSlot = slots.find(s => s.id === slotId)
+    const selectedSlot = slots.find(s => s.slot_id === slotId)
     if (!selectedSlot) { setError('Please select a valid slot.'); return }
     setLoading(true); setError('')
     try {
@@ -204,7 +204,7 @@ function BookingModal({
         doctor_id: doctor!.id,
         appointment_date: date,
         appointment_time: selectedSlot.slot_time,
-        slot_label: selectedSlot.slot_label,
+        slot_label: selectedSlot.label,
         slot_id: slotId,
         reason,
         came_before: cameBefore!,
@@ -310,7 +310,7 @@ function BookingModal({
                     >
                       <option value="">{slotsLoading ? 'Loading slots…' : date ? slots.length ? 'Select a slot' : 'No slots available' : 'Pick a date first'}</option>
                       {slots.map(s => (
-                        <option key={s.id} value={s.id}>{s.slot_label} ({s.slot_time})</option>
+                        <option key={s.slot_id} value={s.slot_id}>{s.label} ({s.slot_time})</option>
                       ))}
                     </select>
                   </div>
