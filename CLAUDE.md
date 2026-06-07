@@ -236,6 +236,27 @@ PATCH /appointment/{id}/status                    -- admin: completed | no_show 
   "reason": "knee pain", "came_before": true, "session_id": "conv_abc" }
 ```
 
+## asyncpg Date/Time Encoding (critical)
+
+asyncpg **cannot encode Python `str` as PostgreSQL `date` or `time` columns** — it requires native Python objects. The `::date` / `::time` SQL cast does NOT help; asyncpg encodes parameters before the query is sent.
+
+**Error symptom:** `asyncpg.exceptions.DataError: invalid input for query argument $N: '2026-06-09' ('str' object has no attribute 'toordinal')`
+
+**Fix pattern — always apply in any node or router that queries date/time columns:**
+```python
+from datetime import date as date_type
+
+appt_date = state["appointment_date"]
+if isinstance(appt_date, str):
+    appt_date = date_type.fromisoformat(appt_date)
+# Then pass appt_date (not the string) to pool.execute/fetch/fetchrow
+# Remove ::date cast from SQL — asyncpg handles it natively once the type is correct
+```
+
+For `time` columns: pass the string with a `::time` SQL cast — asyncpg handles `str → time` via the cast (only `date` needs the Python object). Example: `$8::time` with `state["appointment_time"]` (a `"09:00"` string) works fine.
+
+**Files already fixed:** `routers/appointments.py`, `database/appointment_queries.py`, `appointment_nodes/slot_reservation_agent.py`, `appointment_nodes/alternative_suggester.py`.
+
 ## Knowledge Base
 
 9 `.md` docs in `backend/app/knowledge_base/docs/`, each maps to a ChromaDB collection. To add a doc: create `.md` → add to `COLLECTION_MAP` in `loader.py` → add name to `COLLECTIONS` in `rag_retriever.py` → re-run seed script. ChromaDB chunks on `## ` / `### ` headings.
@@ -291,10 +312,10 @@ Stack: Next.js 16 + React 19 + Tailwind 4 + Shadcn (`@base-ui/react`).
 | `/admin/login` | `src/app/admin/login/page.tsx` | ✅ SessionStorage auth |
 | `/admin` | `src/app/admin/page.tsx` | ✅ Admin home |
 | `/admin/dashboard` | `src/app/admin/dashboard/page.tsx` | ✅ HITL review + Overview |
-| `/doctors` | `src/app/doctors/page.tsx` | ✅ Doctor cards grid + booking modal |
-| `/patient/book` | *(pending Phase B2)* | ⬜ 3-step booking form |
-| `/patient/book/confirm/[id]` | *(pending Phase B3)* | ⬜ Booking confirmation |
-| `/patient/appointments` | *(pending Phase B4)* | ⬜ My appointments list |
+| `/doctors` | `src/app/doctors/page.tsx` | ✅ Doctor cards grid + booking modal — redirects to confirm page on success |
+| `/patient/book` | `src/app/patient/book/page.tsx` | ✅ Immediate redirect to `/doctors` |
+| `/patient/book/confirm/[id]` | `src/app/patient/book/confirm/[id]/page.tsx` | ✅ Polls `GET /appointment/{id}` every 4s; confirmed / error states |
+| `/patient/appointments` | `src/app/patient/appointments/page.tsx` | ✅ Standalone appointments list with cancel |
 
 **Key files:**
 
@@ -360,8 +381,8 @@ All scripts are idempotent — safe to re-run on every deploy.
 | Phase A — Appointment backend (7 tables, 8 doctors, slot generator, 10 nodes, graph, router) | ✅ |
 | Phase B0 — `/doctors` page + landing CTA update | ✅ |
 | Phase B1 — Appointment types + API functions in `api.ts` | ✅ |
-| Phase B2 — `/patient/book` 3-step form (doctor+date → details → agent widget Q1/Q2/Q3) | ⬜ |
-| Phase B3 — `/patient/book/confirm/[id]` polling + confirmation card | ⬜ |
-| Phase B4 — `/patient/appointments` list with status badges + cancel | ⬜ |
-| Phase B5 — Care Hub pill nav: Book Appt → `/doctors`, My Appts | ⬜ |
-| Phase B6 — Appointments tab in admin dashboard | ⬜ |
+| Phase B2 — `/patient/book` redirect page → `/doctors` | ✅ |
+| Phase B3 — `/patient/book/confirm/[id]` polling + confirmation card | ✅ |
+| Phase B4 — "My Appointments" tab in Care Hub + admin Appointments panel | ✅ |
+| Phase B5 — Standalone `/patient/appointments` page with cancel | ✅ |
+| Phase B6 — Admin dashboard appointments tab (`getAllAppointments`, cancel, status update) | ✅ |

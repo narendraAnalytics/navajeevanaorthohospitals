@@ -156,7 +156,6 @@ function BookingModal({
   const [slotsLoading, setSlotsLoading] = useState(false)
   const [slotError, setSlotError] = useState('')
   const [error, setError] = useState('')
-  const [successId, setSuccessId] = useState('')
 
   const email = user?.primaryEmailAddress?.emailAddress ?? ''
 
@@ -166,7 +165,7 @@ function BookingModal({
     }
     if (!modal.open) {
       setDate(''); setSlots([]); setSlotId(''); setReason('')
-      setCameBefore(null); setError(''); setSlotError(''); setSuccessId(''); setPhone('')
+      setCameBefore(null); setError(''); setSlotError(''); setPhone('')
     }
   }, [modal.open, user])
 
@@ -221,7 +220,7 @@ function BookingModal({
         came_before: cameBefore!,
         session_id: crypto.randomUUID(),
       })
-      setSuccessId(result.appointment_id ?? '')
+      router.push(`/patient/book/confirm/${result.appointment_id}`)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Booking failed. Please try again.')
     } finally {
@@ -262,26 +261,7 @@ function BookingModal({
 
         <div className="bm-divider" />
 
-        {successId ? (
-          /* Success state */
-          <div className="bm-success">
-            <div className="bm-success-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" width={30} height={30}>
-                <path d="M5 12l5 5L20 7" />
-              </svg>
-            </div>
-            <div className="bm-success-title">Appointment Requested!</div>
-            <div className="bm-success-sub">
-              Your request with <span className="bm-success-name">{doctor.name}</span> has been received.
-              {successId && <><br /><span style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4, display: 'block' }}>ID: {successId}</span></>}
-            </div>
-            <button className="bm-done-btn" onClick={() => { onClose(); router.push('/patient') }}>
-              Go to Care Hub
-            </button>
-          </div>
-        ) : (
-          /* Form */
-          <div className="bm-body">
+        <div className="bm-body">
             {!isSignedIn ? (
               <div style={{ textAlign: 'center', padding: '20px 0' }}>
                 <p style={{ marginBottom: 16, color: 'var(--muted)', fontSize: 14 }}>Sign in to book an appointment</p>
@@ -378,7 +358,6 @@ function BookingModal({
               </>
             )}
           </div>
-        )}
       </div>
     </div>
   )
