@@ -1,7 +1,7 @@
 """Appointment-specific DB queries — all new tables, zero overlap with queries.py."""
 import json
 import logging
-from datetime import date as date_type
+from datetime import date as date_type, time as time_type
 from typing import Optional
 
 import asyncpg
@@ -146,12 +146,13 @@ async def reschedule_appointment(pool: asyncpg.Pool, appt_id: str, new_slot_id: 
     await pool.execute(
         "UPDATE appointment_slots SET status = 'booked' WHERE id = $1", new_slot_id
     )
+    new_time = time_type.fromisoformat(new_slot["slot_time"][:5])
     await pool.execute(
         """UPDATE appointments
-           SET slot_id = $1, appointment_time = $2::time, slot_label = $3,
+           SET slot_id = $1, appointment_time = $2, slot_label = $3,
                status = 'rescheduled', updated_at = NOW()
            WHERE id = $4""",
-        new_slot_id, new_slot["slot_time"][:5], new_slot["label"], appt_id,
+        new_slot_id, new_time, new_slot["label"], appt_id,
     )
     await log_appointment_audit(pool, appt_id, "rescheduled", performed_by, {
         "old_slot": old_label, "old_time": old_time,

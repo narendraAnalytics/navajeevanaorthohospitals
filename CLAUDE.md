@@ -244,16 +244,17 @@ asyncpg **cannot encode Python `str` as PostgreSQL `date` or `time` columns** �
 
 **Fix pattern — always apply in any node or router that queries date/time columns:**
 ```python
-from datetime import date as date_type
+from datetime import date as date_type, time as time_type
 
 appt_date = state["appointment_date"]
 if isinstance(appt_date, str):
     appt_date = date_type.fromisoformat(appt_date)
-# Then pass appt_date (not the string) to pool.execute/fetch/fetchrow
-# Remove ::date cast from SQL — asyncpg handles it natively once the type is correct
-```
 
-For `time` columns: pass the string with a `::time` SQL cast — asyncpg handles `str → time` via the cast (only `date` needs the Python object). Example: `$8::time` with `state["appointment_time"]` (a `"09:00"` string) works fine.
+appt_time = state["appointment_time"]
+if isinstance(appt_time, str):
+    appt_time = time_type.fromisoformat(appt_time)
+# Pass native objects to pool.execute/fetch/fetchrow — no ::date or ::time cast needed
+```
 
 **Files already fixed:** `routers/appointments.py`, `database/appointment_queries.py`, `appointment_nodes/slot_reservation_agent.py`, `appointment_nodes/alternative_suggester.py`.
 
