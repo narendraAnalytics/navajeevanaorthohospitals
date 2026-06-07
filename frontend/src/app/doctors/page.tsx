@@ -176,10 +176,10 @@ function BookingModal({
     setSlots([]); setSlotId(''); setSlotError('')
     try {
       const data = await getAvailableSlots(doctor.id, d)
-      const available = data.filter(s => s.status === 'available')
-      setSlots(available)
+      setSlots(data)
+      const available = data.filter(s => s.status === 'available' || s.status === 'held')
       if (available.length === 0) {
-        setSlotError('No available slots for this date. Try another date.')
+        setSlotError('All slots for this date are fully booked. Please try another date.')
       }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Unknown error'
@@ -320,9 +320,14 @@ function BookingModal({
                       disabled={!date || slotsLoading}
                     >
                       <option value="">{slotsLoading ? 'Loading slots…' : date ? slots.length ? 'Select a slot' : 'No slots available' : 'Pick a date first'}</option>
-                      {slots.map(s => (
-                        <option key={s.slot_id} value={s.slot_id}>{s.label} ({s.slot_time})</option>
-                      ))}
+                      {slots.map(s => {
+                        const isBooked = s.status === 'booked'
+                        return (
+                          <option key={s.slot_id} value={s.slot_id} disabled={isBooked}>
+                            {s.label} ({s.slot_time}){isBooked ? ' — Booked' : ''}
+                          </option>
+                        )
+                      })}
                     </select>
                   </div>
                 </div>

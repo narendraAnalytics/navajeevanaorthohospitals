@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -13,12 +13,13 @@ import { Line, Doughnut } from 'react-chartjs-2'
 import {
   getPendingReview, getTicketReview, getAllTickets, getEscalationBrief,
   approveTicket, editTicket, sendEmail, resolveTicket,
-  type Ticket, type TicketReview, type EscalationBrief,
+  getAllAppointments, cancelAppointment, updateAppointmentAdminStatus,
+  type Ticket, type TicketReview, type EscalationBrief, type Appointment,
 } from '@/lib/api'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, ArcElement, Title, Tooltip, Legend, Filler)
 
-type DashView = 'overview' | 'queue' | 'all' | 'escalations'
+type DashView = 'overview' | 'queue' | 'all' | 'escalations' | 'appointments'
 type EmailState = 'idle' | 'loading' | 'success' | 'error'
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
@@ -400,6 +401,163 @@ function OverviewDashboard({ allTickets, onTicketClick }: { allTickets: Ticket[]
   )
 }
 
+// ─── appointments panel ───────────────────────────────────────────────────────
+
+const apptStatusColor: Record<string, string> = {
+  pending: '#F59E0B', confirmed: '#10B981', cancelled: '#6B7280',
+  completed: '#3B82F6', no_show: '#EF4444', rescheduled: '#8B5CF6', error: '#EF4444',
+}
+
+function AppointmentsPanel({
+  appointments, loading, onRefresh, onFlash,
+}: {
+  appointments: Appointment[]
+  loading: boolean
+  onRefresh: () => void
+  onFlash: (msg: string, err?: boolean) => void
+}) {
+  const stats = {
+    total: appointments.length,
+    confirmed: appointments.filter(a => a.status === 'confirmed').length,
+    pending: appointments.filter(a => a.status === 'pending').length,
+    cancelled: appointments.filter(a => a.status === 'cancelled').length,
+    completed: appointments.filter(a => a.status === 'completed').length,
+  }
+
+  const handleCancel = async (id: string) => {
+    if (!window.confirm('Cancel this appointment? The slot will be released.')) return
+    try {
+      await cancelAppointment(id)
+      onFlash('✓ Appointment cancelled. Slot is now available.')
+      onRefresh()
+    } catch (e) { onFlash(e instanceof Error ? e.message : String(e), true) }
+  }
+
+  const handleStatus = async (id: string, status: string) => {
+    try {
+      await updateAppointmentAdminStatus(id, status)
+      onFlash(`✓ Status updated to ${status}.`)
+      onRefresh()
+    } catch (e) { onFlash(e instanceof Error ? e.message : String(e), true) }
+  }
+
+  return (
+    <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <h2 style={{ fontSize: 16, fontWeight: 700, color: '#0F172A', margin: 0 }}>Appointments</h2>
+          <p style={{ fontSize: 12, color: '#64748B', margin: '2px 0 0' }}>All patient bookings — manage and update status</p>
+        </div>
+        <button onClick={onRefresh} style={{ background: '#F1F5F9', border: 'none', borderRadius: 8, padding: '7px 14px', fontSize: 12, color: '#475569', cursor: 'pointer', fontWeight: 600 }}>↻ Refresh</button>
+      </div>
+
+      {/* Stats row */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10 }}>
+        {[
+          { label: 'Total', value: stats.total, color: '#3B82F6', bg: '#EFF6FF' },
+          { label: 'Confirmed', value: stats.confirmed, color: '#10B981', bg: '#ECFDF5' },
+          { label: 'Pending', value: stats.pending, color: '#F59E0B', bg: '#FFFBEB' },
+          { label: 'Completed', value: stats.completed, color: '#3B82F6', bg: '#EFF6FF' },
+          { label: 'Cancelled', value: stats.cancelled, color: '#6B7280', bg: '#F8FAFC' },
+        ].map(s => (
+          <div key={s.label} style={{ background: '#fff', borderRadius: 10, padding: '12px 14px', border: '1px solid #E9EFF4' }}>
+            <div style={{ fontSize: 10, color: '#94A3B8', fontWeight: 600, marginBottom: 4 }}>{s.label}</div>
+            <div style={{ fontFamily: '"Sora",system-ui', fontSize: 26, fontWeight: 900, color: s.color }}>{s.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Table */}
+      <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #E2E8F0', overflow: 'hidden' }}>
+        {loading ? (
+          <div style={{ padding: 60, textAlign: 'center', color: '#94A3B8' }}>Loading appointments...</div>
+        ) : appointments.length === 0 ? (
+          <div style={{ padding: 60, textAlign: 'center' }}>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>📅</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#0F172A', marginBottom: 6 }}>No appointments yet</div>
+            <div style={{ fontSize: 12, color: '#64748B' }}>Bookings will appear here once patients schedule them.</div>
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
+              <thead>
+                <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
+                  {['ID', 'Patient', 'Doctor', 'Date & Time', 'Slot', 'Reason', 'New?', 'Status', 'Actions'].map(h => (
+                    <th key={h} style={{ padding: '10px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '.04em', whiteSpace: 'nowrap' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {appointments.map(a => {
+                  const sc = apptStatusColor[a.status] ?? '#6B7280'
+                  const isFinal = a.status === 'cancelled' || a.status === 'completed'
+                  const dateLabel = new Date(a.appointment_date + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+                  const reason = a.reason?.length > 40 ? a.reason.slice(0, 40) + '…' : (a.reason ?? '—')
+                  return (
+                    <tr key={a.id} style={{ borderBottom: '1px solid #F1F5F9', background: '#fff' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = '#F8FAFC')}
+                      onMouseLeave={e => (e.currentTarget.style.background = '#fff')}>
+                      <td style={{ padding: '10px 12px', fontSize: 10.5, fontWeight: 700, color: '#0D9488', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>{a.id}</td>
+                      <td style={{ padding: '10px 12px', minWidth: 140 }}>
+                        <div style={{ fontSize: 12.5, fontWeight: 700, color: '#0F172A' }}>{a.patient_name}</div>
+                        <div style={{ fontSize: 11, color: '#64748B', marginTop: 1 }}>{a.patient_email}</div>
+                        {a.patient_phone && <div style={{ fontSize: 10.5, color: '#94A3B8', marginTop: 1 }}>{a.patient_phone}</div>}
+                      </td>
+                      <td style={{ padding: '10px 12px', fontSize: 12, color: '#334155', whiteSpace: 'nowrap' }}>{a.doctor_name ?? a.doctor_id}</td>
+                      <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: '#0F172A' }}>{dateLabel}</div>
+                        <div style={{ fontSize: 11, color: '#64748B', marginTop: 1 }}>{a.appointment_time}</div>
+                      </td>
+                      <td style={{ padding: '10px 12px', fontSize: 12, color: '#475569', whiteSpace: 'nowrap' }}>{a.slot_label}</td>
+                      <td style={{ padding: '10px 12px', fontSize: 12, color: '#475569', maxWidth: 180 }}>{reason}</td>
+                      <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: a.came_before ? '#0D9488' : '#F59E0B' }}>
+                          {a.came_before ? 'Returning' : 'New'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: `${sc}15`, color: sc, border: `1px solid ${sc}40`, borderRadius: 20, padding: '3px 9px', fontSize: 11, fontWeight: 700 }}>
+                          <span style={{ width: 5, height: 5, borderRadius: '50%', background: sc, flexShrink: 0 }} />
+                          {a.status.replace('_', ' ')}
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
+                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                          {!isFinal && (
+                            <button
+                              onClick={() => handleCancel(a.id)}
+                              style={{ background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA', borderRadius: 7, padding: '4px 10px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                              Cancel
+                            </button>
+                          )}
+                          {!isFinal && (
+                            <select
+                              defaultValue=""
+                              aria-label={`Update status for ${a.patient_name}`}
+                              onChange={e => { if (e.target.value) { handleStatus(a.id, e.target.value); e.target.value = '' } }}
+                              style={{ fontSize: 11, borderRadius: 7, border: '1px solid #E2E8F0', padding: '4px 8px', color: '#475569', cursor: 'pointer', background: '#F8FAFC' }}>
+                              <option value="" disabled>Set status…</option>
+                              <option value="confirmed">Confirmed</option>
+                              <option value="completed">Completed</option>
+                              <option value="no_show">No Show</option>
+                            </select>
+                          )}
+                          {isFinal && <span style={{ fontSize: 11, color: '#94A3B8' }}>—</span>}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── main dashboard ───────────────────────────────────────────────────────────
 
 export default function AdminDashboard() {
@@ -407,6 +565,10 @@ export default function AdminDashboard() {
   const [authChecked, setAuthChecked] = useState(false)
   const [dashView, setDashView] = useState<DashView>('overview')
   const [now, setNow] = useState<Date | null>(null)
+
+  // Appointments state
+  const [appointments, setAppointments] = useState<Appointment[]>([])
+  const [apptLoading, setApptLoading] = useState(false)
 
   // HITL state
   const [queue, setQueue] = useState<TicketReview[]>([])
@@ -445,6 +607,11 @@ export default function AdminDashboard() {
     try { setAllTickets(await getAllTickets()) } catch { /* ignore */ } finally { setLoading(false) }
   }
 
+  const loadAppointments = useCallback(async () => {
+    setApptLoading(true)
+    try { setAppointments(await getAllAppointments()) } catch { /* ignore */ } finally { setApptLoading(false) }
+  }, [])
+
   useEffect(() => {
     if (!authChecked) return
     loadAll()
@@ -454,6 +621,7 @@ export default function AdminDashboard() {
     if (!authChecked) return
     if (dashView === 'queue') loadQueue()
     else if (dashView === 'all' || dashView === 'escalations' || dashView === 'overview') loadAll()
+    else if (dashView === 'appointments') loadAppointments()
   }, [dashView, authChecked])
 
   const selectTicket = async (id: string) => {
@@ -518,6 +686,8 @@ export default function AdminDashboard() {
       icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="13" height="13"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> },
     { id: 'all' as DashView, label: 'All Tickets', badge: null,
       icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="13" height="13"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 10h18M7 15h4M15 15h2"/></svg> },
+    { id: 'appointments' as DashView, label: 'Appointments', badge: appointments.length > 0 ? appointments.length : null,
+      icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="13" height="13"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> },
   ]
 
   return (
@@ -925,6 +1095,15 @@ export default function AdminDashboard() {
                 </table>
               )}
             </div>
+          )}
+          {/* APPOINTMENTS */}
+          {dashView === 'appointments' && (
+            <AppointmentsPanel
+              appointments={appointments}
+              loading={apptLoading}
+              onRefresh={loadAppointments}
+              onFlash={flash}
+            />
           )}
         </div>
       </div>

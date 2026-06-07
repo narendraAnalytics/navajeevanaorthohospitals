@@ -185,7 +185,9 @@ export interface Appointment {
   id: string
   patient_name: string
   patient_email: string
+  patient_phone?: string
   doctor_id: string
+  doctor_name?: string
   appointment_date: string
   appointment_time: string
   slot_label: string
@@ -193,6 +195,7 @@ export interface Appointment {
   came_before: boolean
   status: string
   created_at: string
+  updated_at?: string
 }
 
 // ---- appointment API ----
@@ -214,3 +217,15 @@ export const getAppointmentById = (id: string) =>
 
 export const getAppointmentsByEmail = (email: string) =>
   req<Appointment[]>(`/appointment/by-email/${encodeURIComponent(email)}`)
+
+export const getAllAppointments = () =>
+  req<Appointment[]>('/appointment/all')
+
+export const cancelAppointment = (id: string) =>
+  req<{ appointment_id: string; status: string }>(`/appointment/${id}/cancel`, { method: 'PATCH' })
+
+export const updateAppointmentAdminStatus = (id: string, status: string) =>
+  req<{ appointment_id: string; status: string }>(`/appointment/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status, performed_by: 'ADMINNAVAJEEVANA' }),
+  })
