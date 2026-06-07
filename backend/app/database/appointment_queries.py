@@ -1,6 +1,7 @@
 """Appointment-specific DB queries — all new tables, zero overlap with queries.py."""
 import json
 import logging
+from datetime import date as date_type
 from typing import Optional
 
 import asyncpg
@@ -21,12 +22,12 @@ async def get_doctors(pool: asyncpg.Pool) -> list[dict]:
     return [dict(r) for r in rows]
 
 
-async def get_available_slots(pool: asyncpg.Pool, doctor_id: str, slot_date: str) -> list[dict]:
+async def get_available_slots(pool: asyncpg.Pool, doctor_id: str, slot_date: date_type) -> list[dict]:
     rows = await pool.fetch(
         """SELECT id, slot_time::text, label, status
            FROM appointment_slots
            WHERE doctor_id = $1
-             AND slot_date = $2::date
+             AND slot_date = $2
            ORDER BY slot_time""",
         doctor_id, slot_date,
     )

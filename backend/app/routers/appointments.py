@@ -16,6 +16,7 @@ Conversation protocol (stateless — frontend accumulates answers):
   GET  /appointment/slots/{doctor_id}?date=...
 """
 import logging
+from datetime import date as date_type
 from uuid import uuid4
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
@@ -162,22 +163,27 @@ async def get_slots(doctor_id: str, date: str, request: Request):
     """
     pool = request.app.state.pool
 
+    try:
+        date_obj = date_type.fromisoformat(date)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD.")
+
     doc = await pool.fetchrow("SELECT full_name FROM doctors WHERE id = $1", doctor_id)
     if not doc:
         raise HTTPException(status_code=404, detail=f"Doctor '{doctor_id}' not found")
 
     unavail = await pool.fetchrow(
-        "SELECT id FROM doctor_unavailability WHERE doctor_id=$1 AND date=$2::date",
-        doctor_id, date,
+        "SELECT id FROM doctor_unavailability WHERE doctor_id=$1 AND date=$2",
+        doctor_id, date_obj,
     )
     if unavail:
         return {"doctor_id": doctor_id, "doctor_name": doc["full_name"], "date": date, "slots": [], "note": "Doctor is unavailable on this date."}
 
-    holiday = await pool.fetchrow("SELECT name FROM hospital_holidays WHERE date=$1::date", date)
+    holiday = await pool.fetchrow("SELECT name FROM hospital_holidays WHERE date=$1", date_obj)
     if holiday:
         return {"doctor_id": doctor_id, "doctor_name": doc["full_name"], "date": date, "slots": [], "note": f"Hospital closed — {holiday['name']}."}
 
-    slots = await get_available_slots(pool, doctor_id, date)
+    slots = await get_available_slots(pool, doctor_id, date_obj)
     return {"doctor_id": doctor_id, "doctor_name": doc["full_name"], "date": date, "slots": slots}
 
 

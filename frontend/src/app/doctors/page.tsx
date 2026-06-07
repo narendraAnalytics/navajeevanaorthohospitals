@@ -154,6 +154,7 @@ function BookingModal({
   const [cameBefore, setCameBefore] = useState<boolean | null>(null)
   const [loading, setLoading] = useState(false)
   const [slotsLoading, setSlotsLoading] = useState(false)
+  const [slotError, setSlotError] = useState('')
   const [error, setError] = useState('')
   const [successId, setSuccessId] = useState('')
 
@@ -165,18 +166,27 @@ function BookingModal({
     }
     if (!modal.open) {
       setDate(''); setSlots([]); setSlotId(''); setReason('')
-      setCameBefore(null); setError(''); setSuccessId(''); setPhone('')
+      setCameBefore(null); setError(''); setSlotError(''); setSuccessId(''); setPhone('')
     }
   }, [modal.open, user])
 
   const fetchSlots = useCallback(async (d: string) => {
     if (!doctor || !d) return
     setSlotsLoading(true)
-    setSlots([]); setSlotId('')
+    setSlots([]); setSlotId(''); setSlotError('')
     try {
       const data = await getAvailableSlots(doctor.id, d)
-      setSlots(data.filter(s => s.status === 'available'))
-    } catch {
+      const available = data.filter(s => s.status === 'available')
+      setSlots(available)
+      if (available.length === 0) {
+        setSlotError('No available slots for this date. Try another date.')
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Unknown error'
+      const isNetwork = msg.toLowerCase().includes('fetch') || msg.includes('502') || msg.includes('503') || msg.includes('network')
+      setSlotError(isNetwork
+        ? 'Server is starting up — wait ~30s then click Retry.'
+        : `Couldn't load slots: ${msg}`)
       setSlots([])
     } finally {
       setSlotsLoading(false)
@@ -185,6 +195,7 @@ function BookingModal({
 
   const handleDateChange = (v: string) => {
     setDate(v)
+    setSlotError('')
     fetchSlots(v)
   }
 
@@ -315,6 +326,16 @@ function BookingModal({
                     </select>
                   </div>
                 </div>
+                {slotError && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <p className="bm-error" style={{ margin: 0 }}>{slotError}</p>
+                    {date && (
+                      <button type="button" className="bm-retry-btn" onClick={() => { setSlotError(''); fetchSlots(date) }}>
+                        ↺ Retry
+                      </button>
+                    )}
+                  </div>
+                )}
                 <div>
                   <label className="bm-label">Have you visited before? *</label>
                   <div className="bm-toggle">
@@ -570,6 +591,8 @@ export default function DoctorsPage() {
         .bm-success-name{color:#0C8E84;font-weight:700}
         .bm-done-btn{padding:11px 28px;border-radius:12px;background:#E6F9F7;border:1.5px solid rgba(17,181,164,.3);color:#0C8E84;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font-body);transition:all .18s;margin-top:8px}
         .bm-done-btn:hover{background:#11B5A4;color:#fff}
+        .bm-retry-btn{padding:5px 14px;border-radius:8px;background:#E6F9F7;border:1.5px solid rgba(17,181,164,.3);color:#0C8E84;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font-body);transition:all .18s;flex-shrink:0}
+        .bm-retry-btn:hover{background:#11B5A4;color:#fff}
       `}</style>
 
       <div style={{ fontFamily: 'var(--font-body)', background: 'var(--ivory)', color: 'var(--ink)', minHeight: '100vh', WebkitFontSmoothing: 'antialiased' }}>
