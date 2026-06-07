@@ -134,3 +134,74 @@ export const getEscalationBrief = (id: string) =>
 
 export const resolveTicket = (id: string) =>
   req<{ message: string }>(`/ticket/${id}/resolve`, { method: 'PATCH' })
+
+// ---- appointment types ----
+
+export interface Doctor {
+  id: string
+  full_name: string
+  specialization: string
+  branch: string
+  is_active: boolean
+  working_days: string[]
+}
+
+export interface AppointmentSlot {
+  id: string
+  slot_time: string
+  slot_label: string
+  status: string
+}
+
+export interface BookAppointmentPayload {
+  patient_name: string
+  patient_email: string
+  patient_phone: string
+  doctor_id: string
+  appointment_date: string
+  appointment_time: string
+  slot_label: string
+  slot_id: string
+  reason: string
+  came_before: boolean
+  session_id: string
+}
+
+export interface AppointmentResult {
+  appointment_id: string
+  status: string
+  message?: string
+}
+
+export interface Appointment {
+  id: string
+  patient_name: string
+  patient_email: string
+  doctor_id: string
+  appointment_date: string
+  appointment_time: string
+  slot_label: string
+  reason: string
+  came_before: boolean
+  status: string
+  created_at: string
+}
+
+// ---- appointment API ----
+
+export const getDoctors = () => req<Doctor[]>('/doctors')
+
+export const getAvailableSlots = (doctor_id: string, date: string) =>
+  req<AppointmentSlot[]>(`/appointment/slots/${doctor_id}?date=${date}`)
+
+export const bookAppointment = (payload: BookAppointmentPayload) =>
+  req<AppointmentResult>('/appointment/book', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+
+export const getAppointmentById = (id: string) =>
+  req<Appointment>(`/appointment/${id}`)
+
+export const getAppointmentsByEmail = (email: string) =>
+  req<Appointment[]>(`/appointment/by-email/${encodeURIComponent(email)}`)

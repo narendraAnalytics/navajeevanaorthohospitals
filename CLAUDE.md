@@ -291,7 +291,7 @@ Stack: Next.js 16 + React 19 + Tailwind 4 + Shadcn (`@base-ui/react`).
 | `/admin/login` | `src/app/admin/login/page.tsx` | ✅ SessionStorage auth |
 | `/admin` | `src/app/admin/page.tsx` | ✅ Admin home |
 | `/admin/dashboard` | `src/app/admin/dashboard/page.tsx` | ✅ HITL review + Overview |
-| `/doctors` | *(pending Phase B0)* | ⬜ Doctor cards grid |
+| `/doctors` | `src/app/doctors/page.tsx` | ✅ Doctor cards grid + booking modal |
 | `/patient/book` | *(pending Phase B2)* | ⬜ 3-step booking form |
 | `/patient/book/confirm/[id]` | *(pending Phase B3)* | ⬜ Booking confirmation |
 | `/patient/appointments` | *(pending Phase B4)* | ⬜ My appointments list |
@@ -309,10 +309,16 @@ Stack: Next.js 16 + React 19 + Tailwind 4 + Shadcn (`@base-ui/react`).
 **Design system:**
 - Brand CSS vars prefixed: `--bk-muted`, `--brand-maxw` (avoids Tailwind 4 / Shadcn conflicts)
 - Landing page: `className="brand-page"` — sets fonts + ivory `#FFFBF7` background
-- Tailwind for `/admin` and `/patient`; inline `<style>` for transition/animation pages
-- Animation pages background: ivory + three floating orbs (mint `#9DF0D6`, peach `#FFC9A3`) + dot-grid `::after`
+- Tailwind for `/admin` and `/patient`; inline `<style>` for transition/animation pages and `/doctors`
+- Animation pages + `/doctors` background: ivory + three floating orbs (mint `#9DF0D6`, peach `#FFD0BB`) + optional dot-grid
 - Never put a changing `key` on `<img>` in the hero carousel — CSS `opacity` handles crossfade
 - All `<label>` must have `htmlFor`; standalone inputs need `aria-label`; label style: `.pt-label`
+
+**`/doctors` page architecture (important):**
+- Doctor data is **static** in `src/app/doctors/page.tsx` — 8 doctors hardcoded with Cloudinary image URLs from `frontend/bookingappt.txt`. The page does NOT call `GET /doctors` to render cards; static data avoids a cold-start round-trip.
+- The in-page `BookingModal` does call the live backend: `getAvailableSlots(doctor_id, date)` on date change, then `bookAppointment()` on submit.
+- HeroSection "Book Appointment" CTA (signed-in users) routes to `/doctors` (not `/patient/intro`). Signed-out users still see a Clerk `<SignInButton>` redirecting to `/patient`.
+- CSS classes use `dp-` prefix (page/filter) and `dc-` prefix (doctor card) and `bm-` prefix (booking modal) to avoid collision with globals.
 
 ## Clerk Auth
 
@@ -352,8 +358,8 @@ All scripts are idempotent — safe to re-run on every deploy.
 | Phase 7 — Full Next.js frontend (landing, auth, patient portal, admin dashboard) | ✅ |
 | Phase 8 — Bug fixes + hardening (field aliases, CORS, confidence threshold) | ✅ |
 | Phase A — Appointment backend (7 tables, 8 doctors, slot generator, 10 nodes, graph, router) | ✅ |
-| Phase B0 — `/doctors` page + landing CTA update | ⬜ |
-| Phase B1 — Appointment types + API functions in `api.ts` | ⬜ |
+| Phase B0 — `/doctors` page + landing CTA update | ✅ |
+| Phase B1 — Appointment types + API functions in `api.ts` | ✅ |
 | Phase B2 — `/patient/book` 3-step form (doctor+date → details → agent widget Q1/Q2/Q3) | ⬜ |
 | Phase B3 — `/patient/book/confirm/[id]` polling + confirmation card | ⬜ |
 | Phase B4 — `/patient/appointments` list with status badges + cancel | ⬜ |

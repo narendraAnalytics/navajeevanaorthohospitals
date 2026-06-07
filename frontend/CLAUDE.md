@@ -22,7 +22,7 @@ Next.js 16 · React 19 · Tailwind 4 · Shadcn (`@base-ui/react`, style: `base-n
 | `/admin/login` | `src/app/admin/login/page.tsx` | ✅ | SessionStorage auth |
 | `/admin` | `src/app/admin/page.tsx` | ✅ | Admin home |
 | `/admin/dashboard` | `src/app/admin/dashboard/page.tsx` | ✅ | HITL review + Overview |
-| `/doctors` | `src/app/doctors/page.tsx` | ⬜ Phase B0 | Doctor cards grid |
+| `/doctors` | `src/app/doctors/page.tsx` | ✅ | Doctor cards grid + booking modal (static data + live slot/book API) |
 | `/patient/book` | `src/app/patient/book/page.tsx` | ⬜ Phase B2 | 3-step booking form |
 | `/patient/book/confirm/[id]` | `src/app/patient/book/confirm/[id]/page.tsx` | ⬜ Phase B3 | Booking confirmation |
 | `/patient/appointments` | `src/app/patient/appointments/page.tsx` | ⬜ Phase B4 | My appointments list |
@@ -99,7 +99,7 @@ Set `NEXT_PUBLIC_API_URL` in `.env.local`:
 - Dev: `http://localhost:8000`
 - Prod: `https://navajeevanaorthohospitals.onrender.com`
 
-Appointment API functions to add (Phase B1): `getDoctors`, `getAvailableSlots`, `postConversationAnswer`, `bookAppointment`, `getAppointmentById`, `getAppointmentsByEmail`, `cancelAppointment`.
+Appointment API functions added (Phase B1): `getDoctors`, `getAvailableSlots`, `bookAppointment`, `getAppointmentById`, `getAppointmentsByEmail`. Still pending: `postConversationAnswer`, `cancelAppointment`.
 
 ## Auth
 
