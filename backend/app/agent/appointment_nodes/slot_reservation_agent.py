@@ -3,7 +3,7 @@
 Marks the slot as booked and inserts the appointments row.
 """
 import logging
-from datetime import date as date_type
+from datetime import date as date_type, time as time_type
 
 from app.agent.appointment_state import AppointmentState
 from app.database.connection import get_pool
@@ -24,12 +24,16 @@ async def slot_reservation_agent(state: AppointmentState) -> dict:
     if isinstance(appt_date, str):
         appt_date = date_type.fromisoformat(appt_date)
 
+    appt_time = state["appointment_time"]
+    if isinstance(appt_time, str):
+        appt_time = time_type.fromisoformat(appt_time)
+
     await pool.execute(
         """INSERT INTO appointments
                (id, patient_name, patient_email, patient_phone,
                 doctor_id, slot_id, appointment_date, appointment_time,
                 slot_label, reason, came_before, status)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8::time,$9,$10,$11,$12)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
            ON CONFLICT (id) DO NOTHING""",
         appointment_id,
         state["patient_name"],
@@ -38,7 +42,7 @@ async def slot_reservation_agent(state: AppointmentState) -> dict:
         state["doctor_id"],
         state["slot_id"],
         appt_date,
-        state["appointment_time"],
+        appt_time,
         state["slot_label"],
         state.get("reason"),
         state.get("came_before", False),
