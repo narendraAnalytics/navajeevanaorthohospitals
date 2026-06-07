@@ -1,274 +1,501 @@
-# Patient Query Flow — Navajeevana Ortho Hospitals
-# Complete end-to-end walkthrough: from submission to response
+# OrthoAI — Appointment Booking Workflow Design
+# Navajeevana Ortho Hospitals, Bhimavaram
+# Design Rating: 9.5/10 (Architecture 9, Agent Separation 10, Deterministic Scheduling 10,
+#                         DB Design 9, Memory Integration 9, Hospital Realism 9, Scalability 8)
+# Updated: booking_conversation_agent added (slot + reason + came_before),
+#           fixed 4-slot model, rescheduled status, /doctors landing page
 
 ---
 
-## 1. Patient Submits a Query
+## Architecture Overview
 
-**Where:** `/patient` — Care Hub page
+```
+Patient Request (Frontend)
+        │
+        ▼
+Master Router Agent  (FastAPI + LangGraph)
+        │
+        ├── intent = support_query    → Existing Ticketing Graph (unchanged)
+        │
+        └── intent = appointment      → Appointment Booking Graph (new)
+```
 
-The patient fills in:
-- Full Name (pre-filled from Clerk account, editable)
-- Phone (optional)
-- Email (locked — pulled from Clerk, cannot be changed)
-- Query message (their question or concern)
-
-On submit, the frontend calls:
-  POST /ticket
-  Body: { customer_name, customer_email, customer_phone, message }
-
-The backend derives two fields server-side:
-- customer_id = customer_email  (links all tickets from same patient for long-term memory)
-- subject      = first 60 chars of message  (used as ticket title)
-
-The backend responds with { ticket_id: "NJH-2026-XXXX" } (HTTP 202).
-
-The frontend immediately redirects the patient to:
-  /patient/processing/{ticket_id}
-
+Both graphs share:
+- Same Neon PostgreSQL database (new tables added)
+- Same AsyncPostgresStore (patient long-term memory, keyed by email)
+- Same FastAPI app (new router: /appointment/*)
+- Same Render project — no new service needed
+- Same Clerk auth (patient portal already authenticated)
 
 ---
 
-## 2. Backend: Ticket Created & LangGraph Graph Started
+## Appointment Booking Graph (LangGraph StateGraph)
 
-On receiving the POST /ticket request, the backend:
-1. Creates a row in the `tickets` table (status = "processing")
-2. Creates a row in `replies` table (blank — to be filled by agents)
-3. Starts the LangGraph 8-agent graph in the background using:
-     graph.astream(stream_mode="updates")
-   This streams each agent's output as it completes — real-time, not batch.
-4. Each agent writes a row to `agent_logs` as it finishes
-   (node_name, decision, confidence_score, created_at)
-
-The HTTP response returns immediately (202 Accepted) — the graph runs async.
-
-
----
-
-## 3. Frontend: Live Pipeline Page
-
-**Where:** `/patient/processing/{ticket_id}`
-
-The page polls GET /ticket/{id}/logs every 1.5 seconds.
-
-The response includes:
-- status         (current ticket status)
-- logs           (list of completed agent logs)
-- route_decision (auto_reply | web_search | escalate — set after Confidence Evaluator)
-- confidence_score
-
-The page renders the 8-node pipeline and animates each node:
-  waiting → running → done
-as the agent_logs rows appear in real time.
-
-Polling stops automatically when status changes from "processing".
-Timeout fallback: if still processing after 120 seconds, shows a "Still working…" message.
-
-
----
-
-## 4. The 8-Agent Pipeline (LangGraph StateGraph)
-
-Agents run in this order. Steps 2-4 run in PARALLEL:
-
-  ┌─────────────────────────────────────────────────────────────┐
-  │                                                             │
-  │  [1] Orchestrator                                           │
-  │       Reads the patient message, sets urgency level         │
-  │       (low / medium / high)                                 │
-  │                                                             │
-  │       ↓ fan-out (parallel) ↓                               │
-  │                                                             │
-  │  [2] Intent Classifier    [3] Safety Checker   [4] RAG      │
-  │       Categorises the      Keyword-only scan    Retriever   │
-  │       query type           for safety flags     Searches    │
-  │       (appointment,        (no LLM — fast).     ChromaDB    │
-  │       billing, medical,    Flags if unsafe.     knowledge   │
-  │       general etc.)                             base across │
-  │                                                 9 doc       │
-  │                                                 collections.│
-  │                                                 Returns     │
-  │                                                 cosine      │
-  │                                                 similarity  │
-  │                                                 score.      │
-  │       ↓ fan-in ↓                                            │
-  │                                                             │
-  │  [5] Confidence Evaluator                                   │
-  │       Combines RAG score + safety flags to choose a route:  │
-  │                                                             │
-  │       Route A — auto_reply                                  │
-  │         RAG score ≥ 0.70 AND no safety flags               │
-  │         → Knowledge base has a good answer                  │
-  │         → Goes directly to Reply Writer                     │
-  │                                                             │
-  │       Route B — web_search                                  │
-  │         RAG score < 0.70 (KB doesn't have the answer)       │
-  │         → Tavily web search agent runs first                │
-  │         → If Tavily confidence ≥ 0.50 → Reply Writer        │
-  │         → If Tavily confidence < 0.50 → Escalate instead    │
-  │                                                             │
-  │       Route C — escalate                                    │
-  │         Safety flag triggered (e.g. emergency symptoms)     │
-  │         OR both RAG and Tavily confidence too low           │
-  │         → Escalation Packager prepares a staff brief        │
-  │                                                             │
-  │  [6a] Tavily Web Search   [6b] Reply Writer   [6c] Escal.  │
-  │        (Route B only)      (Routes A & B)      Packager    │
-  │        Searches the web    Drafts a response   (Route C)   │
-  │        for general info.   using KB or web     Prepares    │
-  │        Uses llama-3.3-70b  search results.     urgent      │
-  │        for synthesis.      Opens with brand    brief for   │
-  │                            prefix based on     senior      │
-  │                            route.              medical     │
-  │                                                staff.      │
-  │       ↓                                                     │
-  │                                                             │
-  │  [7] Memory Manager                                         │
-  │       Updates long-term patient memory in AsyncPostgresStore│
-  │       Keyed by customer_id (= patient email address)        │
-  │       Stores context for future visits by the same patient  │
-  │                                                             │
-  └─────────────────────────────────────────────────────────────┘
-
-After all agents complete, ticket status changes to "pending_review".
-
+```
+[Booking Conversation Agent]    ← FIRST NODE (llm_flash)
+        │   Runs after form submit (name, email, phone, doctor_id, date received)
+        │   Conducts 3-question guided widget (NOT freeform chat):
+        │     Q1: Which slot? → fetches available slots, shows 4 labeled pills
+        │                       Patient picks one → fills appointment_time + slot_label
+        │     Q2: Reason for visit? → free text → fills reason
+        │     Q3: Visited Navajeevana before? → Yes / No → fills came_before
+        │                       If Yes → load patient_history from AsyncPostgresStore
+        │   conversation_complete = True → pass enriched state forward
+        │
+        ├── [Booking Orchestrator]    ← pure Python, NO LLM
+        │       Validates all fields present (doctor_id, date, time, reason, came_before)
+        │       Loads patient history from AsyncPostgresStore if not already loaded
+        │
+        ├── [Slot Validator]
+        │       → checks: not in past, within 30-day booking window
+        │       → checks: slot_time is one of 4 fixed times (09:00, 10:30, 14:00, 15:30)
+        │       → checks: doctor leave calendar (doctor_unavailability table)
+        │       → deterministic rule-based (NO LLM)
+        │
+        ├── fan-out (parallel):
+        │       [Doctor Lookup Agent]      → verify doctor exists, get specialization
+        │       [Availability Checker]     → queries appointment_slots (status='available')
+        │
+        ├── fan-in → [Slot Hold Agent]    ← race condition prevention
+        │               → UPDATE slot status = 'held' for 5 min
+        │               → if hold fails → slot was taken → route to Alternative Suggester
+        │
+        ├── 3 routes from Slot Hold:
+        │       ├── hold_success     → [Slot Reservation Agent] → [Notification Agent]
+        │       ├── slot_taken       → [Alternative Suggester]  → back to frontend
+        │       └── invalid_request  → [Error Packager]         → back to frontend
+        │
+        └── [Audit Logger] → [Memory Updater]
+                → audit_logger: INSERT appointment_audit_logs (action='created')
+                → memory_updater: writes appointment to long-term memory
+```
 
 ---
 
-## 5. Knowledge Base (ChromaDB RAG)
+## Agent Responsibilities
 
-The RAG Retriever searches 9 document collections stored in ChromaDB:
-
-  appointment_faq           → Appointment booking, rescheduling
-  doctors_directory         → Doctor profiles, specialisations
-  escalation_rules          → Internal triage rules
-  hospital_information      → Location, hours, services, facilities
-  insurance_billing         → Insurance coverage, payment, billing
-  past_tickets              → Anonymised past patient Q&A (few-shot)
-  physiotherapy_rehabilitation → Physio services, exercises
-  post_surgery_care         → Recovery instructions, do's and don'ts
-  test_preparation          → Pre-procedure preparation instructions
-
-Documents are chunked on ## / ### headings. Similarity search uses cosine distance.
-
-If the RAG score is below 0.70, the Tavily web search agent is invoked to find
-general medical or health information from the public web.
-
-Reply prefix by route:
-  auto_reply  → "At Navajeevana Ortho Hospitals, ..."
-  web_search  → "[Web Search Result] The following is general information
-                 sourced from the web..."
-  escalate    → Urgency-aware patient acknowledgment (doctor will contact)
-
+| Agent | LLM? | Role |
+|---|---|---|
+| Booking Conversation Agent | llm_flash | Guided 3-question widget: slot pick, reason, came_before (yes/no) |
+| Booking Orchestrator | No (Python) | Validates all fields present after conversation agent; loads patient history if came_before |
+| Doctor Lookup Agent | No (DB) | Validates doctor name/ID against doctors table |
+| Patient Verifier | No (Store) | Reads AsyncPostgresStore for patient history (called by conversation agent if came_before=True) |
+| Availability Checker | No (DB) | SELECT from appointment_slots WHERE status='available' — returns 4 fixed labeled slots |
+| Slot Validator | No (rules) | Date/time rules (fixed 4 times only) + doctor leave calendar check |
+| Slot Hold Agent | No (DB) | UPDATE slot to 'held' (5 min TTL) — prevents race conditions |
+| Slot Reservation Agent | No (DB) | UPDATE slot to 'booked', INSERT appointments row (with came_before field) |
+| Alternative Suggester | llm_flash | Suggests remaining open slots from the 4 fixed slots (same day or next working day) |
+| Notification Agent | No (Resend) | Sends confirmation email to patient — includes slot label, reason, came_before context |
+| Error Packager | llm_flash | Friendly error message back to patient |
+| Audit Logger | No (DB) | INSERT appointment_audit_logs (action='created'/'rescheduled'/'cancelled') |
+| Memory Updater | No (Store) | Updates long-term memory with new appointment + came_before + visit_count |
 
 ---
 
-## 6. Status → pending_review
+## Database Tables (Neon PostgreSQL)
 
-Once the graph finishes, the ticket status is "pending_review".
+### doctors
+```sql
+CREATE TABLE doctors (
+    id              TEXT PRIMARY KEY,     -- e.g. "dr_ramesh_k"
+    full_name       TEXT NOT NULL,
+    specialization  TEXT,                 -- Orthopedic, Physiotherapy, etc.
+    is_active       BOOLEAN DEFAULT TRUE
+);
+```
 
-The patient's processing page now shows:
-  "Awaiting Medical Team Review"
-  "AI analysis complete — our team will review before sending."
+### doctor_schedules  ← replaces hardcoded working_hours in doctors table
+```sql
+CREATE TABLE doctor_schedules (
+    id          SERIAL PRIMARY KEY,
+    doctor_id   TEXT NOT NULL,            -- FK to doctors.id
+    day_of_week TEXT NOT NULL,            -- 'Mon','Tue','Wed','Thu','Fri','Sat'
+    start_time  TIME NOT NULL,            -- e.g. 09:00
+    end_time    TIME NOT NULL,            -- e.g. 17:00
+    location    TEXT                      -- 'OPD Block A', 'Surgery OT'
+);
+```
 
-The admin dashboard (GET /review/pending) surfaces the ticket in the review queue.
+### doctor_unavailability  ← leave calendar
+```sql
+CREATE TABLE doctor_unavailability (
+    id          SERIAL PRIMARY KEY,
+    doctor_id   TEXT NOT NULL,
+    date        DATE NOT NULL,
+    reason      TEXT                      -- 'Vacation', 'Conference', 'Surgery Day'
+);
+```
 
+### hospital_holidays
+```sql
+CREATE TABLE hospital_holidays (
+    id      SERIAL PRIMARY KEY,
+    date    DATE NOT NULL UNIQUE,
+    name    TEXT NOT NULL                 -- 'Sankranti', 'Republic Day', 'Maintenance Day'
+);
+```
+Slot generator checks this before generating slots — no slots on holidays.
+
+### appointment_slots  ← FIXED 4 SLOTS MODEL (not dynamic generation)
+```sql
+CREATE TABLE appointment_slots (
+    id          TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    doctor_id   TEXT NOT NULL REFERENCES doctors(id),
+    slot_date   DATE NOT NULL,
+    slot_time   TIME NOT NULL,
+    label       TEXT NOT NULL,           -- 'Morning 1' | 'Morning 2' | 'Evening 1' | 'Evening 2'
+    status      TEXT DEFAULT 'available', -- available | held | booked | blocked
+    held_until  TIMESTAMPTZ,              -- for 5-min hold TTL
+    created_at  TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(doctor_id, slot_date, slot_time)
+);
+-- Fixed 4 slots per working day: 09:00 (Morning 1), 10:30 (Morning 2),
+--                                 14:00 (Evening 1), 15:30 (Evening 2)
+-- Held slots whose TTL expired are treated as available — no cron needed to release them.
+```
+
+### appointments
+```sql
+CREATE TABLE appointments (
+    id                  TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    slot_id             TEXT REFERENCES appointment_slots(id),
+    patient_email       TEXT NOT NULL,              -- = customer_id in memory store
+    patient_name        TEXT NOT NULL,
+    patient_phone       TEXT NOT NULL,
+    doctor_id           TEXT NOT NULL REFERENCES doctors(id),
+    appointment_date    DATE NOT NULL,
+    appointment_time    TIME NOT NULL,
+    slot_label          TEXT,                       -- 'Morning 1' | 'Morning 2' | etc.
+    reason              TEXT,                       -- collected by conversation agent Q2
+    came_before         BOOLEAN DEFAULT FALSE,      -- collected by conversation agent Q3
+    status              TEXT DEFAULT 'pending',
+    -- lifecycle: pending → confirmed → rescheduled | completed | cancelled | no_show
+    confirmation_sent   BOOLEAN DEFAULT FALSE,
+    created_at          TIMESTAMPTZ DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+### appointment_audit_logs
+```sql
+CREATE TABLE appointment_audit_logs (
+    id              SERIAL PRIMARY KEY,
+    appointment_id  TEXT NOT NULL,
+    action          TEXT NOT NULL,  -- created | rescheduled | cancelled | completed | no_show
+    performed_by    TEXT,           -- patient email or admin username
+    timestamp       TIMESTAMPTZ DEFAULT NOW(),
+    metadata        JSONB           -- old/new slot, reason, etc.
+);
+```
 
 ---
 
-## 7. Admin Review & Approval
+## API Endpoints (FastAPI — new router: /appointment)
 
-**Where:** `/admin` — Admin Dashboard
+```
+POST  /appointment/conversation/{session_id}    -- per-question agent step (Q1→Q2→Q3)
+POST  /appointment/book                         -- submit booking (202, graph runs)
+GET   /appointment/{id}                         -- poll booking result
+GET   /appointment/slots/{doctor_id}?date=...   -- available slots (4 fixed labeled slots)
+GET   /appointment/by-email/{email}             -- all appointments for patient
+PATCH /appointment/{id}/cancel                  -- cancel appointment
+PATCH /appointment/{id}/reschedule              -- reschedule (releases old slot, books new)
+GET   /doctors                                  -- list all active doctors
 
-The admin sees the ticket with:
-- Patient details (name, email, urgency)
-- The original patient message
-- The AI-drafted reply (from Reply Writer or Escalation Packager)
-- Confidence score and route taken
+-- Admin only
+POST  /appointment/admin/create                 -- admin manually creates appointment
+PATCH /appointment/admin/{id}/move              -- admin moves appointment to new slot
+PATCH /appointment/{id}/status                  -- admin updates lifecycle status (completed|no_show)
+POST  /appointment/admin/block-slot             -- block a slot (doctor unavailable)
+```
 
-Admin actions available:
-  PATCH /review/{id}/approve      → Mark approved as-is
-  PATCH /review/{id}/edit         → Save an edited version of the reply
-  POST  /review/{id}/send-email   → Send the final reply to the patient
-  PATCH /review/{id}/assign       → Assign ticket to a specific staff member
+### POST /appointment/conversation/{session_id} request/response
+```json
+// Request — patient answers current question
+{ "stage": 0, "answer": "Morning 1" }
 
-When the admin clicks "Send Email":
-1. Frontend calls POST /api/send-email (Next.js server-side route)
-2. That route calls the Resend API with the HTML-formatted reply
-3. Email is sent from RESEND_FROM_EMAIL (verified sender domain)
-4. Backend ticket status updates to "emailed"
+// Response — next question or complete
+{
+  "stage": 1,
+  "question": "What is the reason for your visit today?",
+  "input_type": "text",
+  "complete": false
+}
+// Final response when stage=3:
+{ "stage": 3, "complete": true, "session_id": "conv_abc123" }
+```
 
+### POST /appointment/book request body
+```json
+{
+  "patient_name": "...",
+  "patient_email": "...",         // Clerk-locked
+  "patient_phone": "...",
+  "doctor_id": "dr_ramesh_k",
+  "appointment_date": "2026-06-15",
+  "appointment_time": "09:00",    // from conversation agent Q1
+  "slot_label": "Morning 1",      // from conversation agent Q1
+  "reason": "knee pain follow-up",// from conversation agent Q2
+  "came_before": true,            // from conversation agent Q3
+  "session_id": "conv_abc123"
+}
+```
 
----
-
-## 8. Patient Sees the Response (Auto-Update)
-
-After the pipeline completes, the processing page starts a background poll
-every 10 seconds using GET /ticket/{id}.
-
-When status changes to "approved" or "emailed":
-- The page fetches the full ticket review (original message + final reply)
-- The "Awaiting Review" card is replaced with a "Response Ready" card showing:
-
-  ┌──────────────────────────────────────────────┐
-  │  ✅  Response from Navajeevana Ortho Hospitals│
-  │  Ticket: NJH-2026-XXXX                       │
-  ├──────────────────────────────────────────────┤
-  │  Your Query                                   │
-  │  "Patient's original message here…"           │
-  ├──────────────────────────────────────────────┤
-  │  Our Response                                 │
-  │  At Navajeevana Ortho Hospitals, [reply]…    │
-  ├──────────────────────────────────────────────┤
-  │  📧 Reply also sent to patient@email.com      │
-  │  [Track Ticket]   [Submit Another Query]      │
-  └──────────────────────────────────────────────┘
-
-For escalated tickets, the card instead shows:
-  "A doctor will contact you directly within 2 hours."
-
-
----
-
-## 9. Email Delivery (Resend)
-
-The email is sent via the Resend API from the Next.js server-side route
-`/api/send-email`. It is NOT sent directly by the FastAPI backend.
-
-Environment variables required:
-  RESEND_API_KEY      → Resend API key (server-side only)
-  RESEND_FROM_EMAIL   → Verified sender address (e.g. care@yourdomain.com)
-  RESEND_FROM_NAME    → Display name (e.g. NAVAJEEVANAORTHO)
-
-The email contains:
-- The ticket ID
-- The patient's original query (for reference)
-- The full approved/edited reply from the medical team
-- Contact details for follow-up
-
+### GET /appointment/slots response (FIXED 4-SLOT MODEL)
+```json
+{
+  "doctor_id": "dr_ramesh_k",
+  "doctor_name": "Dr. Ramesh K",
+  "date": "2026-06-15",
+  "slots": [
+    {"slot_id": "uuid1", "slot_time": "09:00", "label": "Morning 1", "status": "available"},
+    {"slot_id": "uuid2", "slot_time": "10:30", "label": "Morning 2", "status": "available"},
+    {"slot_id": "uuid3", "slot_time": "14:00", "label": "Evening 1", "status": "booked"},
+    {"slot_id": "uuid4", "slot_time": "15:30", "label": "Evening 2", "status": "available"}
+  ]
+}
+```
 
 ---
 
-## Quick Status Reference
+## Slot Availability Logic (Availability Checker)
 
-  processing         → Graph is running (agents working)
-  pending_review     → Agents done; waiting for admin to review
-  approved           → Admin approved the AI draft (email not yet sent)
-  emailed            → Reply sent to patient's email
-  escalated          → Forwarded to senior medical staff (safety flag)
-  escalated_to_senior→ Same as escalated
-  resolved           → Ticket closed
-
+```
+Before showing slots:
+  1. Check doctor_unavailability for that date → if found, no slots shown
+  2. Check hospital_holidays for that date → if found, no slots shown
+  3. SELECT slot_id, slot_time, label, status FROM appointment_slots
+     WHERE doctor_id = $1 AND slot_date = $2
+     ORDER BY slot_time
+     -- Always returns up to 4 rows; status tells frontend which to gray out
+     -- Held slots whose TTL expired are treated as available
+```
 
 ---
 
-## LLM Tiers Used
+## Frontend Routes (Next.js)
 
-  llm_pro   = llama-3.3-70b-versatile  → Escalation Packager (complex brief)
-  llm_flash = llama-3.1-8b-instant     → Orchestrator, Intent Classifier,
-                                          RAG Retriever, Reply Writer
-  llm_lite  = llama-3.1-8b-instant     → Memory Manager
+| Route | Purpose |
+|---|---|
+| `/doctors` | Browse all active doctors — grid of cards with "Book Appointment" button → `/patient/book?doctor_id=xxx` |
+| `/patient/book` | 3-step booking flow — doctor+date → patient details → agent conversation widget |
+| `/patient/book/confirm/[id]` | Booking confirmation page — polls until status='confirmed' |
+| `/patient/appointments` | My Appointments — list + cancel + reschedule |
+| `/admin/dashboard` (Appointments tab) | All appointments, filter by doctor/date/status, admin actions |
 
-All LLM calls go through Groq API (low-latency inference).
-Safety Checker and Tavily Search do NOT make LLM calls — they are rule-based
-and API-based respectively.
+### Patient Portal Changes
+- Landing page "Book Appointment" CTA → `/doctors` (browse first, then book)
+- Add pills to Care Hub nav: `Tickets | Book Appt | My Appts`
+- "Book Appt" pill → `/doctors`
+
+---
+
+## Frontend Booking Form UX (3 steps)
+
+```
+Step 1: Choose Doctor + Date
+  Doctor dropdown (pre-filled if arriving from /doctors via ?doctor_id=xxx)
+  Date picker — future dates only, grays out non-schedule + leave + holiday days
+  On date select: fetch GET /appointment/slots/{doctorId}?date=...
+
+Step 2: Your Details
+  Name: pre-filled from Clerk useUser(), editable
+  Email: locked readOnly from Clerk
+  Phone: pre-filled from Clerk if available
+
+Step 3: Agent Conversation Widget
+  Renders 3 sequential questions (not freeform chat):
+
+  Q1 — Which slot do you prefer?
+       4 labeled pills (from slot availability response):
+       [ Morning 1 — 09:00 ] [ Morning 2 — 10:30 ] [ Evening 1 — 14:00 ] [ Evening 2 — 15:30 ]
+       Booked slots grayed out; patient picks one available slot
+
+  Q2 — Reason for visit
+       "What is the reason for your visit today?" — textarea, required
+
+  Q3 — Prior visit
+       "Have you visited Navajeevana Ortho Hospitals before?"
+       [ Yes ] [ No ] toggle buttons
+
+  → [ Confirm Booking ] button appears after Q3 answered
+  → slot is HELD for 5 min from this point (POST /appointment/conversation to complete)
+  → POST /appointment/book with full state
+```
+
+---
+
+## Confirmation Email (Resend)
+
+Sent by Notification Agent after slot_status = 'booked'.
+
+```
+Subject: Appointment Confirmed — Dr. [Name] on [Date] at [Time]
+
+Dear [Patient Name],
+Your appointment has been confirmed.
+
+Doctor: Dr. Ramesh K (Orthopedic Surgery)
+Date: Monday, 15 June 2026
+Time: Morning 1 — 09:00 AM
+Reason: Knee pain follow-up
+Hospital: Navajeevana Ortho Hospitals, Bhimavaram
+
+Please bring: X-rays, previous reports, insurance card
+To cancel or reschedule: [link]
+```
+
+---
+
+## Future: SMS / WhatsApp Reminders (Phase C — Roadmap)
+
+India-specific: many patients don't read email.
+
+```
+Notification Service (future)
+    ├── Email (Resend)         ← Phase A
+    ├── SMS (Twilio/MSG91)     ← Phase C
+    └── WhatsApp (WATI/Gupshup)← Phase C
+```
+
+Reminder schedule: 24h before + 2h before appointment.
+
+---
+
+## Admin Dashboard — Appointments Tab
+
+```
+Admin controls (human override):
+  [ + Create Appointment ]  [ Block Slot ]
+
+Table columns:
+  Patient | Doctor | Date | Time | Slot | Status | Reason | Came Before | Actions
+
+Status badges:
+  pending     → yellow
+  confirmed   → teal
+  rescheduled → orange
+  completed   → green
+  cancelled   → grey
+  no_show     → red
+
+Actions per row:
+  [ Reschedule ] (confirmed + rescheduled rows)
+  [ Cancel ] [ Mark Complete ] [ Mark No-Show ]
+
+Filters:
+  Doctor: [ All ▾ ]   Date: [ Today | This Week | Custom ]
+  Status: [ All | Pending | Confirmed | Rescheduled | Completed | Cancelled | No-Show ]
+```
+
+---
+
+## Master Router Integration
+
+```python
+# v1 — route by endpoint (no LLM needed for structured form submissions)
+if endpoint.startswith("/appointment"):
+    run appointment_graph
+else:
+    run ticket_graph
+
+# v2 — unified chat (future)
+intent = classify(message)   # llm_flash
+# "book Dr. Ramesh next Tuesday" → appointment_graph
+# "my knee is swollen"          → ticket_graph
+```
+
+---
+
+## Shared Patient Memory
+
+AsyncPostgresStore key: patient email (same store used by ticketing graph)
+
+Appointment Memory Updater writes:
+```json
+{
+  "last_appointment": "2026-06-15 09:00",
+  "slot_label": "Morning 1",
+  "preferred_doctor": "dr_ramesh_k",
+  "visit_count": 3,
+  "came_before": true,
+  "appointment_reasons": ["knee pain", "follow-up", "physiotherapy"]
+}
+```
+
+Ticketing Orchestrator reads this → personalizes responses:
+"I see you had an appointment with Dr. Ramesh K on June 15 (Morning 1 — 09:00)..."
+
+---
+
+## Future V2: Appointment Assistant Agent (Phase C)
+
+After Phase A succeeds, add conversational booking:
+
+```
+Patient: "I need to see a knee specialist next week"
+          ↓
+Appointment Assistant Agent (llm_flash)
+  → detects specialization: Orthopedic
+  → finds matching doctors: Dr. Ramesh K, Dr. Krishna
+  → finds free slots next week (from 4 fixed slots per day)
+  → "Dr. Ramesh K has Morning 1 (09:00) on Tuesday and Evening 2 (15:30) on Thursday. Which works?"
+          ↓
+Patient clicks → structured book request → existing graph
+```
+
+LLM adds value in understanding intent and suggestion — never in slot decisions.
+
+---
+
+## Build Order
+
+### Phase A — Backend (deploy to same Render project)
+  1. Create tables in Neon: doctors, doctor_schedules, doctor_unavailability,
+     hospital_holidays, appointment_slots (with label), appointments (with came_before),
+     appointment_audit_logs
+  2. Seed doctors + doctor_schedules from doctors_directory.md knowledge base
+  3. Build slot generator script (fixed 4 slots per working day)
+  4. Build AppointmentState TypedDict (with came_before, conversation fields, slot_label)
+  4b. Build booking_conversation_agent (llm_flash — Q1 slot, Q2 reason, Q3 came_before)
+  5. Build no-LLM nodes: Availability Checker, Slot Validator, Slot Hold Agent, Slot Reservation Agent
+  6. Build LLM nodes: Alternative Suggester, Error Packager
+  7. Build Notification Agent (Resend email — includes slot label + reason + came_before)
+  8. Build Audit Logger + Memory Updater (AsyncPostgresStore — stores came_before)
+  9. Wire graph: booking_conversation_agent → booking_orchestrator → slot_validator → ...
+  10. Add /appointment/* + /doctors + /appointment/conversation/* FastAPI router
+  11. Add admin override endpoints
+
+### Phase B — Frontend (same Vercel project)
+  0. Build /doctors page (doctor cards + "Book Appointment" → /patient/book?doctor_id=xxx)
+     Update landing page CTA → /doctors
+  1. Add types + API functions to api.ts (Doctor, AppointmentSlot with label, came_before)
+  2. Build /patient/book — 3-step form (doctor+date → details → agent conversation widget)
+  3. Build /patient/book/confirm/[id] — polling + confirmation card with slot label
+  4. Build /patient/appointments — list with rescheduled (orange) badge + cancel
+  5. Update Care Hub pill nav: Book Appt → /doctors
+  6. Add Appointments tab to admin dashboard (came_before column, rescheduled filter)
+
+### Phase C — Integrations (future)
+  1. Shared memory cross-pollination (ticket graph reads appointment history)
+  2. SMS/WhatsApp reminders
+  3. Unified chat interface with intent router
+  4. Appointment Assistant Agent (conversational booking via llm_flash)
+  5. Daily cron slot generation (APScheduler or Render Cron Job)
+  6. Reschedule UI — slot picker modal in /patient/appointments
+
+---
+
+## Key Constraints
+
+- Slot availability = DB query only, never LLM decision
+- Agent conversation = structured widget (not freeform chat) — Q1/Q2/Q3 in sequence
+- came_before collected by agent Q3 → stored in appointments table + long-term memory
+- Scheduling is deterministic — no hallucinated availability
+- Fixed 4 slots per day (not dynamic) — Morning 1/2 + Evening 1/2
+- Race conditions prevented by 5-min slot hold before confirmation
+- Doctor schedule table + holiday table checked before generating slots
+- Doctor leave calendar checked before showing slots
+- Shared AsyncPostgresStore — appointment graph and ticket graph share patient memory
+- Appointment graph is fully independent — ticketing graph unchanged
+- Same Render project, same Vercel project — no new services

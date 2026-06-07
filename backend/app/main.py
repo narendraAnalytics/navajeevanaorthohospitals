@@ -5,10 +5,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.agent.graph import build_graph
+from app.agent.appointment_graph import build_appointment_graph
 from app.config import settings
 from app.database.connection import checkpointer_cm, store_cm
 from app.database.init_db import init_db
 from app.routers import admin, review, tickets
+from app.routers import appointments
 
 logging.basicConfig(level=settings.LOG_LEVEL)
 logger = logging.getLogger(__name__)
@@ -24,6 +26,7 @@ async def lifespan(app: FastAPI):
         async with store_cm() as store:
             await store.setup()
             app.state.graph = build_graph(checkpointer=checkpointer, store=store)
+            app.state.appointment_graph = build_appointment_graph(checkpointer=checkpointer, store=store)
             logger.info("[Startup] OrthoAI ready.")
             yield
     await app.state.pool.close()
@@ -48,6 +51,7 @@ app.add_middleware(
 app.include_router(tickets.router)
 app.include_router(admin.router)
 app.include_router(review.router)
+app.include_router(appointments.router)
 
 
 @app.get("/health", tags=["System"])

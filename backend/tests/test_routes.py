@@ -40,6 +40,7 @@ def mock_graph():
 async def client(mock_pool, mock_graph):
     app.state.pool = mock_pool
     app.state.graph = mock_graph
+    app.state.appointment_graph = MagicMock()
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         yield ac
 
@@ -58,9 +59,10 @@ async def test_health(client):
 
 async def test_post_ticket_returns_202(client, mock_pool):
     resp = await client.post("/ticket", json={
-        "customer_id": "CUST-001",
-        "subject": "Knee pain after surgery",
-        "description": "I have severe knee pain and swelling since yesterday evening.",
+        "customer_name": "Test Patient",
+        "customer_email": "patient@test.com",
+        "customer_phone": "9999999999",
+        "message": "I have severe knee pain and swelling since yesterday evening.",
     })
     assert resp.status_code == 202
     data = resp.json()
@@ -96,7 +98,7 @@ async def test_get_ticket_found(client, mock_pool):
     import asyncpg
 
     fake_row = {
-        "id": "TICKET-ABC123",
+        "ticket_id": "TICKET-ABC123",
         "customer_id": "CUST-001",
         "subject": "Knee pain",
         "raw_text": "I have knee pain.",

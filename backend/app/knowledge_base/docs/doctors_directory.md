@@ -297,7 +297,7 @@ Limited
 * MS Orthopedics
 * Fellowship in Arthroscopy
 
-**Experience:** 20 Years
+**Experience:** 5 Years
 
 **Primary Specialty:**
 Arthroscopy

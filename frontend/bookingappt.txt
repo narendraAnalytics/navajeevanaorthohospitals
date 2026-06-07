@@ -1,0 +1,13 @@
+We need to create a appointments section or page in the admin
+In admind appointments can be categorized by [Pending,confirmed,Resechduled,completed,cancelled].
+so we have a bookAppointment cta button in landipage the page redirected to the all doctors and doctor and a button [Book Appoitment]
+When user clciked the book appointment a form opens details we capture then time slot for now we create 2 slots[moring] and 2 slots[evening]
+when user selcted the doctor,patient details,then a mail to patient and admin panel all the details so user had also options to cancel,reschedule...etc
+Also admin will also selected the Appoitment options in the panel.
+Also we are using agents so before human want to select 
+but now agents once patiitent detais recevied and which doctor  selected then agent will talk to the patient
+1 .. Asks selct the time slot available.
+3.... Due to came before yes/no
+Aftera all details agent check the weather slot is there doctor available that day
+then create a resposne and send to the mailid .
+Admin panel refelct the same doctor appointment booked , reason, timeslot ...etc 

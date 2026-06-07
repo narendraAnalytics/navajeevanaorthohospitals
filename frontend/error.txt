@@ -1,3 +1,608 @@
-What are the OPD timings at Navajeevana Ortho Hospitals
+# OrthoAI — Appointment Booking: Step-by-Step Build Roadmap
+# Order: Backend first → Frontend second
+# Reference: info.txt for full architecture + DB schema
+# Design Rating: 9.5/10 — architecture review applied (bookingappt.txt v4)
 
-NEXT_PUBLIC_API_URL=http://localhost:8000
+---
+
+## WHY BACKEND FIRST?
+
+Frontend has nothing to display until:
+- /doctors API exists (doctor cards on /doctors page)
+- /appointment/slots API exists (4 fixed slots per doctor per day)
+- /appointment/book API exists (form + agent conversation submit)
+
+Build and test all API endpoints locally → then build UI on top.
+
+---
+
+================================================================================
+PHASE A — BACKEND
+================================================================================
+
+---
+
+## STEP A1 — Create Database Tables in Neon
+
+Go to Neon MCP (mcp__neon__run_sql) and run in order:
+
+1. doctors table
+2. doctor_schedules table
+3. doctor_unavailability table
+4. hospital_holidays table
+5. appointment_slots table          ← has label column for fixed slot names
+6. appointments table               ← status includes 'rescheduled'
+7. appointment_audit_logs table
+
+### hospital_holidays table
+```sql
+CREATE TABLE hospital_holidays (
+    id      SERIAL PRIMARY KEY,
+    date    DATE NOT NULL UNIQUE,
+    name    TEXT NOT NULL           -- 'Sankranti', 'Republic Day', 'Maintenance Day'
+);
+```
+Slot generator checks this before generating slots — no slots created on holidays.
+
+### appointment_slots table (FIXED 4 SLOTS MODEL)
+```sql
+CREATE TABLE appointment_slots (
+    id          TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    doctor_id   TEXT NOT NULL REFERENCES doctors(id),
+    slot_date   DATE NOT NULL,
+    slot_time   TIME NOT NULL,
+    label       TEXT NOT NULL,     -- 'Morning 1' | 'Morning 2' | 'Evening 1' | 'Evening 2'
+    status      TEXT NOT NULL DEFAULT 'available',  -- available | held | booked
+    held_until  TIMESTAMPTZ,
+    UNIQUE (doctor_id, slot_date, slot_time)
+);
+```
+
+### appointments table
+```sql
+CREATE TABLE appointments (
+    id                  TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    patient_name        TEXT NOT NULL,
+    patient_email       TEXT NOT NULL,
+    patient_phone       TEXT NOT NULL,
+    doctor_id           TEXT NOT NULL REFERENCES doctors(id),
+    slot_id             TEXT REFERENCES appointment_slots(id),
+    appointment_date    DATE NOT NULL,
+    appointment_time    TIME NOT NULL,
+    reason              TEXT,
+    came_before         BOOLEAN DEFAULT FALSE,
+    status              TEXT NOT NULL DEFAULT 'pending',
+    -- status lifecycle: pending → confirmed → rescheduled | completed | cancelled | no_show
+    confirmation_sent   BOOLEAN DEFAULT FALSE,
+    created_at          TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+### appointment_audit_logs table
+```sql
+CREATE TABLE appointment_audit_logs (
+    id              SERIAL PRIMARY KEY,
+    appointment_id  TEXT NOT NULL,
+    action          TEXT NOT NULL,  -- created | rescheduled | cancelled | completed | no_show
+    performed_by    TEXT,           -- patient email or admin username
+    timestamp       TIMESTAMPTZ DEFAULT NOW(),
+    metadata        JSONB           -- old/new slot, reason, etc.
+);
+```
+
+Test: Run SELECT * FROM doctors; — should return empty table, no error.
+
+---
+
+## STEP A2 — Seed Doctors Table
+
+Create: backend/scripts/seed_doctors.py
+
+Read from: backend/app/knowledge_base/docs/doctors_directory.md
+Insert rows into: doctors + doctor_schedules tables
+
+Sample rows to seed:
+  Dr. Ramesh K      — Orthopedic Surgery   — Mon-Fri 09:00-17:00
+  Dr. Krishna       — Physiotherapy        — Mon-Sat 09:00-13:00
+  (add all doctors from doctors_directory.md)
+
+Run: python scripts/seed_doctors.py
+Test: SELECT * FROM doctors; SELECT * FROM doctor_schedules; — rows present.
+
+---
+
+## STEP A3 — Slot Generator Script (FIXED 4 SLOTS PER DAY)
+
+Create: backend/scripts/generate_slots.py
+
+Each working day gets exactly 4 fixed slots per doctor:
+  Morning Slot 1: 09:00  (label = 'Morning 1')
+  Morning Slot 2: 10:30  (label = 'Morning 2')
+  Evening Slot 1: 14:00  (label = 'Evening 1')
+  Evening Slot 2: 15:30  (label = 'Evening 2')
+
+Logic:
+  For each active doctor:
+    For each date in next 30 days:
+      Check doctor_schedules for that day_of_week
+      Check doctor_unavailability for that date
+      Check hospital_holidays for that date
+      If available:
+        INSERT INTO appointment_slots (doctor_id, slot_date, slot_time, label, status)
+        VALUES
+          (doctor_id, date, '09:00', 'Morning 1', 'available'),
+          (doctor_id, date, '10:30', 'Morning 2', 'available'),
+          (doctor_id, date, '14:00', 'Evening 1', 'available'),
+          (doctor_id, date, '15:30', 'Evening 2', 'available')
+        ON CONFLICT (doctor_id, slot_date, slot_time) DO NOTHING;
+
+Run once manually: python scripts/generate_slots.py
+Test: SELECT COUNT(*) FROM appointment_slots; — should be (doctors × working days × 4).
+
+Note: For now, add to render.yaml build command (idempotent ON CONFLICT DO NOTHING).
+Future: remove from build, use APScheduler or Render Cron Job instead.
+
+---
+
+## STEP A3b — Daily Cron Job Plan (implement in Phase C)
+
+When ready to move off deploy-time generation:
+  Option 1: APScheduler inside FastAPI (runs in same process)
+    from apscheduler.schedulers.asyncio import AsyncIOScheduler
+    scheduler.add_job(generate_slots, 'cron', hour=0, minute=5)
+
+  Option 2: Render Cron Job (separate service in render.yaml)
+    type: cron
+    schedule: "5 0 * * *"
+    command: python scripts/generate_slots.py
+
+For now deploy-time is fine. Add cron in Phase C.
+
+---
+
+## STEP A4 — AppointmentState TypedDict
+
+Create: backend/app/agent/appointment_state.py
+
+Fields needed:
+  appointment_id: str
+  patient_email: str
+  patient_name: str
+  patient_phone: str
+  doctor_id: str
+  appointment_date: str          # YYYY-MM-DD (from form)
+  appointment_time: str          # HH:MM (filled by conversation agent)
+  slot_label: str                # 'Morning 1' | 'Morning 2' | 'Evening 1' | 'Evening 2'
+  reason: Optional[str]          # filled by conversation agent
+  came_before: Optional[bool]    # filled by conversation agent Q3
+  conversation_stage: int        # 0=slot, 1=reason, 2=came_before, 3=done
+  conversation_complete: bool
+  slot_id: Optional[str]
+  availability_result: Optional[str]   # "available" | "taken" | "invalid"
+  hold_result: Optional[str]           # "held" | "failed"
+  booking_result: Optional[str]        # "confirmed" | "error"
+  alternative_slots: list[str]         # filled if slot taken
+  reply_message: str                   # final message to patient
+  error_message: Optional[str]
+  patient_history: dict                # from AsyncPostgresStore
+
+---
+
+## STEP A4b — Booking Conversation Agent (NEW)
+
+Create: backend/app/agent/appointment_nodes/booking_conversation_agent.py
+
+This node runs FIRST after form submit (patient_name, email, phone, doctor_id, date received).
+Uses llm_flash. Conducts a 3-question guided conversation:
+
+  Q1 — Slot selection:
+    Fetch available slots for doctor_id + appointment_date from appointment_slots
+    Present 4 pills: Morning 1 (09:00) | Morning 2 (10:30) | Evening 1 (14:00) | Evening 2 (15:30)
+    Patient selects one → fills appointment_time + slot_label + slot_id in state
+    conversation_stage: 0 → 1
+
+  Q2 — Reason for visit:
+    "What is the reason for your visit today?"
+    Free text → fills reason in state
+    conversation_stage: 1 → 2
+
+  Q3 — Prior visit:
+    "Have you visited Navajeevana Ortho Hospitals before? (Yes / No)"
+    Boolean → fills came_before in state
+    If True → load patient_history from AsyncPostgresStore (visit count, preferred doctor)
+    conversation_stage: 2 → 3 → conversation_complete = True
+
+After conversation_complete = True:
+  Passes enriched state to booking_orchestrator → slot_validator → ...
+
+Implementation note:
+  The frontend renders this as a structured step-by-step widget (not freeform chat).
+  Each question is a POST to /appointment/conversation/{session_id} with the answer.
+  Backend returns next question + available options.
+  On conversation_complete, frontend POSTs final state to /appointment/book.
+
+---
+
+## STEP A5 — No-LLM Agent Nodes
+
+Create these files in backend/app/agent/appointment_nodes/:
+
+### availability_checker.py
+  SELECT from appointment_slots WHERE doctor_id + slot_date + slot_time
+  AND (status='available' OR (status='held' AND held_until < NOW()))
+  Returns: availability_result = "available" | "taken"
+
+### slot_validator.py
+  Rules (no DB, no LLM):
+  - appointment_date not in past
+  - appointment_date within 30 days from today
+  - slot_time is one of the 4 fixed times (09:00, 10:30, 14:00, 15:30)
+  - doctor exists and is active
+  Returns: availability_result = "valid" | "invalid" + error_message
+
+### slot_hold_agent.py
+  UPDATE appointment_slots
+  SET status='held', held_until=NOW() + INTERVAL '5 minutes'
+  WHERE id = $slot_id AND status='available'
+  Returns: hold_result = "held" | "failed"
+
+### slot_reservation_agent.py
+  UPDATE appointment_slots SET status='booked' WHERE id = $slot_id
+  INSERT INTO appointments (all fields including came_before, status='pending')
+  Returns: booking_result = "confirmed" + appointment_id
+
+### notification_agent.py
+  Send confirmation email via Resend (same pattern as /api/send-email in frontend)
+  To: patient_email
+  Subject: Appointment Confirmed — Dr. [Name] on [Date] at [Time]
+  Body includes: slot label (e.g. "Morning 1 — 09:00 AM"), reason, came_before note
+  UPDATE appointments SET status='confirmed', confirmation_sent=TRUE
+
+---
+
+## STEP A6 — LLM Agent Nodes
+
+Create in backend/app/agent/appointment_nodes/:
+
+### booking_orchestrator.py  ← NO LLM
+  Pure Python node — validate all required fields present after conversation agent
+  (doctor_id, date, time, patient_email, reason, came_before must all be set)
+  Loads patient history from AsyncPostgresStore if not already loaded
+  Passes state to slot_validator
+
+### alternative_suggester.py
+  llm_flash
+  If slot is taken: SELECT next available slots from remaining 3 fixed slots for same day
+  Or same 4 slots on next working day
+  Use LLM to format friendly message: "That slot is taken. Here are alternatives: ..."
+  Returns: alternative_slots list + reply_message
+
+### error_packager.py
+  llm_flash
+  If invalid_request: format friendly error message for patient
+  Returns: reply_message
+
+### memory_updater.py
+  No LLM — AsyncPostgresStore write
+  After confirmed booking:
+  store.aput(("patient", patient_email), "appointment_history", {
+    "last_appointment": date + time,
+    "preferred_doctor": doctor_id,
+    "came_before": came_before,
+    "visit_count": incremented
+  })
+
+---
+
+## STEP A7 — Wire Appointment Graph
+
+Create: backend/app/agent/appointment_graph.py
+
+Graph flow (UPDATED — conversation agent first):
+  START → booking_conversation_agent   (llm_flash: slot + reason + came_before)
+        → booking_orchestrator         (pure Python: validate all fields)
+        → slot_validator               (rules check — no LLM)
+        → availability_checker         (DB query — no LLM)
+        → conditional:
+              "available" → slot_hold_agent
+              "taken"     → alternative_suggester → END
+              "invalid"   → error_packager → END
+        → slot_hold_agent → conditional:
+              "held"   → slot_reservation_agent
+              "failed" → alternative_suggester → END
+        → slot_reservation_agent       (INSERT appointments, status='pending')
+        → notification_agent           (send email → status='confirmed')
+        → audit_logger                 (INSERT appointment_audit_logs, action='created')
+        → memory_updater               (write to AsyncPostgresStore)
+        → END
+
+Test: Run the graph locally with a mock AppointmentState dict.
+
+---
+
+## STEP A8 — Add Queries to queries.py
+
+Add to: backend/app/database/queries.py
+
+New functions:
+  get_doctors()                                → SELECT * FROM doctors WHERE is_active=TRUE
+  get_available_slots(doctor_id, date)         → SELECT from appointment_slots WHERE status='available'
+                                                  Returns 4 fixed slots (those not yet booked/held)
+  get_appointments_by_email(email)             → SELECT from appointments WHERE patient_email=$1
+  get_appointment_by_id(appt_id)              → full appointment detail
+  cancel_appointment(appt_id)                 → UPDATE status='cancelled', release slot
+  reschedule_appointment(appt_id, new_slot_id) →
+    UPDATE appointment_slots SET status='available' WHERE id=old_slot_id  -- release old
+    Hold new slot → slot_hold_agent
+    Book new slot → slot_reservation_agent
+    UPDATE appointments SET status='rescheduled', slot_id=new_slot_id
+    INSERT appointment_audit_logs (action='rescheduled', metadata={old_slot, new_slot})
+
+---
+
+## STEP A9 — FastAPI Router
+
+Create: backend/app/routers/appointments.py
+
+Endpoints to implement:
+  GET  /doctors                                    → get_doctors() query
+  GET  /appointment/slots/{doctor_id}?date=...     → get_available_slots() — returns up to 4 slots
+  POST /appointment/conversation/{session_id}      → booking_conversation_agent step (per question)
+  POST /appointment/book                           → run appointment_graph (202, background)
+  GET  /appointment/{id}                           → poll result
+  GET  /appointment/by-email/{email}               → get_appointments_by_email()
+  PATCH /appointment/{id}/cancel                   → cancel_appointment()
+  PATCH /appointment/{id}/reschedule               → reschedule_appointment()
+  PATCH /appointment/{id}/status                   → admin: set completed | no_show
+
+Register router in: backend/app/main.py
+  from app.routers.appointments import router as appointments_router
+  app.include_router(appointments_router)
+
+---
+
+## STEP A10 — Test All Endpoints
+
+Start backend: uvicorn app.main:app --reload --port 8000
+
+Test via Swagger (http://localhost:8000/docs):
+
+  GET  /doctors                                     → returns doctor list
+  GET  /appointment/slots/dr_ramesh_k?date=2026-06-15 → returns 4 fixed slots
+  POST /appointment/conversation/{session_id}       → Q1 → Q2 → Q3 sequence
+  POST /appointment/book                            → submit booking → 202
+  GET  /appointment/{id}                            → poll → confirmed
+  Check Neon: SELECT * FROM appointments;           → row present, status=confirmed, came_before set
+  Check email: confirmation received in inbox
+
+Write unit tests: backend/tests/test_appointment_routes.py
+
+---
+
+## STEP A11 — Deploy Backend to Render
+
+Push to main branch → Render auto-deploys.
+
+Check:
+  - Slot generator script runs in build step (4 slots per doctor per working day)
+  - GET https://navajeevanaorthohospitals.onrender.com/doctors → returns data
+  - POST /appointment/book → works from Postman/browser
+
+---
+
+================================================================================
+PHASE B — FRONTEND
+================================================================================
+
+---
+
+## STEP B0 — Build /doctors Page + Update Landing CTA (NEW)
+
+Create: frontend/src/app/doctors/page.tsx
+
+Fetch GET /doctors on mount.
+Display grid of doctor cards:
+  - Initials avatar (no photo yet)
+  - Dr. Full Name — Specialization
+  - Available: Mon-Fri, 09:00-17:00 (from doctor_schedules)
+  - [ Book Appointment → ] button → /patient/book?doctor_id=xxx
+
+Update landing page hero CTA:
+  Edit: src/components/HeroSection.tsx (or wherever "Book Appointment" CTA lives)
+  Change CTA href from /patient/book → /doctors
+  Patient browses all doctors first, selects one, then lands on booking form
+  with doctor_id pre-filled.
+
+---
+
+## STEP B1 — Add Appointment Types to api.ts
+
+Add to: frontend/src/lib/api.ts
+
+New types:
+  Doctor { id, full_name, specialization, availability_summary }
+  AppointmentSlot { slot_id, slot_time, label, status }
+  AppointmentSlots { doctor_id, doctor_name, date, slots: AppointmentSlot[] }
+  ConversationStep { question: string, options?: string[], input_type: 'select'|'text'|'yesno' }
+  ConversationAnswer { session_id: string, stage: number, answer: string }
+  AppointmentBooking { patient_name, patient_email, patient_phone, doctor_id,
+                       appointment_date, appointment_time, slot_label,
+                       reason, came_before, session_id }
+  AppointmentResult { appointment_id, status, doctor_name, appointment_date,
+                      appointment_time, slot_label, message }
+  PatientAppointment { id, doctor_id, doctor_name, appointment_date, appointment_time,
+                       slot_label, status, reason, came_before, created_at }
+
+New API functions:
+  getDoctors()
+  getAvailableSlots(doctorId, date)
+  postConversationAnswer(sessionId, stage, answer)
+  bookAppointment(data)
+  getAppointmentById(id)
+  getAppointmentsByEmail(email)
+  cancelAppointment(id)
+  rescheduleAppointment(id, newSlotId)
+
+---
+
+## STEP B2 — Build /patient/book Page
+
+Create: frontend/src/app/patient/book/page.tsx
+
+URL param: ?doctor_id=xxx (pre-fills doctor from /doctors page)
+
+3-step booking flow:
+
+Step 1 — Doctor + Date
+  Doctor dropdown (pre-filled if doctor_id in URL)
+  Date picker — disable past dates, disable days doctor not scheduled
+  On date select: fetch GET /appointment/slots/{doctorId}?date=...
+
+Step 2 — Patient Details
+  Name: pre-filled from Clerk useUser(), editable
+  Email: locked readOnly from Clerk
+  Phone: pre-filled from Clerk if available
+
+Step 3 — Agent Conversation Widget
+  Renders 3 sequential questions (not freeform chat):
+
+  Q1 — Which slot do you prefer?
+       Shows slot pills from available slots:
+       [ Morning 1 — 09:00 ] [ Morning 2 — 10:30 ] [ Evening 1 — 14:00 ] [ Evening 2 — 15:30 ]
+       Grayed out if slot already booked
+
+  Q2 — Reason for visit
+       Textarea: "What is the reason for your visit today?"
+       Required field
+
+  Q3 — Prior visit
+       "Have you visited Navajeevana Ortho Hospitals before?"
+       [ Yes ] [ No ] toggle buttons
+
+  After Q3: [ Confirm Booking → ] button appears
+  On submit: POST /appointment/book (all form + conversation data)
+  Redirect to /patient/book/confirm/[appointment_id]
+
+---
+
+## STEP B3 — Build /patient/book/confirm/[id] Page
+
+Create: frontend/src/app/patient/book/confirm/[id]/page.tsx
+
+Poll GET /appointment/{id} every 1.5s until status = 'confirmed'
+
+Show confirmation card:
+  ✓ Appointment Confirmed
+  Doctor: Dr. Ramesh K
+  Date: Monday, 15 June 2026
+  Time: Morning 1 — 09:00 AM
+  A confirmation email has been sent to your inbox.
+
+Buttons:
+  [ View My Appointments ] → /patient/appointments
+  [ Back to Care Hub ]     → /patient
+
+---
+
+## STEP B4 — Build /patient/appointments Page
+
+Create: frontend/src/app/patient/appointments/page.tsx
+
+Fetch GET /appointment/by-email/{clerkEmail} on mount
+
+Show list of all appointments:
+  Doctor | Date | Time | Slot | Status | Reason | Actions
+
+Status badges:
+  pending       → yellow
+  confirmed     → teal
+  rescheduled   → orange
+  completed     → green
+  cancelled     → grey
+  no_show       → red
+
+Actions:
+  [ Cancel ]      → PATCH /appointment/{id}/cancel (confirm dialog first)
+  [ Reschedule ]  → opens slot picker modal (future, Phase C)
+
+---
+
+## STEP B5 — Update Care Hub Pill Nav
+
+Edit: frontend/src/app/patient/page.tsx
+
+Add pills to the floating nav:
+  Tickets | Book Appt | My Appts
+
+"Book Appt" → /doctors  (browse doctors first)
+"My Appts"  → /patient/appointments
+
+---
+
+## STEP B6 — Add Appointments Tab to Admin Dashboard
+
+Edit: frontend/src/app/admin/dashboard/page.tsx
+
+Add "Appointments" tab alongside Overview / Review Queue / Escalated / All Tickets.
+
+Appointments tab shows:
+  Filters: Doctor | Date range | Status (pending, confirmed, rescheduled, completed, cancelled, no_show)
+  Table: Patient | Doctor | Date | Time | Slot | Status | Reason | Came Before | Actions
+
+Admin actions:
+  [ Mark Complete ] → PATCH /appointment/{id}/status  (status=completed)
+  [ Mark No-Show ]  → PATCH /appointment/{id}/status  (status=no_show)
+  [ Cancel ]        → PATCH /appointment/{id}/cancel
+  [ Reschedule ]    → available for confirmed + rescheduled rows → slot picker
+
+---
+
+## STEP B7 — Test Full Flow in Browser
+
+Local test (npm run dev + uvicorn running):
+  1. Go to landing page → click "Book Appointment" → /doctors
+  2. Browse doctor cards → click "Book Appointment" on a doctor → /patient/book?doctor_id=xxx
+  3. Step 1: date selected → 4 slot pills load
+  4. Step 2: patient details pre-filled from Clerk
+  5. Step 3: agent questions answered (slot, reason, came before)
+  6. Submit → /patient/book/confirm/[id] polls
+  7. Confirmation card appears
+  8. Check inbox for confirmation email
+  9. Go to /patient/appointments → appointment listed with correct status badge
+  10. Sign in as admin → dashboard → Appointments tab → row visible with came_before column
+
+---
+
+## STEP B8 — Deploy Frontend to Vercel
+
+Push to main → Vercel auto-deploys.
+No new env vars needed — uses same NEXT_PUBLIC_API_URL.
+
+Final check:
+  https://navajeevanaorthohospitals.vercel.app/doctors → doctor cards load
+  https://navajeevanaorthohospitals.vercel.app/patient/book → booking flow works end-to-end
+
+---
+
+================================================================================
+PHASE C — FUTURE (after Phase A + B are live)
+================================================================================
+
+C1  Reschedule UI — slot picker modal in /patient/appointments
+C2  Admin manual create/block-slot controls in dashboard
+C3  SMS/WhatsApp reminders (Twilio or MSG91) — 24h + 2h before
+C4  Shared memory — ticketing orchestrator reads appointment history
+C5  Unified intent router — single chat box routes to ticket or appointment graph
+C6  Daily cron slot generation (APScheduler or Render Cron Job)
+
+---
+
+================================================================================
+CURRENT STATUS
+================================================================================
+
+Backend ticketing: COMPLETE (deployed on Render)
+Frontend ticketing: COMPLETE (deployed on Vercel)
+Appointment booking: NOT STARTED
+
+Next action: Start with STEP A1 — Create the 7 database tables in Neon.

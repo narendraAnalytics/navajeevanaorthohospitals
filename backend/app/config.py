@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     ALLOWED_ORIGIN: str = "http://localhost:3000"
     APP_ENV: str = "development"
     LOG_LEVEL: str = "INFO"
+    RESEND_API_KEY: str = ""
+    RESEND_FROM_EMAIL: str = ""
+    RESEND_FROM_NAME: str = "Navajeevana Ortho Hospitals"
 
 
 settings = Settings()
