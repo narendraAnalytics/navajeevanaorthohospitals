@@ -5,6 +5,7 @@ Fetches the remaining open slots for the same day (or next working day) and
 formats a friendly message for the patient.
 """
 import logging
+from datetime import date as date_type
 
 from langchain_groq import ChatGroq
 
@@ -19,15 +20,19 @@ logger = logging.getLogger(__name__)
 async def alternative_suggester(state: AppointmentState) -> dict:
     pool = await get_pool()
 
+    appt_date = state["appointment_date"]
+    if isinstance(appt_date, str):
+        appt_date = date_type.fromisoformat(appt_date)
+
     rows = await pool.fetch(
         """SELECT id, slot_time::text, label
            FROM appointment_slots
            WHERE doctor_id = $1
-             AND slot_date = $2::date
+             AND slot_date = $2
              AND (status = 'available' OR (status = 'held' AND held_until < NOW()))
            ORDER BY slot_time""",
         state["doctor_id"],
-        state["appointment_date"],
+        appt_date,
     )
 
     alternatives = [

@@ -275,8 +275,8 @@ function BookingModal({
               Your request with <span className="bm-success-name">{doctor.name}</span> has been received.
               {successId && <><br /><span style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4, display: 'block' }}>ID: {successId}</span></>}
             </div>
-            <button className="bm-done-btn" onClick={() => { onClose(); router.push('/patient/appointments') }}>
-              View My Appointments
+            <button className="bm-done-btn" onClick={() => { onClose(); router.push('/patient') }}>
+              Go to Care Hub
             </button>
           </div>
         ) : (
