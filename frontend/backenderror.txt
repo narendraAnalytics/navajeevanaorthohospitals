@@ -1,83 +1,46 @@
-INFO:     Application startup complete.
-INFO:     127.0.0.1:50686 - "OPTIONS /appointment/slots/dr_meera_nair?date=2026-06-09 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50686 - "GET /appointment/slots/dr_meera_nair?date=2026-06-09 HTTP/1.1" 500 Internal Server Error
-ERROR:    Exception in ASGI application
+INFO:     127.0.0.1:51119 - "GET /appointment/slots/dr_meera_nair?date=2026-06-09 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51147 - "OPTIONS /appointment/book HTTP/1.1" 200 OK
+INFO:app.routers.appointments:[Appointments] Booking APPT-4488870C queued for narendra.adp@gmail.com
+INFO:     127.0.0.1:51147 - "POST /appointment/book HTTP/1.1" 202 Accepted
+INFO:app.agent.appointment_nodes.slot_validator:[SlotValidator] 2026-06-09 10:30 — valid
+INFO:app.agent.appointment_nodes.availability_checker:[AvailabilityChecker] Slot 06bc570c-a778-4319-9283-e0b018920d01 is available
+INFO:app.agent.appointment_nodes.slot_hold_agent:[SlotHoldAgent] Held slot 06bc570c-a778-4319-9283-e0b018920d01 for 5 min
+ERROR:app.routers.appointments:[AppointmentGraph] APPT-4488870C failed: INSERT has more expressions than target columns
 Traceback (most recent call last):
-  File "asyncpg/protocol/prepared_stmt.pyx", line 175, in asyncpg.protocol.protocol.PreparedStatementState._encode_bind_msg
-  File "asyncpg/protocol/codecs/base.pyx", line 251, in asyncpg.protocol.protocol.Codec.encode
-  File "asyncpg/protocol/codecs/base.pyx", line 153, in asyncpg.protocol.protocol.Codec.encode_scalar
-  File "asyncpg/pgproto/codecs/datetime.pyx", line 97, in asyncpg.pgproto.pgproto.date_encode
-AttributeError: 'str' object has no attribute 'toordinal'
-
-The above exception was the direct cause of the following exception:
-
-Traceback (most recent call last):
-  File "C:\Users\ES\Desktop\2025\navajeevanaorthohospitals\backend\.venv\Lib\site-packages\uvicorn\protocols\http\httptools_impl.py", line 421, in run_asgi
-    result = await app(  # type: ignore[func-returns-value]
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\ES\Desktop\2025\navajeevanaorthohospitals\backend\.venv\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 63, in __call__
-    return await self.app(scope, receive, send)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\ES\Desktop\2025\navajeevanaorthohospitals\backend\.venv\Lib\site-packages\fastapi\applications.py", line 1159, in __call__
-    await super().__call__(scope, receive, send)
-  File "C:\Users\ES\Desktop\2025\navajeevanaorthohospitals\backend\.venv\Lib\site-packages\starlette\applications.py", line 90, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "C:\Users\ES\Desktop\2025\navajeevanaorthohospitals\backend\.venv\Lib\site-packages\starlette\middleware\errors.py", line 186, in __call__
-    raise exc
-  File "C:\Users\ES\Desktop\2025\navajeevanaorthohospitals\backend\.venv\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
-    await self.app(scope, receive, _send)
-  File "C:\Users\ES\Desktop\2025\navajeevanaorthohospitals\backend\.venv\Lib\site-packages\starlette\middleware\cors.py", line 96, in __call__
-    await self.simple_response(scope, receive, send, request_headers=headers)
-  File "C:\Users\ES\Desktop\2025\navajeevanaorthohospitals\backend\.venv\Lib\site-packages\starlette\middleware\cors.py", line 154, in simple_response
-    await self.app(scope, receive, send)
-  File "C:\Users\ES\Desktop\2025\navajeevanaorthohospitals\backend\.venv\Lib\site-packages\starlette\middleware\exceptions.py", line 63, in __call__
-    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
-  File "C:\Users\ES\Desktop\2025\navajeevanaorthohospitals\backend\.venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "C:\Users\ES\Desktop\2025\navajeevanaorthohospitals\backend\.venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "C:\Users\ES\Desktop\2025\navajeevanaorthohospitals\backend\.venv\Lib\site-packages\fastapi\middleware\asyncexitstack.py", line 18, in __call__
-    await self.app(scope, receive, send)
-  File "C:\Users\ES\Desktop\2025\navajeevanaorthohospitals\backend\.venv\Lib\site-packages\starlette\routing.py", line 660, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "C:\Users\ES\Desktop\2025\navajeevanaorthohospitals\backend\.venv\Lib\site-packages\starlette\routing.py", line 680, in app
-    await route.handle(scope, receive, send)
-  File "C:\Users\ES\Desktop\2025\navajeevanaorthohospitals\backend\.venv\Lib\site-packages\starlette\routing.py", line 276, in handle
-    await self.app(scope, receive, send)
-  File "C:\Users\ES\Desktop\2025\navajeevanaorthohospitals\backend\.venv\Lib\site-packages\fastapi\routing.py", line 134, in app
-    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
-  File "C:\Users\ES\Desktop\2025\navajeevanaorthohospitals\backend\.venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "C:\Users\ES\Desktop\2025\navajeevanaorthohospitals\backend\.venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "C:\Users\ES\Desktop\2025\navajeevanaorthohospitals\backend\.venv\Lib\site-packages\fastapi\routing.py", line 120, in app
-    response = await f(request)
-               ^^^^^^^^^^^^^^^^
-  File "C:\Users\ES\Desktop\2025\navajeevanaorthohospitals\backend\.venv\Lib\site-packages\fastapi\routing.py", line 674, in app
-    raw_response = await run_endpoint_function(
-                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\ES\Desktop\2025\navajeevanaorthohospitals\backend\.venv\Lib\site-packages\fastapi\routing.py", line 328, in run_endpoint_function
-    return await dependant.call(**values)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\ES\Desktop\2025\navajeevanaorthohospitals\backend\app\routers\appointments.py", line 169, in get_slots
-    unavail = await pool.fetchrow(
-              ^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\ES\Desktop\2025\navajeevanaorthohospitals\backend\.venv\Lib\site-packages\asyncpg\pool.py", line 660, in fetchrow
-    return await con.fetchrow(
-           ^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\ES\Desktop\2025\navajeevanaorthohospitals\backend\.venv\Lib\site-packages\asyncpg\connection.py", line 752, in fetchrow
-    data = await self._execute(
-           ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\ES\Desktop\2025\navajeevanaorthohospitals\backend\app\routers\appointments.py", line 66, in _run_appointment_graph
+    async for _ in graph.astream(state, config=config, stream_mode="updates"):
+  File "C:\Users\ES\Desktop\2025\navajeevanaorthohospitals\backend\.venv\Lib\site-packages\langgraph\pregel\main.py", line 3407, in astream
+    async for _ in runner.atick(
+  File "C:\Users\ES\Desktop\2025\navajeevanaorthohospitals\backend\.venv\Lib\site-packages\langgraph\pregel\_runner.py", line 396, in atick
+    await arun_with_retry(
+  File "C:\Users\ES\Desktop\2025\navajeevanaorthohospitals\backend\.venv\Lib\site-packages\langgraph\pregel\_retry.py", line 706, in arun_with_retry
+    return await task.proc.ainvoke(task.input, config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\ES\Desktop\2025\navajeevanaorthohospitals\backend\.venv\Lib\site-packages\langgraph\_internal\_runnable.py", line 733, in ainvoke
+    input = await asyncio.create_task(
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\ES\Desktop\2025\navajeevanaorthohospitals\backend\.venv\Lib\site-packages\langgraph\_internal\_runnable.py", line 501, in ainvoke
+    ret = await self.afunc(*args, **kwargs)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\ES\Desktop\2025\navajeevanaorthohospitals\backend\app\agent\appointment_nodes\slot_reservation_agent.py", line 27, in slot_reservation_agent
+    await pool.execute(
+  File "C:\Users\ES\Desktop\2025\navajeevanaorthohospitals\backend\.venv\Lib\site-packages\asyncpg\pool.py", line 592, in execute
+    return await con.execute(query, *args, timeout=timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\ES\Desktop\2025\navajeevanaorthohospitals\backend\.venv\Lib\site-packages\asyncpg\connection.py", line 357, in execute
+    _, status, _ = await self._execute(
+                   ^^^^^^^^^^^^^^^^^^^^
   File "C:\Users\ES\Desktop\2025\navajeevanaorthohospitals\backend\.venv\Lib\site-packages\asyncpg\connection.py", line 1873, in _execute
     result, _ = await self.__execute(
                 ^^^^^^^^^^^^^^^^^^^^^
   File "C:\Users\ES\Desktop\2025\navajeevanaorthohospitals\backend\.venv\Lib\site-packages\asyncpg\connection.py", line 1970, in __execute
     result, stmt = await self._do_execute(
                    ^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\ES\Desktop\2025\navajeevanaorthohospitals\backend\.venv\Lib\site-packages\asyncpg\connection.py", line 2036, in _do_execute    result = await executor(stmt, timeout)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "asyncpg/protocol/protocol.pyx", line 184, in bind_execute
-  File "asyncpg/protocol/prepared_stmt.pyx", line 204, in asyncpg.protocol.protocol.PreparedStatementState._encode_bind_msg
-asyncpg.exceptions.DataError: invalid input for query argument $2: '2026-06-09' ('str' object has no attribute 'toordinal')
-
-Server is starting up — wait ~30s then click Retry
+  File "C:\Users\ES\Desktop\2025\navajeevanaorthohospitals\backend\.venv\Lib\site-packages\asyncpg\connection.py", line 2021, in _do_execute    stmt = await self._get_statement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\ES\Desktop\2025\navajeevanaorthohospitals\backend\.venv\Lib\site-packages\asyncpg\connection.py", line 443, in _get_statement
+    statement = await self._protocol.prepare(
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "asyncpg/protocol/protocol.pyx", line 165, in prepare
+asyncpg.exceptions.PostgresSyntaxError: INSERT has more expressions than target columns
+During task with name 'slot_reservation_agent' and id 'd92298b8-8569-caaa-7d21-0effc887aced'

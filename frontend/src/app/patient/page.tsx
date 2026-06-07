@@ -5,9 +5,18 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useUser } from '@clerk/nextjs'
-import { submitTicket, getTicket, getTicketsByEmail, type Ticket } from '@/lib/api'
+import { submitTicket, getTicket, getTicketsByEmail, getAppointmentsByEmail, type Ticket, type Appointment } from '@/lib/api'
 
-type Tab = 'submit' | 'track'
+type Tab = 'submit' | 'track' | 'appointments'
+
+const apptStatusColor: Record<string, { color: string; dot: string; label: string }> = {
+  pending:     { color: 'rgba(245,158,11,.12)',  dot: '#F59E0B', label: 'Pending' },
+  confirmed:   { color: 'rgba(16,185,129,.12)',  dot: '#10B981', label: 'Confirmed' },
+  cancelled:   { color: 'rgba(107,114,128,.12)', dot: '#9CA3AF', label: 'Cancelled' },
+  completed:   { color: 'rgba(59,130,246,.12)',  dot: '#3B82F6', label: 'Completed' },
+  no_show:     { color: 'rgba(239,68,68,.12)',   dot: '#EF4444', label: 'No Show' },
+  rescheduled: { color: 'rgba(139,92,246,.12)',  dot: '#8B5CF6', label: 'Rescheduled' },
+}
 
 const statusLabel: Record<string, { label: string; color: string; dot: string }> = {
   processing:          { label: 'Processing',  color: 'rgba(245,158,11,.12)',  dot: '#F59E0B' },
@@ -45,6 +54,10 @@ export default function PatientPortal() {
   const [emailTracking, setEmailTracking] = useState(false)
   const [emailTrackError, setEmailTrackError] = useState('')
 
+  const [myAppointments, setMyAppointments] = useState<Appointment[] | null>(null)
+  const [apptLoading, setApptLoading] = useState(false)
+  const [apptError, setApptError] = useState('')
+
   // Pre-fill from Clerk profile once loaded
   useEffect(() => {
     if (!user) return
@@ -73,6 +86,22 @@ export default function PatientPortal() {
       setSubmitting(false)
     }
   }
+
+  const loadMyAppointments = async () => {
+    const email = user?.emailAddresses[0]?.emailAddress || form.email
+    if (!email) return
+    setApptLoading(true); setApptError('')
+    try { setMyAppointments(await getAppointmentsByEmail(email)) }
+    catch { setApptError('Could not load appointments. Please try again.') }
+    finally { setApptLoading(false) }
+  }
+
+  useEffect(() => {
+    if (tab === 'appointments' && myAppointments === null && !apptLoading) {
+      loadMyAppointments()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab])
 
   const handleEmailTrack = async () => {
     const email = form.email
@@ -227,13 +256,13 @@ export default function PatientPortal() {
 
           {/* Tabs */}
           <div style={{ display: 'flex', gap: 6, marginBottom: 28, background: 'rgba(255,255,255,.65)', backdropFilter: 'blur(16px)', borderRadius: 50, padding: 6, border: '1px solid rgba(255,255,255,.8)', boxShadow: '0 8px 30px -14px rgba(16,42,40,.18)' }}>
-            {(['submit', 'track'] as Tab[]).map((t) => (
+            {(['submit', 'track', 'appointments'] as Tab[]).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
                 style={{
                   flex: 1, padding: '11px 0', borderRadius: 40, border: 'none', cursor: 'pointer',
-                  fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13.5,
+                  fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13,
                   background: tab === t ? 'var(--g-teal)' : 'transparent',
                   color: tab === t ? '#fff' : 'var(--bk-muted)',
                   boxShadow: tab === t ? '0 8px 22px -8px rgba(17,181,164,.55)' : 'none',
@@ -493,6 +522,76 @@ export default function PatientPortal() {
                     </div>
                   )}
                 </>
+              )}
+            </div>
+          )}
+
+          {/* Appointments tab */}
+          {tab === 'appointments' && (
+            <div style={{ background: 'rgba(255,255,255,.72)', backdropFilter: 'blur(22px)', borderRadius: 28, padding: '32px 28px', border: '1px solid rgba(255,255,255,.8)', boxShadow: '0 24px 64px -28px rgba(16,42,40,.22), inset 0 1px 0 rgba(255,255,255,.9)', display: 'flex', flexDirection: 'column', gap: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <h2 style={{ fontFamily: 'var(--font-head)', fontSize: 19, fontWeight: 700, color: 'var(--ink)', marginBottom: 4 }}>My Appointments</h2>
+                  <p style={{ fontSize: 13, color: 'var(--bk-muted)' }}>Your scheduled appointments at Navajeevana Ortho Hospitals</p>
+                </div>
+                <button onClick={() => { setMyAppointments(null); loadMyAppointments() }}
+                  style={{ background: 'rgba(17,181,164,.1)', border: '1px solid rgba(17,181,164,.2)', borderRadius: 10, padding: '8px 14px', fontSize: 12.5, fontWeight: 700, color: 'var(--teal-d)', cursor: 'pointer' }}>
+                  ↻ Refresh
+                </button>
+              </div>
+
+              {apptLoading && (
+                <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--bk-muted)', fontSize: 14 }}>Loading your appointments…</div>
+              )}
+
+              {apptError && (
+                <div style={{ background: 'rgba(239,68,68,.08)', border: '1px solid rgba(239,68,68,.2)', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                  <span style={{ fontSize: 13, color: '#991B1B' }}>{apptError}</span>
+                  <button onClick={() => { setApptError(''); loadMyAppointments() }} style={{ fontSize: 12, fontWeight: 700, color: '#DC2626', background: 'none', border: 'none', cursor: 'pointer' }}>Retry</button>
+                </div>
+              )}
+
+              {!apptLoading && !apptError && myAppointments !== null && myAppointments.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '32px 0' }}>
+                  <div style={{ fontSize: 40, marginBottom: 12 }}>📅</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', marginBottom: 8 }}>No appointments scheduled</div>
+                  <p style={{ fontSize: 13, color: 'var(--bk-muted)', marginBottom: 20 }}>Book an appointment with one of our specialist doctors.</p>
+                  <a href="/doctors" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'var(--g-teal)', color: '#fff', borderRadius: 30, padding: '11px 22px', fontWeight: 700, fontSize: 13.5, textDecoration: 'none', boxShadow: '0 8px 22px -8px rgba(17,181,164,.55)' }}>
+                    Book Appointment →
+                  </a>
+                </div>
+              )}
+
+              {!apptLoading && myAppointments && myAppointments.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {myAppointments.map(a => {
+                    const sc = apptStatusColor[a.status] ?? { color: 'rgba(107,114,128,.12)', dot: '#9CA3AF', label: a.status }
+                    const dateLabel = new Date(a.appointment_date + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
+                    return (
+                      <div key={a.id} style={{ background: sc.color, borderRadius: 16, padding: '16px 18px', border: `1px solid ${sc.dot}30` }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                          <div>
+                            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', marginBottom: 3 }}>{a.doctor_name ?? a.doctor_id}</div>
+                            <div style={{ fontSize: 12.5, color: 'var(--bk-muted)', marginBottom: 8 }}>{dateLabel} · {a.appointment_time} · {a.slot_label}</div>
+                            {a.reason && <div style={{ fontSize: 13, color: '#334155' }}>Reason: {a.reason.slice(0, 80)}{a.reason.length > 80 ? '…' : ''}</div>}
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: '#fff', border: `1px solid ${sc.dot}40`, borderRadius: 20, padding: '4px 10px', fontSize: 11.5, fontWeight: 700, color: sc.dot }}>
+                              <span style={{ width: 6, height: 6, borderRadius: '50%', background: sc.dot }} />
+                              {sc.label}
+                            </span>
+                            <span style={{ fontSize: 11, color: 'var(--bk-muted)', fontWeight: 600 }}>
+                              {a.came_before ? 'Returning patient' : 'New patient'}
+                            </span>
+                          </div>
+                        </div>
+                        <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${sc.dot}20`, fontSize: 10.5, color: 'var(--bk-muted)', fontFamily: 'monospace' }}>
+                          ID: {a.id}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
               )}
             </div>
           )}

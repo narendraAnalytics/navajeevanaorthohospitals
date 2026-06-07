@@ -29,7 +29,7 @@ async def slot_reservation_agent(state: AppointmentState) -> dict:
                (id, patient_name, patient_email, patient_phone,
                 doctor_id, slot_id, appointment_date, appointment_time,
                 slot_label, reason, came_before, status)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::time,$10,$11,$12,$13)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8::time,$9,$10,$11,$12)
            ON CONFLICT (id) DO NOTHING""",
         appointment_id,
         state["patient_name"],
