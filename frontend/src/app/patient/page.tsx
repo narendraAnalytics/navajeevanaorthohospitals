@@ -269,7 +269,7 @@ export default function PatientPortal() {
                   transition: 'all .28s cubic-bezier(.22,1,.36,1)',
                 }}
               >
-                {t === 'submit' ? '📝  Submit a Query' : '🔍  Track My Ticket'}
+                {t === 'submit' ? '📝  Submit a Query' : t === 'track' ? '🔍  Track My Ticket' : '📅  My Appointments'}
               </button>
             ))}
           </div>
