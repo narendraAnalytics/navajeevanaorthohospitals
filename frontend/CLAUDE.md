@@ -12,11 +12,20 @@ Next.js 16 · React 19 · Tailwind 4 · Shadcn (`@base-ui/react`, style: `base-n
 
 ## Routes
 
-| Route | File | Notes |
-|---|---|---|
-| `/` | `src/app/page.tsx` | Landing page — server component, imports client sections |
-| `/patient` | `src/app/patient/page.tsx` | Patient portal — submit ticket + track status (client) |
-| `/admin` | `src/app/admin/page.tsx` | Admin dashboard — HITL review queue (client) |
+| Route | File | Status | Notes |
+|---|---|---|---|
+| `/` | `src/app/page.tsx` | ✅ | Landing page — server component, imports client sections |
+| `/patient/intro` | `src/app/patient/intro/page.tsx` | ✅ | Entry animation → `/patient` |
+| `/patient` | `src/app/patient/page.tsx` | ✅ | Care Hub — submit ticket + track (client) |
+| `/patient/submit-transition/[ticket_id]` | `src/app/patient/submit-transition/[ticket_id]/page.tsx` | ✅ | AI handoff animation |
+| `/patient/processing/[ticket_id]` | `src/app/patient/processing/[ticket_id]/page.tsx` | ✅ | Live pipeline view |
+| `/admin/login` | `src/app/admin/login/page.tsx` | ✅ | SessionStorage auth |
+| `/admin` | `src/app/admin/page.tsx` | ✅ | Admin home |
+| `/admin/dashboard` | `src/app/admin/dashboard/page.tsx` | ✅ | HITL review + Overview |
+| `/doctors` | `src/app/doctors/page.tsx` | ⬜ Phase B0 | Doctor cards grid |
+| `/patient/book` | `src/app/patient/book/page.tsx` | ⬜ Phase B2 | 3-step booking form |
+| `/patient/book/confirm/[id]` | `src/app/patient/book/confirm/[id]/page.tsx` | ⬜ Phase B3 | Booking confirmation |
+| `/patient/appointments` | `src/app/patient/appointments/page.tsx` | ⬜ Phase B4 | My appointments list |
 
 ## Design system
 
@@ -75,12 +84,29 @@ Fonts loaded in `src/app/layout.tsx`:
 | `src/components/TestimonialsSection.tsx` | client | Testimonial carousel (6500ms) + AI feature card |
 | `src/components/Footer.tsx` | server | 4-column dark footer |
 
+## Key files
+
+| File | Purpose |
+|---|---|
+| `src/proxy.ts` | Clerk middleware — MUST be named `proxy.ts`. `/admin(.*)` and `/api/send-email` excluded. |
+| `src/lib/api.ts` | Typed fetch wrapper for all backend endpoints. `sendEmail()` posts to `/api/send-email` (Next.js route), not backend directly. |
+| `src/lib/auth.ts` | `getOrCreateUser()` — lazy Clerk→Neon sync for `frontend_users` |
+
 ## API
 
 `src/lib/api.ts` — typed `fetch` wrapper for all backend endpoints.  
 Set `NEXT_PUBLIC_API_URL` in `.env.local`:
 - Dev: `http://localhost:8000`
 - Prod: `https://navajeevanaorthohospitals.onrender.com`
+
+Appointment API functions to add (Phase B1): `getDoctors`, `getAvailableSlots`, `postConversationAnswer`, `bookAppointment`, `getAppointmentById`, `getAppointmentsByEmail`, `cancelAppointment`.
+
+## Auth
+
+- Middleware: `src/proxy.ts` (not `middleware.ts` — project convention)
+- Use `<Show when="signed-in">` / `<Show when="signed-out">` — not deprecated `<SignedIn>` / `<SignedOut>`
+- Patient email: auto-filled from `useUser()` and locked (`readOnly`) — never let patients change it
+- Admin portal: sessionStorage-based, not Clerk. Username `ADMINNAVAJEEVANA` / password `admin@123`
 
 ## Assets
 

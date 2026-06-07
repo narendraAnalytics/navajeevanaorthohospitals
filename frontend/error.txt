@@ -603,6 +603,13 @@ CURRENT STATUS
 
 Backend ticketing: COMPLETE (deployed on Render)
 Frontend ticketing: COMPLETE (deployed on Vercel)
-Appointment booking: NOT STARTED
+Appointment booking backend (Phase A): COMPLETE (deployed on Render)
+  ✅ 7 DB tables in Neon (doctors=8, schedules=46, slots=800, appointments=0)
+  ✅ seed_doctors.py + generate_slots.py added to render.yaml build command
+  ✅ AppointmentState + 10 agent nodes + appointment_graph.py
+  ✅ /doctors + /appointment/* FastAPI router registered in main.py
+  ✅ 10/10 tests passing
 
-Next action: Start with STEP A1 — Create the 7 database tables in Neon.
+Appointment booking frontend (Phase B): NOT STARTED
+
+Next action: Phase B0 — Build /doctors page + update landing CTA → /doctors.
