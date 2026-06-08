@@ -1,1 +1,15 @@
-https://res.cloudinary.com/dkqbzwicr/image/upload/q_auto/f_auto/v1780931528/robo_hf6sls.png
+Every visit / every refresh plays the intro:
+
+Scenario	Result
+User opens index.html (fresh)	→ redirects to intro.html
+User refreshes index.html	→ redirects to intro.html again ✓
+Intro finishes / Enter Site clicked	→ goes to index.html?entered=1
+index.html detects ?entered=1	→ cleans URL, shows main site
+User refreshes clean index.html	→ redirects to intro again ✓
+Intro features:
+
+🎬 Full-screen video with soft vignette on all edges — blends into dark navy background
+✨ Animated grain, floating teal particles, scanlines for cinematic depth
+🔤 Staggered entrance animations — NAVAJEEVANA shimmer title
+📊 Live progress bar tracking video duration with countdown
+Enter Site + Skip Intro buttons — auto-redirects when video ends or after 16s

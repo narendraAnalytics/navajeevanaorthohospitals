@@ -55,6 +55,12 @@ export default function HeroSection() {
   const router = useRouter()
 
   useEffect(() => {
+    if (window.location.search.includes('entered')) {
+      window.history.replaceState({}, '', '/')
+    }
+  }, [])
+
+  useEffect(() => {
     const id = setInterval(() => {
       setActiveIdx(i => (i + 1) % SLIDES.length)
     }, 5000)
