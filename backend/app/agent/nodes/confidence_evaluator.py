@@ -5,7 +5,7 @@ from app.agent.state import TicketState
 logger = logging.getLogger(__name__)
 
 # Tiered thresholds — conservative for healthcare context
-RAG_AUTO_REPLY_THRESHOLD = 0.70   # KB answer reliable enough to send
+RAG_AUTO_REPLY_THRESHOLD = 0.65   # KB answer reliable enough to send
 RAG_WEB_SEARCH_THRESHOLD = 0.60   # below this → skip Tavily, escalate directly
 
 
