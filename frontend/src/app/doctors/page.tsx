@@ -323,7 +323,7 @@ function BookingModal({
     }
   }
 
-  const today = new Date().toISOString().split('T')[0]
+  const today = new Date(Date.now() + 5.5 * 60 * 60 * 1000).toISOString().split('T')[0]
 
   if (!doctor) return null
 
