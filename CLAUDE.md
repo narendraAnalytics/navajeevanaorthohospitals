@@ -211,17 +211,20 @@ PATCH /ticket/{id}/resolve
 ### Appointment Booking
 
 ```
-GET   /doctors                                    -- all active doctors with schedule summary
-GET   /appointment/slots/{doctor_id}?date=...     -- 4 fixed labeled slots for a doctor+date
-POST  /appointment/conversation/{session_id}      -- stateless Q&A step (stage 0/1/2 → next question)
-POST  /appointment/book                           -- submit booking (202, graph runs in background)
-GET   /appointment/{id}                           -- poll booking result
-GET   /appointment/by-email/{email}               -- all appointments for patient
-GET   /appointment/all                            -- admin: all appointments
+GET   /doctors                                             -- all active doctors with schedule summary
+GET   /appointment/slots/{doctor_id}?date=...              -- 4 fixed labeled slots for a doctor+date
+GET   /appointment/slots/{doctor_id}/availability?month=.. -- booked-slot count per date for a month (YYYY-MM)
+POST  /appointment/conversation/{session_id}               -- stateless Q&A step (stage 0/1/2 → next question)
+POST  /appointment/book                                    -- submit booking (202, graph runs in background)
+GET   /appointment/{id}                                    -- poll booking result
+GET   /appointment/by-email/{email}                        -- all appointments for patient
+GET   /appointment/all                                     -- admin: all appointments
 PATCH /appointment/{id}/cancel
-PATCH /appointment/{id}/reschedule                -- body: { new_slot_id }
-PATCH /appointment/{id}/status                    -- admin: completed | no_show | confirmed | cancelled
+PATCH /appointment/{id}/reschedule                         -- body: { new_slot_id }
+PATCH /appointment/{id}/status                             -- admin: completed | no_show | confirmed | cancelled
 ```
+
+**Month availability response:** `{"2026-06-09": 2, "2026-06-14": 4, ...}` — date string → booked slot count (0–4). Only dates with ≥1 booked slot appear. Used by `MonthCalendar` in the doctors page to color-code days.
 
 **Conversation protocol** (stateless — frontend accumulates answers):
 - `stage 0` answer = `slot_id` → validates slot exists/available, returns Q2 (reason textarea)
@@ -345,9 +348,16 @@ Stack: Next.js 16 + React 19 + Tailwind 4 + Shadcn (`@base-ui/react`).
 
 **`/doctors` page architecture (important):**
 - Doctor data is **static** in `src/app/doctors/page.tsx` — 8 doctors hardcoded with Cloudinary image URLs from `frontend/bookingappt.txt`. The page does NOT call `GET /doctors` to render cards; static data avoids a cold-start round-trip.
-- The in-page `BookingModal` does call the live backend: `getAvailableSlots(doctor_id, date)` on date change, then `bookAppointment()` on submit.
+- The in-page `BookingModal` calls three backend endpoints: `getDoctorMonthAvailability(doctor_id, month)` on calendar month change, `getAvailableSlots(doctor_id, date)` on day selection, and `bookAppointment()` on submit.
+- `MonthCalendar` component (defined in `page.tsx` above `BookingModal`) renders a custom month grid with color-coded availability: 0 booked = transparent, 1 = green, 2 = amber, 3 = orange, 4 = red/blocked. Sundays are always blocked. Fetches a new month from the availability endpoint when navigating prev/next.
+- Booking modal loading state: animated shimmer button + cycling messages ("Checking availability…" → "Securing your slot…" → "Confirming booking…" → "Almost there…") via `useEffect` + `setInterval` on the `loading` state.
+- `handleDateChange` blocks Sundays client-side (`getDay() === 0`) with an inline error before hitting the backend.
 - HeroSection "Book Appointment" CTA (signed-in users) routes to `/doctors` (not `/patient/intro`). Signed-out users still see a Clerk `<SignInButton>` redirecting to `/patient`.
-- CSS classes use `dp-` prefix (page/filter) and `dc-` prefix (doctor card) and `bm-` prefix (booking modal) to avoid collision with globals.
+- CSS class prefixes: `dp-` (page/filter), `dc-` (doctor card), `bm-` (booking modal), `mc-` (month calendar).
+
+**Navbar Patient Portal animation:**
+- `src/components/Nav.tsx` wraps the signed-out `ghost-pill` button in `<div className="pp-ring">`.
+- `.pp-ring` in `globals.css` uses a `::before` pseudo-element with a `conic-gradient` that rotates via `transform: rotate(360deg)` (`pp-spin` keyframe) — creates a spinning colored border. Uses `overflow: hidden` + `padding: 2px` to clip to pill shape. Do **not** revert to `@property --pp-angle` approach — it silently fails in many browsers.
 
 ## Clerk Auth
 
@@ -394,3 +404,5 @@ All scripts are idempotent — safe to re-run on every deploy.
 | Phase B4 — "My Appointments" tab in Care Hub + admin Appointments panel | ✅ |
 | Phase B5 — Standalone `/patient/appointments` page with cancel | ✅ |
 | Phase B6 — Admin dashboard appointments tab (`getAllAppointments`, cancel, status update) | ✅ |
+| Phase C — `/doctors` page UI polish (floating pill header, 3-col nav layout, MonthCalendar with availability colors, animated loading button, Sunday blocking, navbar Patient Portal spinning ring) | ✅ |
+| Phase C1 — New backend endpoint `GET /appointment/slots/{doctor_id}/availability?month=YYYY-MM` + `get_month_availability` query | ✅ |

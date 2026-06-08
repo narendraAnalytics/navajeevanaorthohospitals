@@ -262,7 +262,11 @@ function BookingModal({
     try {
       const data = await getAvailableSlots(doctor.id, d)
       setSlots(data)
-      const available = data.filter(s => s.status === 'available' || s.status === 'held')
+      const nowStr = `${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`
+      const available = data.filter(s =>
+        (s.status === 'available' || s.status === 'held') &&
+        !(d === today && s.slot_time <= nowStr)
+      )
       if (available.length === 0) {
         setSlotError('All slots for this date are fully booked. Please try another date.')
       }
@@ -391,10 +395,12 @@ function BookingModal({
                   >
                     <option value="">{slotsLoading ? 'Loading slots…' : date ? slots.length ? 'Select a slot' : 'No slots available' : 'Pick a date first'}</option>
                     {slots.map(s => {
+                      const nowStr = `${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`
                       const isBooked = s.status === 'booked'
+                      const isPast = date === today && s.slot_time <= nowStr
                       return (
-                        <option key={s.slot_id} value={s.slot_id} disabled={isBooked}>
-                          {s.label} ({s.slot_time}){isBooked ? ' — Booked' : ''}
+                        <option key={s.slot_id} value={s.slot_id} disabled={isBooked || isPast}>
+                          {s.label} ({s.slot_time}){isBooked ? ' — Booked' : isPast ? ' — Passed' : ''}
                         </option>
                       )
                     })}
