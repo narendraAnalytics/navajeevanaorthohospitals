@@ -96,7 +96,7 @@ async def get_pending_review_tickets(pool: asyncpg.Pool) -> list[dict]:
            LEFT JOIN replies r ON r.ticket_id = t.id AND r.reply_type = 'ai_draft'
            LEFT JOIN escalations e ON e.ticket_id = t.id
            WHERE t.final_status = 'pending_review'
-           ORDER BY t.created_at ASC"""
+           ORDER BY t.created_at DESC"""
     )
     return [dict(r) for r in rows]
 
