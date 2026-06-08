@@ -368,13 +368,13 @@
 .tnav { display: flex; gap: 8px; margin-top: 18px; }
 .tnav button { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); background: #fff; cursor: pointer; display: grid; place-items: center; color: var(--ink-2); transition: .25s; }
 .tnav button:hover { background: var(--g-teal); color: #fff; border-color: transparent; }
-.ai-card { background: linear-gradient(150deg,#E9F8F1,#EAF4FF); border-radius: 22px; padding: 28px; border: 1px solid rgba(255,255,255,.7); position: relative; overflow: hidden; }
+.ai-card { background: linear-gradient(150deg,#F8FBFF,#EEF4FF); border-radius: 22px; padding: 28px; border: 1px solid rgba(255,255,255,.7); position: relative; overflow: visible; min-height: 260px; }
 .ai-card h3 { font-size: 21px; margin-bottom: 16px; }
 .ai-list { display: flex; flex-direction: column; gap: 11px; max-width: 330px; }
 .ai-list li { list-style: none; display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--ink-2); font-weight: 500; }
 .ai-list .ck { width: 20px; height: 20px; border-radius: 50%; background: var(--g-warm); display: grid; place-items: center; flex-shrink: 0; }
 .ai-list .ck svg { width: 11px; height: 11px; color: #fff; }
-.ai-bot { position: absolute; right: 18px; bottom: 14px; width: 120px; height: 120px; border-radius: 30px; background: var(--g-teal); display: grid; place-items: center; box-shadow: var(--shadow-card); animation: bob 4.5s ease-in-out infinite; }
+.ai-bot { position: absolute; right: 10px; bottom: 0; width: 160px; height: 160px; border-radius: 0; background: transparent; display: grid; place-items: end center; box-shadow: none; animation: bob 4.5s ease-in-out infinite; overflow: visible; }
 .ai-bot svg { width: 66px; height: 66px; color: #fff; }
 .ai-spark { position: absolute; border-radius: 50%; background: var(--gold); animation: tw 2.4s ease-in-out infinite; }
 @keyframes tw { 0%,100% { opacity: .3; transform: scale(.7); } 50% { opacity: 1; transform: scale(1.15); } }

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import Image from 'next/image'
 
 const testimonials = [
   {
@@ -107,12 +108,13 @@ export default function TestimonialsSection() {
             ))}
           </ul>
           <div className="ai-bot">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6}>
-              <rect x={4} y={8} width={16} height={11} rx={4} />
-              <path d="M12 4v4M9 13h.01M15 13h.01M9 16h6" />
-              <circle cx={12} cy={4} r={1.4} fill="currentColor" />
-              <path d="M2 12v3m20-3v3" />
-            </svg>
+            <Image
+              src="https://res.cloudinary.com/dkqbzwicr/image/upload/q_auto/f_auto/v1780931528/robo_hf6sls.png"
+              alt="AI Support Robot"
+              width={155}
+              height={155}
+              style={{ objectFit: 'contain', display: 'block' }}
+            />
           </div>
         </div>
       </div>

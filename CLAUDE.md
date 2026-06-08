@@ -104,6 +104,7 @@ Agent source files: `backend/app/agent/appointment_nodes/` (one file per node). 
   - `appt_date < today` — today IS allowed (same-day booking). Past dates are rejected.
   - For same-day bookings, slot times that have already passed are also rejected. IST is computed explicitly as `(datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)).time()` — do not use `datetime.now()` local time (backend runs on UTC on Render).
 - `appointment_queries.py` is a **separate file** from `queries.py` — never merge them. Ticketing queries live in `queries.py`; appointment queries in `appointment_queries.py`.
+- `notification_agent.py` sends a rich HTML confirmation email via Resend. `_build_email_html()` builds the full HTML (gradient header, teal detail rows, info note, dark footer). Do not replace with plain text — the visual design is intentional.
 
 ## FastAPI Lifespan (critical)
 
@@ -355,6 +356,12 @@ Stack: Next.js 16 + React 19 + Tailwind 4 + Shadcn (`@base-ui/react`).
 - Never put a changing `key` on `<img>` in the hero carousel — CSS `opacity` handles crossfade
 - All `<label>` must have `htmlFor`; standalone inputs need `aria-label`; label style: `.pt-label`
 
+**Landing page "Meet Our Specialists" section (`src/app/page.tsx`):**
+- Shows 5 preview doctors (Arjun Reddy, Priya Sharma, Vivek Rao, Kiran Kumar, Meera Nair) with real Cloudinary photos — image URLs sourced from `frontend/backenderror.txt`.
+- Doctor photo container `.doc-photo` uses `position:relative; overflow:hidden` — Next.js `<Image fill>` works without any extra wrapper styles.
+- "View All Doctors" is a `<Link href="/doctors">` (not a `<button>`).
+- CSS classes: `.doc-grid` (5-col grid), `.doc-card`, `.doc-photo`, `.doc-body`, `.ribbon` (color tag), `.uline` (bottom accent bar).
+
 **`/doctors` page architecture (important):**
 - Doctor data is **static** in `src/app/doctors/page.tsx` — 8 doctors hardcoded with Cloudinary image URLs from `frontend/bookingappt.txt`. The page does NOT call `GET /doctors` to render cards; static data avoids a cold-start round-trip.
 - The in-page `BookingModal` calls three backend endpoints: `getDoctorMonthAvailability(doctor_id, month)` on calendar month change, `getAvailableSlots(doctor_id, date)` on day selection, and `bookAppointment()` on submit.
@@ -418,3 +425,5 @@ All scripts are idempotent — safe to re-run on every deploy.
 | Phase C — `/doctors` page UI polish (floating pill header, 3-col nav layout, MonthCalendar with availability colors, animated loading button, Sunday blocking, navbar Patient Portal spinning ring) | ✅ |
 | Phase C1 — New backend endpoint `GET /appointment/slots/{doctor_id}/availability?month=YYYY-MM` + `get_month_availability` query | ✅ |
 | Phase D — Bug fixes: same-day booking, past-time slot blocking (IST), LangGraph namespace sanitization for email keys | ✅ |
+| Phase E1 — Appointment confirmation email redesign (rich HTML: gradient header, card layout, teal detail rows, info note box, footer) | ✅ |
+| Phase E2 — Landing page "Meet Our Specialists" section updated: real doctor photos from Cloudinary, "View All Doctors" links to `/doctors` | ✅ |
