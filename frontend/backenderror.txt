@@ -1,38 +1,8 @@
-{
-  "ticket_id": "TICKET-C448C032",
-  "status": "pending_review",
-  "route_decision": "escalate",
-  "confidence_score": 0.5544,
-  "logs": [
-    {
-      "node_name": "orchestrator",
-      "decision": "low",
-      "confidence_score": null,
-      "created_at": "2026-06-08T11:44:48.638490+00:00"
-    },
-    {
-      "node_name": "safety_checker",
-      "decision": "safe",
-      "confidence_score": null,
-      "created_at": "2026-06-08T11:44:49.102565+00:00"
-    },
-    {
-      "node_name": "intent_classifier",
-      "decision": "general",
-      "confidence_score": null,
-      "created_at": "2026-06-08T11:44:52.564249+00:00"
-    },
-    {
-      "node_name": "rag_retriever",
-      "decision": "score:0.55",
-      "confidence_score": null,
-      "created_at": "2026-06-08T11:44:54.566273+00:00"
-    },
-    {
-      "node_name": "escalation_packager",
-      "decision": "escalated",
-      "confidence_score": null,
-      "created_at": "2026-06-08T11:44:56.959211+00:00"
-    }
-  ]
-}
+https://res.cloudinary.com/dkqbzwicr/image/upload/q_auto/f_auto/v1780810639/Dr._Arjun_Reddy_u2yqyp.png
+https://res.cloudinary.com/dkqbzwicr/image/upload/q_auto/f_auto/v1780810642/Dr.Priya_Sharma_f4exwi.png
+https://res.cloudinary.com/dkqbzwicr/image/upload/q_auto/f_auto/v1780810639/Dr._Meera_Nair_xstg4x.png
+https://res.cloudinary.com/dkqbzwicr/image/upload/q_auto/f_auto/v1780810639/Dr._Kiran_Kumar_qd99lm.png
+https://res.cloudinary.com/dkqbzwicr/image/upload/q_auto/f_auto/v1780810643/Dr._Vivek_Rao_n2wxu9.png
+https://res.cloudinary.com/dkqbzwicr/image/upload/q_auto/f_auto/v1780810642/Dr._Lakshmi_Devi_qilela.png
+https://res.cloudinary.com/dkqbzwicr/image/upload/q_auto/f_auto/v1780810643/Dr._Sandeep_Varma_sfagtp.png
+https://res.cloudinary.com/dkqbzwicr/image/upload/q_auto/f_auto/v1780810638/Dr._Ananya_Reddy_dkda4q.png

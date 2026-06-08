@@ -3,13 +3,15 @@ import HeroSection from '@/components/HeroSection'
 import TestimonialsSection from '@/components/TestimonialsSection'
 import Footer from '@/components/Footer'
 import RevealObserver from '@/components/RevealObserver'
+import Image from 'next/image'
+import Link from 'next/link'
 
 const doctors = [
-  { n: 'Dr. Ravi Kumar', r: 'Senior Orthopedic Surgeon', m: '20+ Years Experience · Knee & Hip Specialist', c: 'bg-gi-teal', tag: 'Top Rated' },
-  { n: 'Dr. Priya Nair', r: 'Spine Surgeon', m: '15+ Years Experience · Spine Specialist', c: 'bg-gi-coral', tag: 'Spine' },
-  { n: 'Dr. Suresh Babu', r: 'Sports Medicine Expert', m: '12+ Years Experience · Sports Injury Specialist', c: 'bg-gi-warm', tag: 'Sports' },
-  { n: 'Dr. Anitha Reddy', r: 'Joint Replacement Surgeon', m: '18+ Years Experience · Joint Replacement Expert', c: 'bg-gi-violet', tag: 'Joints' },
-  { n: 'Dr. Venkatesh', r: 'Trauma & Fracture Specialist', m: '14+ Years Experience · Trauma Care Expert', c: 'bg-gi-teal', tag: 'Trauma' },
+  { n: 'Dr. Arjun Reddy',  r: 'Joint Replacement Surgery', m: '24+ Years Experience · Knee & Hip Specialist',   c: 'bg-gi-teal',   tag: 'Joints',    img: 'https://res.cloudinary.com/dkqbzwicr/image/upload/q_auto/f_auto/v1780810639/Dr._Arjun_Reddy_u2yqyp.png' },
+  { n: 'Dr. Priya Sharma', r: 'Pediatric Orthopedics',     m: '16+ Years Experience · Pediatric Bone Specialist', c: 'bg-gi-coral',  tag: 'Pediatric', img: 'https://res.cloudinary.com/dkqbzwicr/image/upload/q_auto/f_auto/v1780810642/Dr.Priya_Sharma_f4exwi.png' },
+  { n: 'Dr. Vivek Rao',    r: 'Trauma & Fracture Care',    m: '28+ Years Experience · Emergency Trauma Expert',   c: 'bg-gi-warm',   tag: 'Trauma',    img: 'https://res.cloudinary.com/dkqbzwicr/image/upload/q_auto/f_auto/v1780810643/Dr._Vivek_Rao_n2wxu9.png' },
+  { n: 'Dr. Kiran Kumar',  r: 'Spine Care',                m: '21+ Years Experience · Spine Surgery Specialist',  c: 'bg-gi-violet', tag: 'Spine',     img: 'https://res.cloudinary.com/dkqbzwicr/image/upload/q_auto/f_auto/v1780810639/Dr._Kiran_Kumar_qd99lm.png' },
+  { n: 'Dr. Meera Nair',   r: 'Sports Medicine',           m: '18+ Years Experience · Sports Injury Specialist',  c: 'bg-gi-teal',   tag: 'Sports',    img: 'https://res.cloudinary.com/dkqbzwicr/image/upload/q_auto/f_auto/v1780810639/Dr._Meera_Nair_xstg4x.png' },
 ]
 
 const specialties = [
@@ -92,24 +94,25 @@ export default function LandingPage() {
                 <div className="eyebrow te-warm">Our Team</div>
                 <h2>Meet Our<br /><span className="te-warm">Specialists</span></h2>
                 <p>Experienced orthopedic surgeons committed to your recovery.</p>
-                <button className="bbtn warm mt-18">
+                <Link href="/doctors" className="bbtn warm mt-18">
                   View All Doctors
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}>
                     <path d="M5 12h14M13 6l6 6-6 6" />
                   </svg>
-                </button>
+                </Link>
               </div>
               <div className="doc-grid">
-                {doctors.map(({ n, r, m, c, tag }, i) => (
+                {doctors.map(({ n, r, m, c, tag, img }, i) => (
                   <div key={n} className={`doc-card reveal d${i + 1}`}>
                     <div className="doc-photo">
                       <span className={`ribbon ${c}`}>{tag}</span>
-                      <div className="ph">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
-                          <circle cx={12} cy={9} r={4} />
-                          <path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7" />
-                        </svg>
-                      </div>
+                      <Image
+                        src={img}
+                        alt={n}
+                        fill
+                        sizes="(max-width:600px) 100vw, 200px"
+                        style={{ objectFit: 'cover', objectPosition: 'top center' }}
+                      />
                     </div>
                     <div className="doc-body">
                       <h4>{n}</h4>
