@@ -153,6 +153,7 @@ function BookingModal({
   const [reason, setReason] = useState('')
   const [cameBefore, setCameBefore] = useState<boolean | null>(null)
   const [loading, setLoading] = useState(false)
+  const [loadingMsg, setLoadingMsg] = useState('')
   const [slotsLoading, setSlotsLoading] = useState(false)
   const [slotError, setSlotError] = useState('')
   const [error, setError] = useState('')
@@ -168,6 +169,15 @@ function BookingModal({
       setCameBefore(null); setError(''); setSlotError(''); setPhone('')
     }
   }, [modal.open, user])
+
+  useEffect(() => {
+    if (!loading) { setLoadingMsg(''); return }
+    const msgs = ['Checking availability…', 'Securing your slot…', 'Confirming booking…', 'Almost there…']
+    let i = 0
+    setLoadingMsg(msgs[0])
+    const id = setInterval(() => { i = (i + 1) % msgs.length; setLoadingMsg(msgs[i]) }, 1600)
+    return () => clearInterval(id)
+  }, [loading])
 
   const fetchSlots = useCallback(async (d: string) => {
     if (!doctor || !d) return
@@ -195,6 +205,11 @@ function BookingModal({
   const handleDateChange = (v: string) => {
     setDate(v)
     setSlotError('')
+    setSlots([]); setSlotId('')
+    if (new Date(v + 'T00:00:00').getDay() === 0) {
+      setSlotError('Sundays are unavailable — we are open Mon–Sat only.')
+      return
+    }
     fetchSlots(v)
   }
 
@@ -289,6 +304,7 @@ function BookingModal({
                   <div>
                     <label className="bm-label" htmlFor="bm-date">Preferred Date *</label>
                     <input id="bm-date" className="bm-input" type="date" min={today} value={date} onChange={e => handleDateChange(e.target.value)} />
+                    <p style={{ fontSize: 11, color: 'var(--bk-muted)', marginTop: 4, fontFamily: 'var(--font-body)' }}>Mon – Sat only · No appointments on Sundays</p>
                   </div>
                   <div>
                     <label className="bm-label" htmlFor="bm-slot">Time Slot *</label>
@@ -348,9 +364,9 @@ function BookingModal({
                   />
                 </div>
                 {error && <p className="bm-error">{error}</p>}
-                <button className="bm-submit" onClick={handleSubmit} disabled={loading}>
+                <button className={`bm-submit${loading ? ' loading' : ''}`} onClick={handleSubmit} disabled={loading}>
                   {loading ? (
-                    <><span className="bm-spinner" /> Confirming…</>
+                    <><span className="bm-spinner" />{loadingMsg}</>
                   ) : (
                     <><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" width={15} height={15}><path d="M5 12l5 5L20 7" /></svg> Confirm Appointment</>
                   )}
@@ -565,6 +581,9 @@ export default function DoctorsPage() {
         .bm-submit{display:flex;align-items:center;justify-content:center;gap:8px;padding:13px 24px;border-radius:12px;background:var(--g-teal);color:#fff;font-size:14px;font-weight:700;cursor:pointer;border:none;font-family:var(--font-body);transition:opacity .18s,transform .18s;margin-top:4px;width:100%}
         .bm-submit:hover:not(:disabled){opacity:.9;transform:scale(1.01)}
         .bm-submit:disabled{opacity:.6;cursor:not-allowed}
+        .bm-submit.loading{background:linear-gradient(90deg,#0fa898,#11B5A4,#3ecfc0,#11B5A4,#0fa898);background-size:300% 100%;animation:bm-shimmer 2s linear infinite,bm-pulse 1.6s ease-in-out infinite;opacity:1}
+        @keyframes bm-shimmer{0%{background-position:100% 0}100%{background-position:-100% 0}}
+        @keyframes bm-pulse{0%,100%{opacity:1}50%{opacity:.82}}
         .bm-error{color:#ef4444;font-size:12px;font-weight:600;font-family:var(--font-body)}
         .bm-spinner{width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:bm-spin .7s linear infinite;flex-shrink:0}
         @keyframes bm-spin{to{transform:rotate(360deg)}}
