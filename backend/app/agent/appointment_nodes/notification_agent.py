@@ -16,33 +16,128 @@ logger = logging.getLogger(__name__)
 def _build_email_html(state: AppointmentState, doctor_name: str) -> str:
     came_note = (
         "Our team has noted that you have visited us before. "
-        "Please bring your previous records and X-rays."
+        "Please bring your previous records and X-rays if available."
         if state.get("came_before")
         else "Please bring a valid ID and any relevant medical reports."
     )
-    return f"""
-<div style="font-family:sans-serif;max-width:600px;margin:auto;padding:24px">
-  <h2 style="color:#0d9488">Appointment Confirmed — Navajeevana Ortho Hospitals</h2>
-  <p>Dear <strong>{state['patient_name']}</strong>,</p>
-  <p>Your appointment has been confirmed. Details below:</p>
-  <table style="width:100%;border-collapse:collapse;margin:16px 0">
-    <tr><td style="padding:8px;color:#555">Doctor</td>
-        <td style="padding:8px"><strong>{doctor_name}</strong></td></tr>
-    <tr style="background:#f9f9f9">
-        <td style="padding:8px;color:#555">Date</td>
-        <td style="padding:8px"><strong>{state['appointment_date']}</strong></td></tr>
-    <tr><td style="padding:8px;color:#555">Time</td>
-        <td style="padding:8px"><strong>{state['slot_label']} — {state['appointment_time']}</strong></td></tr>
-    <tr style="background:#f9f9f9">
-        <td style="padding:8px;color:#555">Reason</td>
-        <td style="padding:8px">{state.get('reason', 'Not specified')}</td></tr>
-  </table>
-  <p style="color:#555">{came_note}</p>
-  <p style="color:#555">Hospital: Navajeevana Ortho Hospitals, Bhimavaram, Andhra Pradesh</p>
-  <p style="font-size:12px;color:#999">
-    To cancel or reschedule, please contact us or visit your appointments page.
-  </p>
-</div>"""
+    came_icon = "&#128203;" if state.get("came_before") else "&#9432;"
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Appointment Confirmed</title></head>
+<body style="margin:0;padding:0;background:#FFFBF7;font-family:'Segoe UI',Arial,sans-serif;">
+
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#FFFBF7;padding:32px 16px;">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+
+  <!-- HEADER BANNER -->
+  <tr>
+    <td style="background:linear-gradient(135deg,#0d9488 0%,#0f766e 100%);border-radius:16px 16px 0 0;padding:36px 40px 28px;text-align:center;">
+      <div style="display:inline-block;background:rgba(255,255,255,0.18);border:1.5px solid rgba(255,255,255,0.35);border-radius:50px;padding:6px 18px;margin-bottom:16px;">
+        <span style="color:#ffffff;font-size:13px;font-weight:600;letter-spacing:0.5px;">&#10003;&nbsp; APPOINTMENT CONFIRMED</span>
+      </div>
+      <div style="color:#ffffff;font-size:22px;font-weight:700;line-height:1.3;margin-bottom:4px;">
+        Navajeevana Ortho Hospitals
+      </div>
+      <div style="color:#99f6e4;font-size:13px;">Bhimavaram, Andhra Pradesh</div>
+    </td>
+  </tr>
+
+  <!-- BODY CARD -->
+  <tr>
+    <td style="background:#ffffff;border-radius:0 0 16px 16px;padding:36px 40px 32px;box-shadow:0 4px 24px rgba(13,148,136,0.08);">
+
+      <!-- Greeting -->
+      <p style="margin:0 0 6px;font-size:20px;font-weight:700;color:#134e4a;">
+        Dear {state['patient_name']},
+      </p>
+      <p style="margin:0 0 28px;font-size:15px;color:#6b7280;line-height:1.5;">
+        Your appointment has been successfully booked. Here are your details:
+      </p>
+
+      <!-- Details table -->
+      <table width="100%" cellpadding="0" cellspacing="0" style="border-radius:12px;overflow:hidden;border:1.5px solid #ccfbf1;">
+
+        <tr style="background:#f0fdfa;">
+          <td style="padding:14px 20px;width:40%;">
+            <span style="font-size:16px;">&#128101;</span>&nbsp;
+            <span style="font-size:13px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.4px;">Doctor</span>
+          </td>
+          <td style="padding:14px 20px;">
+            <span style="font-size:15px;font-weight:700;color:#134e4a;">{doctor_name}</span>
+          </td>
+        </tr>
+
+        <tr style="background:#ffffff;">
+          <td style="padding:14px 20px;">
+            <span style="font-size:16px;">&#128197;</span>&nbsp;
+            <span style="font-size:13px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.4px;">Date</span>
+          </td>
+          <td style="padding:14px 20px;">
+            <span style="font-size:15px;font-weight:700;color:#134e4a;">{state['appointment_date']}</span>
+          </td>
+        </tr>
+
+        <tr style="background:#f0fdfa;">
+          <td style="padding:14px 20px;">
+            <span style="font-size:16px;">&#9200;</span>&nbsp;
+            <span style="font-size:13px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.4px;">Time</span>
+          </td>
+          <td style="padding:14px 20px;">
+            <span style="font-size:15px;font-weight:700;color:#134e4a;">{state['slot_label']}</span>
+            <span style="font-size:13px;color:#0d9488;margin-left:6px;">&#8212; {state['appointment_time']}</span>
+          </td>
+        </tr>
+
+        <tr style="background:#ffffff;">
+          <td style="padding:14px 20px;">
+            <span style="font-size:16px;">&#128203;</span>&nbsp;
+            <span style="font-size:13px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.4px;">Reason</span>
+          </td>
+          <td style="padding:14px 20px;">
+            <span style="font-size:15px;color:#374151;">{state.get('reason', 'Not specified')}</span>
+          </td>
+        </tr>
+
+      </table>
+
+      <!-- Info note -->
+      <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;">
+        <tr>
+          <td style="background:#f0fdfa;border-left:4px solid #0d9488;border-radius:0 10px 10px 0;padding:14px 18px;">
+            <span style="font-size:16px;">{came_icon}</span>&nbsp;
+            <span style="font-size:14px;color:#134e4a;line-height:1.6;">{came_note}</span>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Divider -->
+      <hr style="border:none;border-top:1.5px solid #f0fdfa;margin:28px 0;">
+
+      <!-- Cancel/reschedule note -->
+      <p style="margin:0;font-size:13px;color:#9ca3af;text-align:center;line-height:1.6;">
+        Need to cancel or reschedule? Visit your appointments page or contact us directly.<br>
+        We look forward to seeing you at Navajeevana Ortho Hospitals.
+      </p>
+
+    </td>
+  </tr>
+
+  <!-- FOOTER -->
+  <tr>
+    <td style="background:#134e4a;border-radius:0 0 16px 16px;padding:20px 40px;text-align:center;margin-top:4px;">
+      <p style="margin:0 0 4px;font-size:13px;font-weight:600;color:#99f6e4;">Navajeevana Ortho Hospitals</p>
+      <p style="margin:0;font-size:12px;color:#5eead4;">Bhimavaram, Andhra Pradesh, India</p>
+    </td>
+  </tr>
+
+</table>
+</td></tr>
+</table>
+
+</body>
+</html>"""
 
 
 async def notification_agent(state: AppointmentState) -> dict:
