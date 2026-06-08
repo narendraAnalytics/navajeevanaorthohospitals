@@ -100,6 +100,9 @@ Agent source files: `backend/app/agent/appointment_nodes/` (one file per node). 
 - All DB-hitting nodes (`availability_checker`, `slot_hold_agent`, etc.) call `await get_pool()` from `app.database.connection` — safe because the singleton is initialised before the graph runs.
 - **Conversation (Q1/Q2/Q3) is separate from the graph.** `POST /appointment/conversation/{session_id}` handles the step-by-step widget statelessly (each call processes one answer and returns the next question). The full graph runs only when `POST /appointment/book` is called with all answers collected.
 - Fixed 4 slots per working day: `09:00` (Morning 1), `10:30` (Morning 2), `14:00` (Evening 1), `15:30` (Evening 2). `slot_validator` rejects any other times.
+- **Slot validator date/time rules** (`appointment_nodes/slot_validator.py`):
+  - `appt_date < today` — today IS allowed (same-day booking). Past dates are rejected.
+  - For same-day bookings, slot times that have already passed are also rejected. IST is computed explicitly as `(datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)).time()` — do not use `datetime.now()` local time (backend runs on UTC on Render).
 - `appointment_queries.py` is a **separate file** from `queries.py` — never merge them. Ticketing queries live in `queries.py`; appointment queries in `appointment_queries.py`.
 
 ## FastAPI Lifespan (critical)
@@ -163,9 +166,15 @@ Ticket lifecycle: `processing → pending_review → approved → emailed` (or `
 ### Shared memory
 
 Both graphs share the same `AsyncPostgresStore` keyed by patient email:
-- Ticketing graph writes `"medical_history"` → `("patient", email)`
-- Appointment graph reads/writes `"appointment_history"` → `("patient", email)`
+- Ticketing graph writes `"medical_history"` → `("patient", sanitized_email)`
+- Appointment graph reads/writes `"appointment_history"` → `("patient", sanitized_email)`
 - Ticketing orchestrator can read `appointment_history` to personalise responses.
+
+**Namespace sanitization (critical):** `AsyncPostgresStore` forbids `.` in namespace labels. All four nodes that build the namespace must sanitize the email identically:
+```python
+namespace = ("patient", email.replace(".", "_").replace("@", "_AT_"))
+```
+Files: `appointment_nodes/memory_updater.py`, `appointment_nodes/booking_orchestrator.py`, `nodes/memory_manager.py`, `nodes/orchestrator.py`. Never use the raw email string as a namespace label.
 
 ### Frontend-owned table
 
@@ -352,6 +361,8 @@ Stack: Next.js 16 + React 19 + Tailwind 4 + Shadcn (`@base-ui/react`).
 - `MonthCalendar` component (defined in `page.tsx` above `BookingModal`) renders a custom month grid with color-coded availability: 0 booked = transparent, 1 = green, 2 = amber, 3 = orange, 4 = red/blocked. Sundays are always blocked. Fetches a new month from the availability endpoint when navigating prev/next.
 - Booking modal loading state: animated shimmer button + cycling messages ("Checking availability…" → "Securing your slot…" → "Confirming booking…" → "Almost there…") via `useEffect` + `setInterval` on the `loading` state.
 - `handleDateChange` blocks Sundays client-side (`getDay() === 0`) with an inline error before hitting the backend.
+- **`today` is IST-aware:** `const today = new Date(Date.now() + 5.5 * 60 * 60 * 1000).toISOString().split('T')[0]` — adds 5.5h to UTC before extracting the date string. Never use `new Date().toISOString().split('T')[0]` (UTC — wrong for IST users around midnight).
+- **Past-slot filtering for today:** when the selected date equals `today`, slots with `slot_time <= nowTimeStr` (current local HH:MM) are disabled in the `<select>` and labelled `" — Passed"`. `fetchSlots` also excludes them when checking if any available slots remain. `nowTimeStr` uses `new Date().getHours/getMinutes()` (browser local = IST for Indian users).
 - HeroSection "Book Appointment" CTA (signed-in users) routes to `/doctors` (not `/patient/intro`). Signed-out users still see a Clerk `<SignInButton>` redirecting to `/patient`.
 - CSS class prefixes: `dp-` (page/filter), `dc-` (doctor card), `bm-` (booking modal), `mc-` (month calendar).
 
@@ -406,3 +417,4 @@ All scripts are idempotent — safe to re-run on every deploy.
 | Phase B6 — Admin dashboard appointments tab (`getAllAppointments`, cancel, status update) | ✅ |
 | Phase C — `/doctors` page UI polish (floating pill header, 3-col nav layout, MonthCalendar with availability colors, animated loading button, Sunday blocking, navbar Patient Portal spinning ring) | ✅ |
 | Phase C1 — New backend endpoint `GET /appointment/slots/{doctor_id}/availability?month=YYYY-MM` + `get_month_availability` query | ✅ |
+| Phase D — Bug fixes: same-day booking, past-time slot blocking (IST), LangGraph namespace sanitization for email keys | ✅ |

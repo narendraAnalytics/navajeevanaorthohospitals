@@ -9,7 +9,7 @@ from app.knowledge_base.chroma_client import get_client
 
 logger = logging.getLogger(__name__)
 
-COLLECTIONS = [
+ALL_COLLECTIONS = [
     "appointment_faq",
     "test_preparation",
     "post_surgery_care",
@@ -33,8 +33,64 @@ Strict rules:
 - Keep the synthesis concise — 3 to 5 sentences maximum.
 - Write in clear, simple English suitable for a patient."""
 
+REWRITE_PROMPT = """You are a medical query optimizer. Rewrite the patient's question into a clear, keyword-rich search query for a hospital knowledge base. Output ONLY the rewritten query — no explanation, no preamble. 3–12 words max."""
 
-def _query_collection(client, collection_name: str, query: str, n_results: int = 2) -> list[dict]:
+# Keyword → collection mapping for intent-based routing
+_COLLECTION_RULES: list[tuple[list[str], list[str]]] = [
+    (
+        ["appointment", "opd", "book", "reschedul", "timing", "slot", "walk-in", "walk in", "wait time", "availab"],
+        ["appointment_faq", "doctors_directory", "hospital_information"],
+    ),
+    (
+        ["insurance", "star health", "cashless", "tpa", "arogya", "cghs", "reimburse", "pre-auth", "preauth", "new india", "mediclaim"],
+        ["insurance_billing", "hospital_information"],
+    ),
+    (
+        ["physiotherapy", "physio", "rehab", "exercise", "recovery", "post-surgery", "post surgery", "wound", "restrict", "activity"],
+        ["physiotherapy_rehabilitation", "post_surgery_care"],
+    ),
+    (
+        ["dr.", "dr ", "doctor", "specialist", "surgeon", "ortho", "consultant"],
+        ["doctors_directory", "hospital_information"],
+    ),
+    (
+        ["mri", "ct scan", "x-ray", "xray", "fasting", "preparation", "prepare", "scan", "test prep", "before test", "before scan"],
+        ["test_preparation", "hospital_information"],
+    ),
+    (
+        ["report", "result", "lab report", "blood report", "test result", "scan result"],
+        ["past_tickets", "hospital_information"],
+    ),
+]
+
+
+def _select_collections(query: str) -> list[str]:
+    """Returns narrowed collection list based on keyword matching. Falls back to all collections."""
+    q = query.lower()
+    for keywords, collections in _COLLECTION_RULES:
+        if any(kw in q for kw in keywords):
+            logger.info(f"[RAGRetriever] Collection routing → {collections}")
+            return collections
+    logger.info("[RAGRetriever] No keyword match — searching all collections")
+    return ALL_COLLECTIONS
+
+
+def _rewrite_query(raw_query: str, llm: ChatGroq) -> str:
+    """Rewrites short/ambiguous patient queries into keyword-rich search queries."""
+    try:
+        response = llm.invoke([
+            ("system", REWRITE_PROMPT),
+            ("human", raw_query),
+        ])
+        rewritten = response.content.strip()
+        logger.info(f"[RAGRetriever] Query rewrite: '{raw_query[:60]}' → '{rewritten}'")
+        return rewritten
+    except Exception as e:
+        logger.warning(f"[RAGRetriever] Query rewrite failed: {e}. Using original query.")
+        return raw_query
+
+
+def _query_collection(client, collection_name: str, query: str, n_results: int = 5) -> list[dict]:
     try:
         collection = client.get_collection(collection_name)
         results = collection.query(query_texts=[query], n_results=n_results)
@@ -56,13 +112,20 @@ def _query_collection(client, collection_name: str, query: str, n_results: int =
 
 
 def rag_retriever(state: TicketState) -> dict:
-    """Agent 4: Queries ChromaDB across all collections, synthesizes top docs into answer_draft.
+    """Agent 4: Queries ChromaDB across selected collections, synthesizes top docs into answer_draft.
     Runs in parallel with Intent Classifier and Safety Checker."""
-    query = f"{state.get('subject', '')} {state.get('raw_text', '')}"
+    raw_query = f"{state.get('subject', '')} {state.get('raw_text', '')}"
     client = get_client()
+    llm = ChatGroq(model=GROQ_MODEL_FLASH, api_key=settings.GROQ_API_KEY, temperature=0)
+
+    # Rewrite query for better retrieval on short/ambiguous patient messages
+    query = _rewrite_query(raw_query, llm)
+
+    # Route to relevant collections based on query keywords
+    collections = _select_collections(query)
 
     all_chunks: list[dict] = []
-    for collection_name in COLLECTIONS:
+    for collection_name in collections:
         all_chunks.extend(_query_collection(client, collection_name, query))
 
     if not all_chunks:
@@ -74,20 +137,19 @@ def rag_retriever(state: TicketState) -> dict:
             }]
         }
 
-    # Sort by similarity, take top 3 for synthesis
+    # Sort by similarity, take top 5 for synthesis
     all_chunks.sort(key=lambda x: x["similarity_score"], reverse=True)
-    top_chunks = all_chunks[:3]
+    top_chunks = all_chunks[:5]
     best_score = top_chunks[0]["similarity_score"]
 
     docs_text = "\n\n---\n\n".join(
         f"[Source: {c['collection']}]\n{c['content']}" for c in top_chunks
     )
 
-    llm = ChatGroq(model=GROQ_MODEL_FLASH, api_key=settings.GROQ_API_KEY, temperature=0)
     try:
         response = llm.invoke([
             ("system", SYNTHESIS_PROMPT),
-            ("human", f"PATIENT QUERY:\n{query}\n\nRETRIEVED DOCUMENTS:\n{docs_text}"),
+            ("human", f"PATIENT QUERY:\n{raw_query}\n\nRETRIEVED DOCUMENTS:\n{docs_text}"),
         ])
         answer_draft = response.content.strip()
     except Exception as e:

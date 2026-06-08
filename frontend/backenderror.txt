@@ -1,3 +1,38 @@
-INFO:app.agent.appointment_nodes.audit_logger:[AuditLogger] Logged action='created' for APPT-8FC30E76
-ERROR:app.agent.appointment_nodes.memory_updater:[MemoryUpdater] Failed to write store: Invalid namespace label 'narendra.adp@gmail.com' found in ('patient', 'narendra.adp@gmail.com'). Namespace labels cannot contain periods ('.').
-INFO:app.routers.appointments:[AppointmentGraph] APPT-8FC30E76 confirmed
+{
+  "ticket_id": "TICKET-C448C032",
+  "status": "pending_review",
+  "route_decision": "escalate",
+  "confidence_score": 0.5544,
+  "logs": [
+    {
+      "node_name": "orchestrator",
+      "decision": "low",
+      "confidence_score": null,
+      "created_at": "2026-06-08T11:44:48.638490+00:00"
+    },
+    {
+      "node_name": "safety_checker",
+      "decision": "safe",
+      "confidence_score": null,
+      "created_at": "2026-06-08T11:44:49.102565+00:00"
+    },
+    {
+      "node_name": "intent_classifier",
+      "decision": "general",
+      "confidence_score": null,
+      "created_at": "2026-06-08T11:44:52.564249+00:00"
+    },
+    {
+      "node_name": "rag_retriever",
+      "decision": "score:0.55",
+      "confidence_score": null,
+      "created_at": "2026-06-08T11:44:54.566273+00:00"
+    },
+    {
+      "node_name": "escalation_packager",
+      "decision": "escalated",
+      "confidence_score": null,
+      "created_at": "2026-06-08T11:44:56.959211+00:00"
+    }
+  ]
+}
