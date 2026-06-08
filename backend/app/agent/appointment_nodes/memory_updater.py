@@ -16,7 +16,7 @@ async def memory_updater(state: AppointmentState, store: BaseStore) -> dict:
         return {}
 
     patient_email = state["patient_email"]
-    namespace = ("patient", patient_email)
+    namespace = ("patient", patient_email.replace(".", "_").replace("@", "_AT_"))
 
     existing = {}
     try:

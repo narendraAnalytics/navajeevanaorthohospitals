@@ -58,7 +58,7 @@ async def memory_manager(state: TicketState, store: BaseStore) -> dict:
 
     if facts:
         try:
-            namespace = ("patient", customer_id)
+            namespace = ("patient", customer_id.replace(".", "_").replace("@", "_AT_"))
             # Merge with existing facts to avoid overwriting prior history
             existing = await store.aget(namespace, "medical_history")
             prior_facts: list[str] = existing.value.get("facts", []) if existing else []

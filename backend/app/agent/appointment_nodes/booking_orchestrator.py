@@ -28,7 +28,7 @@ async def booking_orchestrator(state: AppointmentState, store: BaseStore) -> dic
     patient_history = {}
     if state.get("came_before"):
         try:
-            namespace = ("patient", state["patient_email"])
+            namespace = ("patient", state["patient_email"].replace(".", "_").replace("@", "_AT_"))
             result = await store.aget(namespace, "appointment_history")
             if result:
                 patient_history = result.value or {}

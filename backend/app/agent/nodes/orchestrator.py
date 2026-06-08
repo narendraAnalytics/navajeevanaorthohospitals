@@ -38,7 +38,7 @@ async def orchestrator(state: TicketState, store: BaseStore) -> dict:
     customer_id = state.get("customer_id", "unknown")
     patient_history = ""
     try:
-        namespace = ("patient", customer_id)
+        namespace = ("patient", customer_id.replace(".", "_").replace("@", "_AT_"))
         result = await store.aget(namespace, "medical_history")
         if result:
             facts = result.value.get("facts", [])
