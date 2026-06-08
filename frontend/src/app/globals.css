@@ -227,6 +227,13 @@
 .nav-welcome { font-size: 12px; font-weight: 600; color: var(--ink-2); white-space: nowrap; padding: 0 4px; }
 .ghost-pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--ink-2); padding: 8px 12px; border-radius: 30px; border: 1px solid var(--line); background: rgba(255,255,255,.5); transition: .25s; white-space: nowrap; text-decoration: none; }
 .ghost-pill:hover { border-color: var(--teal); color: var(--teal-d); }
+/* ── Patient Portal animated ring ── */
+.pp-ring { position: relative; display: inline-flex; border-radius: 32px; padding: 2px; overflow: hidden; }
+.pp-ring::before { content: ''; position: absolute; top: 50%; left: 50%; width: 300%; aspect-ratio: 1 / 1; transform: translate(-50%, -50%) rotate(0deg); background: conic-gradient(#9DF0D6, #11B5A4, #5FD3E6, #FFD0BB, #FF7E67, #9DF0D6); animation: pp-spin 3s linear infinite; }
+@keyframes pp-spin { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
+.pp-ring .ghost-pill { position: relative; z-index: 1; background: rgba(255,251,247,.95); border-color: transparent !important; }
+.pp-ring .ghost-pill:hover { background: #fff; }
+
 .bbtn { display: inline-flex; align-items: center; gap: 7px; font-family: var(--font-body); font-weight: 700; font-size: 12.5px; border: none; cursor: pointer; border-radius: 30px; padding: 10px 16px; color: #fff; position: relative; overflow: hidden; transition: transform .2s cubic-bezier(.2,.8,.2,1),box-shadow .25s; white-space: nowrap; text-decoration: none; }
 .bbtn svg { width: 15px; height: 15px; }
 .bbtn.warm { background: var(--g-warm); box-shadow: 0 10px 24px -10px rgba(255,107,110,.7); }

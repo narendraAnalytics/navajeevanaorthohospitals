@@ -91,15 +91,17 @@ export default function Nav() {
             <UserButton />
           </Show>
           <Show when="signed-out">
-            <SignInButton mode="redirect" forceRedirectUrl="/api/auth/sync">
-              <button className="ghost-pill">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width={14} height={14}>
-                  <circle cx={12} cy={8} r={4} />
-                  <path d="M4 21c0-4 4-6 8-6s8 2 8 6" />
-                </svg>
-                Patient Portal
-              </button>
-            </SignInButton>
+            <div className="pp-ring">
+              <SignInButton mode="redirect" forceRedirectUrl="/api/auth/sync">
+                <button className="ghost-pill">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width={14} height={14}>
+                    <circle cx={12} cy={8} r={4} />
+                    <path d="M4 21c0-4 4-6 8-6s8 2 8 6" />
+                  </svg>
+                  Patient Portal
+                </button>
+              </SignInButton>
+            </div>
             <Link className="bbtn violet" href="/admin">Admin Portal</Link>
           </Show>
           <button className="nav-burger" aria-label="Menu">
