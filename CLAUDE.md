@@ -318,8 +318,9 @@ Stack: Next.js 16 + React 19 + Tailwind 4 + Shadcn (`@base-ui/react`).
 
 | Route | File | Status |
 |---|---|---|
-| `/` | `src/app/page.tsx` | ✅ Landing page (server component) |
-| `/patient/intro` | `src/app/patient/intro/page.tsx` | ✅ Entry animation → `/patient` |
+| `/intro` | `src/app/intro/page.tsx` | ✅ Site-wide cinematic intro (dark, video BG) — plays on every visit |
+| `/` | `src/app/page.tsx` | ✅ Landing page (server component) — only reachable via `/?entered=1` |
+| `/patient/intro` | `src/app/patient/intro/page.tsx` | ✅ Patient portal entry animation → `/patient` |
 | `/patient` | `src/app/patient/page.tsx` | ✅ Care Hub — submit ticket + track |
 | `/patient/submit-transition/[ticket_id]` | `src/app/patient/submit-transition/[ticket_id]/page.tsx` | ✅ AI handoff animation |
 | `/patient/processing/[ticket_id]` | `src/app/patient/processing/[ticket_id]/page.tsx` | ✅ Live pipeline view |
@@ -337,7 +338,7 @@ Stack: Next.js 16 + React 19 + Tailwind 4 + Shadcn (`@base-ui/react`).
 |---|---|
 | `src/app/globals.css` | All brand CSS — design tokens + every landing page class |
 | `src/app/layout.tsx` | Sora + Plus Jakarta Sans fonts; `<ClerkProvider>` inside `<body>` |
-| `src/proxy.ts` | Clerk middleware — MUST be named `proxy.ts`. `/admin(.*)` excluded (sessionStorage auth). Also excludes `/api/send-email`. |
+| `src/proxy.ts` | Clerk middleware — MUST be named `proxy.ts`. Redirects `/` → `/intro` unless `?entered=1` is present. `/admin(.*)` excluded (sessionStorage auth). Also excludes `/api/send-email`. |
 | `src/lib/api.ts` | Typed fetch wrapper for all backend endpoints. `sendEmail()` posts to `/api/send-email` (Next.js route), not backend directly. |
 | `src/lib/auth.ts` | `getOrCreateUser()` — lazy Clerk→Neon sync for `frontend_users` |
 
@@ -372,6 +373,12 @@ Stack: Next.js 16 + React 19 + Tailwind 4 + Shadcn (`@base-ui/react`).
 - **Past-slot filtering for today:** when the selected date equals `today`, slots with `slot_time <= nowTimeStr` (current local HH:MM) are disabled in the `<select>` and labelled `" — Passed"`. `fetchSlots` also excludes them when checking if any available slots remain. `nowTimeStr` uses `new Date().getHours/getMinutes()` (browser local = IST for Indian users).
 - HeroSection "Book Appointment" CTA (signed-in users) routes to `/doctors` (not `/patient/intro`). Signed-out users still see a Clerk `<SignInButton>` redirecting to `/patient`.
 - CSS class prefixes: `dp-` (page/filter), `dc-` (doctor card), `bm-` (booking modal), `mc-` (month calendar).
+
+**Site-wide intro flow (`/intro`):**
+- `src/proxy.ts` middleware redirects every bare `/` visit to `/intro` (no sessionStorage — plays every refresh).
+- `/intro` page sets `window.location.href = '/?entered=1'` on "Enter Site" / "Skip Intro" / video end / 16s timeout.
+- Middleware allows `/?entered=1` through; `HeroSection.tsx` cleans the param via `window.history.replaceState`.
+- `/intro` uses a Cloudinary `.webm` video (`v1780937062/Create_an_second_ultra_reali_cdxura`). All effects (vignette, grain, scanlines, particles) are inline `<style>` — do not move to `globals.css`.
 
 **Navbar Patient Portal animation:**
 - `src/components/Nav.tsx` wraps the signed-out `ghost-pill` button in `<div className="pp-ring">`.
@@ -427,3 +434,5 @@ All scripts are idempotent — safe to re-run on every deploy.
 | Phase D — Bug fixes: same-day booking, past-time slot blocking (IST), LangGraph namespace sanitization for email keys | ✅ |
 | Phase E1 — Appointment confirmation email redesign (rich HTML: gradient header, card layout, teal detail rows, info note box, footer) | ✅ |
 | Phase E2 — Landing page "Meet Our Specialists" section updated: real doctor photos from Cloudinary, "View All Doctors" links to `/doctors` | ✅ |
+| Phase F1 — AI Patient Support card: replaced inline SVG robot with Cloudinary PNG (`robo_hf6sls`); `.ai-card` overflow:visible so robot sits at bottom edge | ✅ |
+| Phase F2 — Site-wide cinematic intro page (`/intro`): Cloudinary video BG, vignette, grain, particles, shimmer title, progress bar; middleware redirects every `/` visit through intro | ✅ |
