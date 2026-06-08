@@ -118,8 +118,8 @@ def rag_retriever(state: TicketState) -> dict:
     client = get_client()
     llm = ChatGroq(model=GROQ_MODEL_FLASH, api_key=settings.GROQ_API_KEY, temperature=0)
 
-    # Rewrite query for better retrieval on short/ambiguous patient messages
-    query = _rewrite_query(raw_query, llm)
+    # Rewrite only short/ambiguous queries — long detailed queries match better as-is
+    query = _rewrite_query(raw_query, llm) if len(raw_query.strip()) < 80 else raw_query
 
     # Route to relevant collections based on query keywords
     collections = _select_collections(query)
