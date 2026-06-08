@@ -328,6 +328,13 @@ Stack: Next.js 16 + React 19 + Tailwind 4 + Shadcn (`@base-ui/react`).
 | `src/lib/api.ts` | Typed fetch wrapper for all backend endpoints. `sendEmail()` posts to `/api/send-email` (Next.js route), not backend directly. |
 | `src/lib/auth.ts` | `getOrCreateUser()` — lazy Clerk→Neon sync for `frontend_users` |
 
+**Next.js API Routes** (server-side, not exposed to backend):
+
+| Route | File | Purpose |
+|---|---|---|
+| `GET /api/auth/sync` | `src/app/api/auth/sync/route.ts` | Runs `getOrCreateUser()` — syncs Clerk user into `frontend_users` on first login. Clerk's `FORCE_REDIRECT_URL` points here after sign-in/sign-up. |
+| `POST /api/send-email` | `src/app/api/send-email/route.ts` | Sends ticket reply email via Resend. Adds urgency-based HTML styling and converts markdown → HTML. Called by frontend only — uses `RESEND_API_KEY` from frontend env. |
+
 **Design system:**
 - Brand CSS vars prefixed: `--bk-muted`, `--brand-maxw` (avoids Tailwind 4 / Shadcn conflicts)
 - Landing page: `className="brand-page"` — sets fonts + ivory `#FFFBF7` background

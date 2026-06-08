@@ -474,14 +474,14 @@ export default function DoctorsPage() {
         @keyframes dp-float{0%,100%{transform:translate(0,0)}50%{transform:translate(28px,-22px)}}
 
         /* ── HEADER ── */
-        .dp-header{position:sticky;top:0;z-index:50;background:rgba(255,251,247,.88);backdrop-filter:blur(18px);border-bottom:1px solid rgba(17,181,164,.12);padding:0 32px}
-        .dp-header-inner{max-width:1280px;margin:0 auto;height:64px;display:flex;align-items:center;gap:16px}
-        .dp-back{display:flex;align-items:center;gap:7px;padding:8px 16px;border-radius:50px;background:#E6F9F7;border:1.5px solid rgba(17,181,164,.3);color:#0C8E84;font-size:13px;font-weight:700;cursor:pointer;text-decoration:none;transition:all .2s;white-space:nowrap;font-family:var(--font-body)}
+        .dp-header{position:sticky;top:14px;left:0;right:0;z-index:50;display:flex;justify-content:center;padding:0 14px;background:transparent;border-bottom:none}
+        .dp-header-inner{width:min(1280px,100%);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:10px 24px;border-radius:60px;background:rgba(255,255,255,.55);backdrop-filter:blur(22px) saturate(1.4);-webkit-backdrop-filter:blur(22px) saturate(1.4);border:1px solid rgba(255,255,255,.75);box-shadow:0 14px 40px -16px rgba(16,42,40,.30),inset 0 1px 0 rgba(255,255,255,.8)}
+        .dp-back{justify-self:start;display:flex;align-items:center;gap:7px;padding:8px 16px;border-radius:50px;background:#E6F9F7;border:1.5px solid rgba(17,181,164,.3);color:#0C8E84;font-size:13px;font-weight:700;cursor:pointer;text-decoration:none;transition:all .2s;white-space:nowrap;font-family:var(--font-body)}
         .dp-back:hover{background:#11B5A4;color:#fff;transform:translateX(-2px)}
-        .dp-brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink)}
+        .dp-brand{display:flex;flex-direction:column;align-items:center;text-decoration:none;color:var(--ink)}
         .dp-brand strong{font-family:var(--font-head);font-size:14px;font-weight:800;color:#11B5A4}
-        .dp-brand span{font-size:11px;color:var(--bk-muted);display:block;line-height:1}
-        .dp-header-title{margin-left:auto;font-family:var(--font-head);font-size:15px;font-weight:800;color:var(--ink)}
+        .dp-brand span{font-size:11px;color:var(--bk-muted);display:block;line-height:1.4;text-align:center}
+        .dp-header-title{justify-self:end;font-family:var(--font-head);font-size:15px;font-weight:800;color:var(--ink)}
 
         /* ── PAGE ── */
         .dp-page{position:relative;z-index:1;max-width:1280px;margin:0 auto;padding:40px 32px 80px}
