@@ -206,6 +206,9 @@ export const getAvailableSlots = (doctor_id: string, date: string) =>
   req<SlotsResponse>(`/appointment/slots/${doctor_id}?date=${date}`)
     .then(r => r.slots)
 
+export const getDoctorMonthAvailability = (doctor_id: string, month: string) =>
+  req<Record<string, number>>(`/appointment/slots/${doctor_id}/availability?month=${month}`)
+
 export const bookAppointment = (payload: BookAppointmentPayload) =>
   req<AppointmentResult>('/appointment/book', {
     method: 'POST',

@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useUser } from '@clerk/nextjs'
 import { SignInButton } from '@clerk/nextjs'
-import { getAvailableSlots, bookAppointment, type AppointmentSlot } from '@/lib/api'
+import { getAvailableSlots, bookAppointment, getDoctorMonthAvailability, type AppointmentSlot } from '@/lib/api'
 
 // ── DOCTOR DATA ──────────────────────────────────────────────────────────────
 
@@ -126,6 +126,82 @@ const SPECS = [
   { label: 'Oncology', value: 'Orthopedic Oncology' },
   { label: 'General', value: 'General Orthopedics' },
 ]
+
+// ── MONTH CALENDAR ────────────────────────────────────────────────────────────
+
+const DOW = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December']
+
+function MonthCalendar({ doctorId, selected, onSelect, today }: {
+  doctorId: string; selected: string; onSelect: (d: string) => void; today: string
+}) {
+  const [calDate, setCalDate] = useState(() => {
+    const t = new Date(today + 'T00:00:00')
+    return new Date(t.getFullYear(), t.getMonth(), 1)
+  })
+  const [avail, setAvail] = useState<Record<string, number>>({})
+  const [calLoading, setCalLoading] = useState(false)
+
+  const year = calDate.getFullYear()
+  const month = calDate.getMonth()
+  const monthStr = `${year}-${String(month + 1).padStart(2, '0')}`
+
+  useEffect(() => {
+    setCalLoading(true)
+    getDoctorMonthAvailability(doctorId, monthStr)
+      .then(setAvail)
+      .catch(() => setAvail({}))
+      .finally(() => setCalLoading(false))
+  }, [doctorId, monthStr])
+
+  const todayDate = new Date(today + 'T00:00:00')
+  const canGoPrev = calDate > new Date(todayDate.getFullYear(), todayDate.getMonth(), 1)
+  const firstDow = new Date(year, month, 1).getDay()
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  const cells: (number | null)[] = [
+    ...Array(firstDow).fill(null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ]
+  const fmt = (d: number) => `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+
+  return (
+    <div className="mc-wrap">
+      <div className="mc-nav">
+        <button className="mc-nav-btn" onClick={() => setCalDate(new Date(year, month - 1, 1))} disabled={!canGoPrev} aria-label="Previous month">‹</button>
+        <span className="mc-month-label">{MONTH_NAMES[month]} {year}{calLoading ? ' …' : ''}</span>
+        <button className="mc-nav-btn" onClick={() => setCalDate(new Date(year, month + 1, 1))} aria-label="Next month">›</button>
+      </div>
+      <div className="mc-grid">
+        {DOW.map(d => <div key={d} className="mc-dow">{d}</div>)}
+        {cells.map((day, i) => {
+          if (!day) return <div key={`e-${i}`} />
+          const ds = fmt(day)
+          const dow = new Date(ds + 'T00:00:00').getDay()
+          const isPast = ds < today
+          const isSun = dow === 0
+          const booked = avail[ds] ?? 0
+          const isFull = booked >= 4
+          const isSelected = ds === selected
+          const disabled = isPast || isSun || isFull
+          const availClass = !isPast && !isSun ? `avail-${Math.min(booked, 4)}` : ''
+          const cls = ['mc-day', isPast ? 'past' : '', isSun ? 'sunday' : '', availClass, isSelected ? 'selected' : ''].filter(Boolean).join(' ')
+          const title = isSun ? 'Closed on Sundays' : isFull ? 'Fully booked' : isPast ? 'Past date' : `${4 - booked} slot${4 - booked !== 1 ? 's' : ''} available`
+          return (
+            <div key={ds} className={cls} onClick={() => !disabled && onSelect(ds)} title={title}>
+              {day}
+            </div>
+          )
+        })}
+      </div>
+      <div className="mc-legend">
+        <span className="mc-leg avail-1">1 booked</span>
+        <span className="mc-leg avail-2">2 booked</span>
+        <span className="mc-leg avail-3">3 booked</span>
+        <span className="mc-leg avail-4">Full</span>
+      </div>
+    </div>
+  )
+}
 
 // ── BOOKING MODAL ─────────────────────────────────────────────────────────────
 
@@ -300,32 +376,29 @@ function BookingModal({
                   <label className="bm-label" htmlFor="bm-email">Email</label>
                   <input id="bm-email" className="bm-input" type="email" value={email} readOnly style={{ opacity: 0.7, cursor: 'not-allowed' }} />
                 </div>
-                <div className="bm-row">
-                  <div>
-                    <label className="bm-label" htmlFor="bm-date">Preferred Date *</label>
-                    <input id="bm-date" className="bm-input" type="date" min={today} value={date} onChange={e => handleDateChange(e.target.value)} />
-                    <p style={{ fontSize: 11, color: 'var(--bk-muted)', marginTop: 4, fontFamily: 'var(--font-body)' }}>Mon – Sat only · No appointments on Sundays</p>
-                  </div>
-                  <div>
-                    <label className="bm-label" htmlFor="bm-slot">Time Slot *</label>
-                    <select
-                      id="bm-slot"
-                      className="bm-input bm-select"
-                      value={slotId}
-                      onChange={e => setSlotId(e.target.value)}
-                      disabled={!date || slotsLoading}
-                    >
-                      <option value="">{slotsLoading ? 'Loading slots…' : date ? slots.length ? 'Select a slot' : 'No slots available' : 'Pick a date first'}</option>
-                      {slots.map(s => {
-                        const isBooked = s.status === 'booked'
-                        return (
-                          <option key={s.slot_id} value={s.slot_id} disabled={isBooked}>
-                            {s.label} ({s.slot_time}){isBooked ? ' — Booked' : ''}
-                          </option>
-                        )
-                      })}
-                    </select>
-                  </div>
+                <div>
+                  <label className="bm-label">Preferred Date *</label>
+                  <MonthCalendar doctorId={doctor.id} selected={date} onSelect={handleDateChange} today={today} />
+                </div>
+                <div>
+                  <label className="bm-label" htmlFor="bm-slot">Time Slot *</label>
+                  <select
+                    id="bm-slot"
+                    className="bm-input bm-select"
+                    value={slotId}
+                    onChange={e => setSlotId(e.target.value)}
+                    disabled={!date || slotsLoading}
+                  >
+                    <option value="">{slotsLoading ? 'Loading slots…' : date ? slots.length ? 'Select a slot' : 'No slots available' : 'Pick a date first'}</option>
+                    {slots.map(s => {
+                      const isBooked = s.status === 'booked'
+                      return (
+                        <option key={s.slot_id} value={s.slot_id} disabled={isBooked}>
+                          {s.label} ({s.slot_time}){isBooked ? ' — Booked' : ''}
+                        </option>
+                      )
+                    })}
+                  </select>
                 </div>
                 {slotError && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
@@ -596,6 +669,32 @@ export default function DoctorsPage() {
         .bm-done-btn:hover{background:#11B5A4;color:#fff}
         .bm-retry-btn{padding:5px 14px;border-radius:8px;background:#E6F9F7;border:1.5px solid rgba(17,181,164,.3);color:#0C8E84;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font-body);transition:all .18s;flex-shrink:0}
         .bm-retry-btn:hover{background:#11B5A4;color:#fff}
+
+        /* ── MONTH CALENDAR ── */
+        .mc-wrap{background:#F8FDFB;border-radius:12px;border:1.5px solid #E2EDE9;overflow:hidden}
+        .mc-nav{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#fff;border-bottom:1px solid #E2EDE9}
+        .mc-nav-btn{background:none;border:none;cursor:pointer;padding:4px 10px;border-radius:6px;color:#0C8E84;font-size:20px;font-weight:700;line-height:1;transition:background .15s}
+        .mc-nav-btn:hover:not(:disabled){background:#E6F9F7}
+        .mc-nav-btn:disabled{color:#C5D0CE;cursor:default}
+        .mc-month-label{font-family:var(--font-head);font-size:13px;font-weight:800;color:var(--ink)}
+        .mc-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;padding:10px}
+        .mc-dow{text-align:center;font-size:10px;font-weight:700;color:var(--bk-muted);padding:4px 0;font-family:var(--font-body)}
+        .mc-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font-body);transition:all .15s;color:var(--ink)}
+        .mc-day:hover:not(.past):not(.sunday):not(.avail-4){filter:brightness(.92)}
+        .mc-day.selected{outline:2.5px solid #11B5A4;outline-offset:1px;font-weight:800}
+        .mc-day.past{color:#C5D0CE!important;cursor:default;background:transparent!important}
+        .mc-day.sunday{color:#C5D0CE!important;cursor:default;background:transparent!important}
+        .mc-day.avail-0{background:transparent}
+        .mc-day.avail-1{background:#D1FAE5;color:#065F46}
+        .mc-day.avail-2{background:#FEF3C7;color:#92400E}
+        .mc-day.avail-3{background:#FFEDD5;color:#9A3412}
+        .mc-day.avail-4{background:#FEE2E2;color:#991B1B;cursor:not-allowed}
+        .mc-legend{display:flex;gap:8px;padding:8px 12px;border-top:1px solid #E2EDE9;flex-wrap:wrap;align-items:center}
+        .mc-leg{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;font-family:var(--font-body)}
+        .mc-leg.avail-1{background:#D1FAE5;color:#065F46}
+        .mc-leg.avail-2{background:#FEF3C7;color:#92400E}
+        .mc-leg.avail-3{background:#FFEDD5;color:#9A3412}
+        .mc-leg.avail-4{background:#FEE2E2;color:#991B1B}
       `}</style>
 
       <div style={{ fontFamily: 'var(--font-body)', background: 'var(--ivory)', color: 'var(--ink)', minHeight: '100vh', WebkitFontSmoothing: 'antialiased' }}>

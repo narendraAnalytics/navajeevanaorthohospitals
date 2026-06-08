@@ -178,3 +178,19 @@ async def log_appointment_audit(pool: asyncpg.Pool, appt_id: str, action: str, p
            VALUES ($1, $2, $3, $4)""",
         appt_id, action, performed_by, json.dumps(metadata),
     )
+
+
+async def get_month_availability(
+    pool: asyncpg.Pool, doctor_id: str, month_start: date_type, month_end: date_type
+) -> dict[str, int]:
+    rows = await pool.fetch(
+        """SELECT slot_date::text AS d,
+                  COUNT(*) FILTER (WHERE status = 'booked') AS booked
+           FROM appointment_slots
+           WHERE doctor_id = $1
+             AND slot_date >= $2
+             AND slot_date <= $3
+           GROUP BY slot_date""",
+        doctor_id, month_start, month_end,
+    )
+    return {r["d"]: r["booked"] for r in rows}

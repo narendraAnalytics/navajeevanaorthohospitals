@@ -16,6 +16,7 @@ Conversation protocol (stateless — frontend accumulates answers):
   GET  /appointment/slots/{doctor_id}?date=...
 """
 import logging
+from calendar import monthrange
 from datetime import date as date_type
 from uuid import uuid4
 
@@ -28,6 +29,7 @@ from app.database.appointment_queries import (
     get_appointments_by_patient_email,
     get_available_slots,
     get_doctors,
+    get_month_availability,
     reschedule_appointment,
     update_appointment_status,
 )
@@ -153,6 +155,28 @@ async def list_doctors(request: Request):
         )
         for r in rows
     ]
+
+
+@router.get("/appointment/slots/{doctor_id}/availability", tags=["Appointments"])
+async def get_month_avail(doctor_id: str, month: str, request: Request):
+    """Return booked-slot count per date for a doctor in a given month.
+
+    Query param: ?month=YYYY-MM
+    Response: {"2026-06-09": 2, "2026-06-14": 4, ...}
+    """
+    pool = request.app.state.pool
+    try:
+        year, mon = (int(x) for x in month.split("-"))
+        month_start = date_type(year, mon, 1)
+        month_end = date_type(year, mon, monthrange(year, mon)[1])
+    except (ValueError, IndexError):
+        raise HTTPException(status_code=400, detail="Invalid month format. Use YYYY-MM.")
+
+    doc = await pool.fetchrow("SELECT id FROM doctors WHERE id = $1", doctor_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail=f"Doctor '{doctor_id}' not found")
+
+    return await get_month_availability(pool, doctor_id, month_start, month_end)
 
 
 @router.get("/appointment/slots/{doctor_id}", tags=["Appointments"])
