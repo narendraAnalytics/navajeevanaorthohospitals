@@ -18,6 +18,7 @@ ALL_COLLECTIONS = [
     "doctors_directory",
     "hospital_information",
     "physiotherapy_rehabilitation",
+    "knee_replacement",
 ]
 
 SYNTHESIS_PROMPT = """You are a medical knowledge retrieval AI for Navajeevana Orthopedic Hospital, Bhimavaram, Andhra Pradesh.

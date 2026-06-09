@@ -1,6 +1,5 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import Nav from '@/components/Nav'
 import Footer from '@/components/Footer'
 import { specialties, getSpecialty } from '@/lib/specialties-data'
 
@@ -25,7 +24,7 @@ export default async function SpecialtyPage({ params }: { params: Promise<{ slug
       <style>{`
         .sp-hero {
           background: ${s.heroGradient};
-          padding: 120px 24px 60px;
+          padding: 60px 24px 60px;
           position: relative;
         }
         .sp-hero-inner { max-width: 860px; margin: 0 auto; }
@@ -173,8 +172,6 @@ export default async function SpecialtyPage({ params }: { params: Promise<{ slug
           border: 1px solid rgba(255,255,255,.7);
         }
       `}</style>
-
-      <Nav />
 
       {/* Hero */}
       <header className="sp-hero">

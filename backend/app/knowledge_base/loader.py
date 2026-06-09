@@ -15,6 +15,7 @@ COLLECTION_MAP = {
     "doctors_directory.md":      "doctors_directory",
     "hospital_information.md":          "hospital_information",
     "physiotherapy_rehabilitation.md":  "physiotherapy_rehabilitation",
+    "knee_replacement.md":              "knee_replacement",
 }
 
 
