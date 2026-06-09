@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 const LOGO = 'https://res.cloudinary.com/dkqbzwicr/image/upload/q_auto/f_auto/v1780555373/logo_xr4zab.png'
-const VIDEO = 'https://res.cloudinary.com/dkqbzwicr/video/upload/q_auto/f_auto/v1780937062/Create_an_second_ultra_reali_cdxura.webm'
+const VIDEO  = 'https://res.cloudinary.com/dkqbzwicr/video/upload/q_auto/f_auto/v1780937062/Create_an_second_ultra_reali_cdxura.webm'
+const POSTER = 'https://res.cloudinary.com/dkqbzwicr/video/upload/q_auto,f_auto,so_0/v1780937062/Create_an_second_ultra_reali_cdxura.jpg'
 
 export default function IntroPage() {
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -36,15 +37,12 @@ export default function IntroPage() {
         const rem = Math.ceil(video.duration - video.currentTime)
         if (timer) timer.textContent = rem + 's'
       }
-      const onEnded = () => enterSite()
       video.addEventListener('canplay', onCanPlay)
       video.addEventListener('timeupdate', onTimeUpdate)
-      video.addEventListener('ended', onEnded)
-      const autoId = setTimeout(enterSite, 16000)
+      const autoId = setTimeout(enterSite, 60000)
       return () => {
         video.removeEventListener('canplay', onCanPlay)
         video.removeEventListener('timeupdate', onTimeUpdate)
-        video.removeEventListener('ended', onEnded)
         clearTimeout(autoId)
       }
     }
@@ -150,8 +148,12 @@ export default function IntroPage() {
 
       <div className={`stage${exiting ? ' exiting' : ''}`}>
 
+        {/* Poster — robot visible immediately while video buffers on first visit */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={POSTER} alt="" aria-hidden className="bg-video ready" />
+
         {/* Video */}
-        <video ref={videoRef} className="bg-video" autoPlay muted playsInline>
+        <video ref={videoRef} className="bg-video" autoPlay muted playsInline preload="auto" loop>
           <source src={VIDEO} type="video/webm" />
         </video>
 
