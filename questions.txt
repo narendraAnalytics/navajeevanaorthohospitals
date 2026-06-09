@@ -3,3 +3,5 @@ Which doctors are available at Bhimavaram branch? I need an orthopedic surgeon.
 I want to consult Dr. Arjun Reddy. What is his specialization and which branch does he work at?
 
 What are the OPD timings at Navajeevana Ortho Hospitals? What time does the hospital open on weekdays?"
+
+Same treatment as knee replacement: replace the authored     placeholder in specialties-data.ts with the real doc content, copy to backend KB, and register it in loader + retriever.

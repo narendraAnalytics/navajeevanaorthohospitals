@@ -14,7 +14,9 @@ Next.js 16 · React 19 · Tailwind 4 · Shadcn (`@base-ui/react`, style: `base-n
 
 | Route | File | Status | Notes |
 |---|---|---|---|
+| `/intro` | `src/app/intro/page.tsx` | ✅ | Site-wide cinematic intro — signed-out only; loops video; `router.push('/?entered=1')` on enter |
 | `/` | `src/app/page.tsx` | ✅ | Landing page — server component, imports client sections |
+| `/specialties/[slug]` | `src/app/specialties/[slug]/page.tsx` | ✅ | Dynamic specialty pages; 6 slugs; no navbar; content from `src/lib/specialties-data.ts` |
 | `/patient/intro` | `src/app/patient/intro/page.tsx` | ✅ | Entry animation → `/patient` |
 | `/patient` | `src/app/patient/page.tsx` | ✅ | Care Hub — submit ticket + track (client) |
 | `/patient/submit-transition/[ticket_id]` | `src/app/patient/submit-transition/[ticket_id]/page.tsx` | ✅ | AI handoff animation |
@@ -88,9 +90,12 @@ Fonts loaded in `src/app/layout.tsx`:
 
 | File | Purpose |
 |---|---|
-| `src/proxy.ts` | Clerk middleware — MUST be named `proxy.ts`. `/admin(.*)` and `/api/send-email` excluded. |
+| `src/proxy.ts` | Clerk middleware — MUST be named `proxy.ts`. Redirects `/` → `/intro` only when `!entered` AND `!userId`. `/admin(.*)` and `/api/send-email` excluded. |
 | `src/lib/api.ts` | Typed fetch wrapper for all backend endpoints. `sendEmail()` posts to `/api/send-email` (Next.js route), not backend directly. |
 | `src/lib/auth.ts` | `getOrCreateUser()` — lazy Clerk→Neon sync for `frontend_users` |
+| `src/lib/specialties-data.ts` | All 6 specialty page content (slugs, sections, FAQs). Add new specialties here. `getSpecialty(slug)` used by the dynamic route. |
+| `src/components/CtaBannerButtons.tsx` | Auth-aware CTA buttons — signed-in → `/doctors`, signed-out → Clerk modal with `forceRedirectUrl="/doctors"`. |
+| `src/components/PageReveal.tsx` | Dark overlay that fades out on mount. Add as first child of `.brand-page` on pages reached via intro navigation. |
 
 ## API
 

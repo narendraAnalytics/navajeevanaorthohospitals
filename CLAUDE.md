@@ -273,7 +273,9 @@ if isinstance(appt_time, str):
 
 ## Knowledge Base
 
-9 `.md` docs in `backend/app/knowledge_base/docs/`, each maps to a ChromaDB collection. To add a doc: create `.md` → add to `COLLECTION_MAP` in `loader.py` → add name to `COLLECTIONS` in `rag_retriever.py` → re-run seed script. ChromaDB chunks on `## ` / `### ` headings.
+11 `.md` docs in `backend/app/knowledge_base/docs/`, each maps to a ChromaDB collection. To add a doc: create `.md` → add to `COLLECTION_MAP` in `loader.py` → add name to `ALL_COLLECTIONS` in `rag_retriever.py` → re-run seed script. ChromaDB chunks on `## ` / `### ` headings.
+
+Collections: `appointment_faq`, `test_preparation`, `post_surgery_care`, `insurance_billing`, `escalation_rules`, `past_tickets`, `doctors_directory`, `hospital_information`, `physiotherapy_rehabilitation`, `knee_replacement`, `hip_replacement`.
 
 ## Environment Variables
 
@@ -318,8 +320,9 @@ Stack: Next.js 16 + React 19 + Tailwind 4 + Shadcn (`@base-ui/react`).
 
 | Route | File | Status |
 |---|---|---|
-| `/intro` | `src/app/intro/page.tsx` | ✅ Site-wide cinematic intro (dark, video BG) — plays on every visit |
-| `/` | `src/app/page.tsx` | ✅ Landing page (server component) — only reachable via `/?entered=1` |
+| `/intro` | `src/app/intro/page.tsx` | ✅ Site-wide cinematic intro (dark, video BG) — plays for signed-out users; signed-in users skip directly to `/` |
+| `/` | `src/app/page.tsx` | ✅ Landing page (server component) — reachable via `/?entered=1` or directly when signed in |
+| `/specialties/[slug]` | `src/app/specialties/[slug]/page.tsx` | ✅ Dynamic specialty detail pages (6 slugs); content from `src/lib/specialties-data.ts`; no navbar, breadcrumb only |
 | `/patient/intro` | `src/app/patient/intro/page.tsx` | ✅ Patient portal entry animation → `/patient` |
 | `/patient` | `src/app/patient/page.tsx` | ✅ Care Hub — submit ticket + track |
 | `/patient/submit-transition/[ticket_id]` | `src/app/patient/submit-transition/[ticket_id]/page.tsx` | ✅ AI handoff animation |
@@ -338,9 +341,12 @@ Stack: Next.js 16 + React 19 + Tailwind 4 + Shadcn (`@base-ui/react`).
 |---|---|
 | `src/app/globals.css` | All brand CSS — design tokens + every landing page class |
 | `src/app/layout.tsx` | Sora + Plus Jakarta Sans fonts; `<ClerkProvider>` inside `<body>` |
-| `src/proxy.ts` | Clerk middleware — MUST be named `proxy.ts`. Redirects `/` → `/intro` unless `?entered=1` is present. `/admin(.*)` excluded (sessionStorage auth). Also excludes `/api/send-email`. |
+| `src/proxy.ts` | Clerk middleware — MUST be named `proxy.ts`. Redirects `/` → `/intro` only when `!entered` AND `!userId` (signed-in users skip intro). `/admin(.*)` excluded (sessionStorage auth). Also excludes `/api/send-email`. |
 | `src/lib/api.ts` | Typed fetch wrapper for all backend endpoints. `sendEmail()` posts to `/api/send-email` (Next.js route), not backend directly. |
 | `src/lib/auth.ts` | `getOrCreateUser()` — lazy Clerk→Neon sync for `frontend_users` |
+| `src/lib/specialties-data.ts` | Content store for all 6 specialty pages. Exports `specialties[]` array + `getSpecialty(slug)` helper. Add new specialty content here, not in the page component. |
+| `src/components/CtaBannerButtons.tsx` | Client component — CTA banner buttons. Signed-in → `router.push('/doctors')`; signed-out → `<SignInButton mode="modal" forceRedirectUrl="/doctors">`. |
+| `src/components/PageReveal.tsx` | Client component — full-screen `#05101E` overlay that fades out on mount (600ms). Placed as first child of `.brand-page` to mask hard-navigation flashes. |
 
 **Next.js API Routes** (server-side, not exposed to backend):
 
@@ -375,10 +381,12 @@ Stack: Next.js 16 + React 19 + Tailwind 4 + Shadcn (`@base-ui/react`).
 - CSS class prefixes: `dp-` (page/filter), `dc-` (doctor card), `bm-` (booking modal), `mc-` (month calendar).
 
 **Site-wide intro flow (`/intro`):**
-- `src/proxy.ts` middleware redirects every bare `/` visit to `/intro` (no sessionStorage — plays every refresh).
-- `/intro` page sets `window.location.href = '/?entered=1'` on "Enter Site" / "Skip Intro" / video end / 16s timeout.
+- `src/proxy.ts` middleware redirects bare `/` → `/intro` only for **signed-out** users. Signed-in users land directly on `/`.
+- `/intro` uses `router.push('/?entered=1')` (Next.js client navigation — no hard reload flash) on "Enter Site" / "Skip Intro" / 60s safety timeout. Video does NOT auto-navigate on end — it loops.
+- A static Cloudinary poster image (`so_0` frame thumbnail) is rendered behind the video so the robot is visible immediately on first visit before the video buffers.
 - Middleware allows `/?entered=1` through; `HeroSection.tsx` cleans the param via `window.history.replaceState`.
 - `/intro` uses a Cloudinary `.webm` video (`v1780937062/Create_an_second_ultra_reali_cdxura`). All effects (vignette, grain, scanlines, particles) are inline `<style>` — do not move to `globals.css`.
+- `PageReveal` component on the landing page fades a dark overlay out on mount to mask any flash between the intro exit animation and the landing page paint.
 
 **Navbar Patient Portal animation:**
 - `src/components/Nav.tsx` wraps the signed-out `ghost-pill` button in `<div className="pp-ring">`.
@@ -436,3 +444,6 @@ All scripts are idempotent — safe to re-run on every deploy.
 | Phase E2 — Landing page "Meet Our Specialists" section updated: real doctor photos from Cloudinary, "View All Doctors" links to `/doctors` | ✅ |
 | Phase F1 — AI Patient Support card: replaced inline SVG robot with Cloudinary PNG (`robo_hf6sls`); `.ai-card` overflow:visible so robot sits at bottom edge | ✅ |
 | Phase F2 — Site-wide cinematic intro page (`/intro`): Cloudinary video BG, vignette, grain, particles, shimmer title, progress bar; middleware redirects every `/` visit through intro | ✅ |
+| Phase F3 — Intro UX improvements: signed-in users skip intro; video loops with poster for instant robot visibility; `router.push` replaces hard nav; `PageReveal` fade-in on landing page | ✅ |
+| Phase G1 — Specialty detail pages: `/specialties/[slug]` dynamic route for all 6 specialties; data-driven via `specialties-data.ts`; KB seeded with `knee_replacement` + `hip_replacement` docs | ✅ |
+| Phase G2 — CTA banner auth: "Book Appointment" / "Call Now" open Clerk modal when signed-out, navigate to `/doctors` when signed-in | ✅ |
