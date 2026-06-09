@@ -74,7 +74,7 @@ export default function Nav() {
               {label}
             </a>
           ))}
-          {!user && <a href="#">How It Works</a>}
+          {!user && <a href="/how-it-works">How It Works</a>}
         </div>
 
         <div className="nav-cta">
