@@ -1,4 +1,5 @@
 import Nav from '@/components/Nav'
+import CtaBannerButtons from '@/components/CtaBannerButtons'
 import HeroSection from '@/components/HeroSection'
 import TestimonialsSection from '@/components/TestimonialsSection'
 import Footer from '@/components/Footer'
@@ -208,15 +209,7 @@ export default function LandingPage() {
                 <p>Book your appointment with our experts today.</p>
               </div>
             </div>
-            <div className="cta-acts">
-              <button className="bbtn white lg">Book Appointment</button>
-              <button className="bbtn whiteout lg">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                  <path d="M5 4h4l2 5-3 2a11 11 0 005 5l2-3 5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2z" />
-                </svg>
-                Call Now
-              </button>
-            </div>
+            <CtaBannerButtons />
           </div>
         </div>
       </main>
