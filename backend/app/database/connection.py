@@ -25,6 +25,7 @@ async def get_pool() -> asyncpg.Pool:
                     max_size=5,
                     timeout=30,
                     command_timeout=60,
+                    max_inactive_connection_lifetime=300,
                 )
                 logger.info("[DB] asyncpg pool created")
                 break

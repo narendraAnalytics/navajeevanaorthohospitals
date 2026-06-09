@@ -1,7 +1,77 @@
-Which doctors are available at Bhimavaram branch? I need an orthopedic surgeon.
+# Vercel Runtime Log
 
-I want to consult Dr. Arjun Reddy. What is his specialization and which branch does he work at?
+## Request
+ID: 49zr4-1780984177094-43f99a155ca3
+Time: 2026-06-09T05:49:37.094Z
+GET /patient → 304
+Host: navajeevanaorthohospitals.vercel.app
+Duration: 27ms
+Cache: HIT
+Region: bom1
+User Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36
+Referer: https://navajeevanaorthohospitals.vercel.app/patient/processing/TICKET-C70213B6
 
-What are the OPD timings at Navajeevana Ortho Hospitals? What time does the hospital open on weekdays?"
+## Query Params
+_rsc=RDa-NXxly-yJ6ErV
 
-Same treatment as knee replacement: replace the authored     placeholder in specialties-data.ts with the real doc content, copy to backend KB, and register it in loader + retriever.
+## Lifecycle
+
+### Middleware
+Status: 200
+Route: /_middleware
+Duration: 9ms
+Runtime: nodejs24.x
+Memory: 274MB / 2048MB
+Region: bom1
+
+### Cache
+Status: 304
+Route: /patient.segments/patient/__PAGE__.segment
+Cache: HIT
+Region: bom1
+
+## Deployment
+ID: dpl_8pgDLZovEFofUYyf9FYtrk3TbH7U
+Environment: production
+Branch: main
+
+------------------------------------------------------------
+
+# Vercel Runtime Log
+
+## Request
+ID: 49zr4-1780984179359-8041715a3d44
+Time: 2026-06-09T05:49:39.359Z
+GET /patient → 304
+Host: navajeevanaorthohospitals.vercel.app
+Duration: 26ms
+Cache: HIT
+Region: bom1
+User Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36
+Referer: https://navajeevanaorthohospitals.vercel.app/patient/processing/TICKET-C70213B6
+
+## Query Params
+tab=track
+id=TICKET-C70213B6
+_rsc=dX2Eltq9RQGrEfY3
+
+## Lifecycle
+
+### Middleware
+Status: 200
+Route: /_middleware
+Duration: 9ms
+Runtime: nodejs24.x
+Memory: 274MB / 2048MB
+Region: bom1
+
+### Cache
+Status: 304
+Route: /patient.segments/_tree.segment
+Cache: HIT
+Region: bom1
+
+## Deployment
+ID: dpl_8pgDLZovEFofUYyf9FYtrk3TbH7U
+Environment: production
+Branch: main
