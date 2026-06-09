@@ -14,7 +14,10 @@ const isPublicRoute = createRouteMatcher([
 export default clerkMiddleware(async (auth, req) => {
   const { pathname, searchParams } = req.nextUrl
   if (pathname === '/' && !searchParams.has('entered')) {
-    return NextResponse.redirect(new URL('/intro', req.url))
+    const { userId } = await auth()
+    if (!userId) {
+      return NextResponse.redirect(new URL('/intro', req.url))
+    }
   }
   if (!isPublicRoute(req)) {
     await auth.protect()
