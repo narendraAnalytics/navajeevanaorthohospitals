@@ -273,9 +273,11 @@ if isinstance(appt_time, str):
 
 ## Knowledge Base
 
-11 `.md` docs in `backend/app/knowledge_base/docs/`, each maps to a ChromaDB collection. To add a doc: create `.md` → add to `COLLECTION_MAP` in `loader.py` → add name to `ALL_COLLECTIONS` in `rag_retriever.py` → re-run seed script. ChromaDB chunks on `## ` / `### ` headings.
+15 `.md` docs in `backend/app/knowledge_base/docs/`, each maps to a ChromaDB collection. To add a doc: create `.md` → add to `COLLECTION_MAP` in `loader.py` → add name to `ALL_COLLECTIONS` in `rag_retriever.py` → re-run seed script. ChromaDB chunks on `## ` / `### ` headings.
 
-Collections: `appointment_faq`, `test_preparation`, `post_surgery_care`, `insurance_billing`, `escalation_rules`, `past_tickets`, `doctors_directory`, `hospital_information`, `physiotherapy_rehabilitation`, `knee_replacement`, `hip_replacement`.
+Collections: `appointment_faq`, `test_preparation`, `post_surgery_care`, `insurance_billing`, `escalation_rules`, `past_tickets`, `doctors_directory`, `hospital_information`, `physiotherapy_rehabilitation`, `knee_replacement`, `hip_replacement`, `spine_surgery`, `sports_medicine`, `fracture_trauma_care`, `robotic_joint_replacement`.
+
+**RAG routing (`_COLLECTION_RULES` in `rag_retriever.py`):** Keyword → collection mapping uses **first-match-wins** order. More specific rules (robotic, knee/hip replacement, spine, sports, fracture) are listed BEFORE the generic `physiotherapy` / `recovery` rule — adding new rules must go above the physio rule or they will never match queries containing "recovery".
 
 ## Environment Variables
 
@@ -416,7 +418,7 @@ All scripts are idempotent — safe to re-run on every deploy.
 
 > **CORS critical:** `ALLOWED_ORIGIN` in Render env vars **must** be `https://navajeevanaorthohospitals.vercel.app`. Default in `config.py` is `http://localhost:3000`.
 
-> **Neon cold-start:** Render free tier sleeps after ~15 min. If graph fails with `AdminShutdown`, restart the backend service.
+> **Neon cold-start:** Render free tier sleeps after ~15 min. If graph fails with `AdminShutdown`, restart the backend service. The asyncpg pool in `connection.py` uses `max_inactive_connection_lifetime=300` to recycle stale connections before Neon drops them — do not remove this setting.
 
 > `GET /` returns `{"detail":"Not Found"}` — normal. Use `/docs` for Swagger UI.
 
@@ -447,3 +449,7 @@ All scripts are idempotent — safe to re-run on every deploy.
 | Phase F3 — Intro UX improvements: signed-in users skip intro; video loops with poster for instant robot visibility; `router.push` replaces hard nav; `PageReveal` fade-in on landing page | ✅ |
 | Phase G1 — Specialty detail pages: `/specialties/[slug]` dynamic route for all 6 specialties; data-driven via `specialties-data.ts`; KB seeded with `knee_replacement` + `hip_replacement` docs | ✅ |
 | Phase G2 — CTA banner auth: "Book Appointment" / "Call Now" open Clerk modal when signed-out, navigate to `/doctors` when signed-in | ✅ |
+| Phase H1 — 4 new KB docs + collections: `spine_surgery`, `sports_medicine`, `fracture_trauma_care`, `robotic_joint_replacement`; RAG `_COLLECTION_RULES` updated with 5 specific rules before physio catch-all | ✅ |
+| Phase H2 — Specialty pages real content: all 6 `/specialties/[slug]` pages populated from authored `.md` files via `specialties-data.ts` | ✅ |
+| Phase H3 — Stale Neon connection fix: `max_inactive_connection_lifetime=300` in asyncpg pool; prevents "no agent ran, error" on Vercel/Render after idle periods | ✅ |
+| Phase H4 — Navbar portfolio icon (BuildFlows): Cloudinary `e_bgremoval` for transparent PNG; teal glow on hover + "My Work →" tooltip | ✅ |

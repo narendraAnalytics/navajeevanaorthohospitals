@@ -104,6 +104,7 @@ export default function Nav() {
                 width={30}
                 height={30}
               />
+              <span className="nav-ptip">My Work →</span>
             </a>
             <div className="pp-ring">
               <SignInButton mode="redirect" forceRedirectUrl="/api/auth/sync">
