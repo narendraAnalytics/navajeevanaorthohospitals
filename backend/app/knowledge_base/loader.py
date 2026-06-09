@@ -17,6 +17,10 @@ COLLECTION_MAP = {
     "physiotherapy_rehabilitation.md":  "physiotherapy_rehabilitation",
     "knee_replacement.md":              "knee_replacement",
     "hip_replacement.md":               "hip_replacement",
+    "spine_surgery.md":                 "spine_surgery",
+    "sports_medicine.md":               "sports_medicine",
+    "fracture_trauma_care.md":          "fracture_trauma_care",
+    "robotic_joint_replacement.md":     "robotic_joint_replacement",
 }
 
 

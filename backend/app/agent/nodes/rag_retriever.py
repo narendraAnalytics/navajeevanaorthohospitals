@@ -20,6 +20,10 @@ ALL_COLLECTIONS = [
     "physiotherapy_rehabilitation",
     "knee_replacement",
     "hip_replacement",
+    "spine_surgery",
+    "sports_medicine",
+    "fracture_trauma_care",
+    "robotic_joint_replacement",
 ]
 
 SYNTHESIS_PROMPT = """You are a medical knowledge retrieval AI for Navajeevana Orthopedic Hospital, Bhimavaram, Andhra Pradesh.
