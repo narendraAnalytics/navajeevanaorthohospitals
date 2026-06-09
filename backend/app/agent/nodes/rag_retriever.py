@@ -52,6 +52,26 @@ _COLLECTION_RULES: list[tuple[list[str], list[str]]] = [
         ["insurance_billing", "hospital_information"],
     ),
     (
+        ["robotic", "robot-assist", "computer-assist", "navigation surgery", "mako", "navio"],
+        ["robotic_joint_replacement", "knee_replacement", "hip_replacement"],
+    ),
+    (
+        ["knee replacement", "hip replacement", "arthroplasty", "tka", "tkr", "tha", "thr", "total knee", "total hip", "partial knee", "partial hip"],
+        ["knee_replacement", "hip_replacement", "robotic_joint_replacement"],
+    ),
+    (
+        ["spine surgery", "back surgery", "disc", "herniat", "stenosis", "spondyl", "laminect", "spinal fusion", "sciatica", "microdiscectomy"],
+        ["spine_surgery", "physiotherapy_rehabilitation", "post_surgery_care"],
+    ),
+    (
+        ["acl", "pcl", "ligament tear", "meniscus", "rotator cuff", "sports injur", "athletic injur", "tennis elbow", "golfer"],
+        ["sports_medicine", "physiotherapy_rehabilitation"],
+    ),
+    (
+        ["fracture", "broken bone", "trauma", "accident injur", "orif", "external fixat", "compound fracture", "stress fracture"],
+        ["fracture_trauma_care", "post_surgery_care"],
+    ),
+    (
         ["physiotherapy", "physio", "rehab", "exercise", "recovery", "post-surgery", "post surgery", "wound", "restrict", "activity"],
         ["physiotherapy_rehabilitation", "post_surgery_care"],
     ),
