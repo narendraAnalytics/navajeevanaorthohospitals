@@ -574,6 +574,9 @@ export default function AdminDashboard() {
   const [queue, setQueue] = useState<TicketReview[]>([])
   const [allTickets, setAllTickets] = useState<Ticket[]>([])
   const [selected, setSelected] = useState<TicketReview | null>(null)
+  const [filterDate, setFilterDate] = useState('')
+  const [filterEmail, setFilterEmail] = useState('')
+  const [filterPhone, setFilterPhone] = useState('')
   const [brief, setBrief] = useState<EscalationBrief | null>(null)
   const [editText, setEditText] = useState('')
   const [editMode, setEditMode] = useState(false)
@@ -676,6 +679,13 @@ export default function AdminDashboard() {
   const timeStr = now?.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) ?? ''
 
   if (!authChecked) return null
+
+  const filteredQueue = queue.filter(t => {
+    if (filterDate && !t.created_at.startsWith(filterDate)) return false
+    if (filterEmail && !t.customer_email?.toLowerCase().includes(filterEmail.toLowerCase())) return false
+    if (filterPhone && !t.customer_phone?.includes(filterPhone)) return false
+    return true
+  })
 
   const navItems = [
     { id: 'overview' as DashView, label: 'Dashboard', badge: null,
@@ -817,6 +827,26 @@ export default function AdminDashboard() {
                     </div>
                     <button onClick={loadQueue} style={{ background: '#F1F5F9', border: 'none', borderRadius: 8, padding: '7px 14px', fontSize: 12, color: '#475569', cursor: 'pointer', fontWeight: 600 }}>↻ Refresh</button>
                   </div>
+                  {/* Filter bar */}
+                  <div style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '.04em', marginRight: 4 }}>Filter:</span>
+                    <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)}
+                      aria-label="Filter by submitted date"
+                      style={{ border: '1px solid #E2E8F0', borderRadius: 7, padding: '5px 10px', fontSize: 12, color: '#334155', background: '#fff', outline: 'none' }} />
+                    <input type="text" placeholder="Email..." value={filterEmail} onChange={e => setFilterEmail(e.target.value)}
+                      style={{ border: '1px solid #E2E8F0', borderRadius: 7, padding: '5px 10px', fontSize: 12, color: '#334155', background: '#fff', width: 180, outline: 'none' }} />
+                    <input type="text" placeholder="Phone..." value={filterPhone} onChange={e => setFilterPhone(e.target.value)}
+                      style={{ border: '1px solid #E2E8F0', borderRadius: 7, padding: '5px 10px', fontSize: 12, color: '#334155', background: '#fff', width: 140, outline: 'none' }} />
+                    {(filterDate || filterEmail || filterPhone) && (
+                      <button onClick={() => { setFilterDate(''); setFilterEmail(''); setFilterPhone('') }}
+                        style={{ background: '#FEE2E2', border: 'none', borderRadius: 7, padding: '5px 12px', fontSize: 11, color: '#EF4444', fontWeight: 700, cursor: 'pointer' }}>
+                        ✕ Clear
+                      </button>
+                    )}
+                    {(filterDate || filterEmail || filterPhone) && (
+                      <span style={{ fontSize: 11, color: '#64748B', marginLeft: 4 }}>{filteredQueue.length} result{filteredQueue.length !== 1 ? 's' : ''}</span>
+                    )}
+                  </div>
                   {loading ? (
                     <div style={{ padding: 40, textAlign: 'center', color: '#94A3B8' }}>Loading...</div>
                   ) : queue.length === 0 ? (
@@ -825,6 +855,8 @@ export default function AdminDashboard() {
                       <div style={{ fontSize: 16, fontWeight: 700, color: '#0F172A', marginBottom: 8 }}>Queue is clear!</div>
                       <div style={{ fontSize: 13, color: '#64748B' }}>All tickets reviewed. Great work.</div>
                     </div>
+                  ) : filteredQueue.length === 0 ? (
+                    <div style={{ padding: 40, textAlign: 'center', color: '#94A3B8', fontSize: 13 }}>No tickets match the current filters.</div>
                   ) : (
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                       <thead>
@@ -835,7 +867,7 @@ export default function AdminDashboard() {
                         </tr>
                       </thead>
                       <tbody>
-                        {queue.map(t => {
+                        {filteredQueue.map(t => {
                           const created = new Date(t.created_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
                           const preview = t.original_message ? t.original_message.slice(0, 55) + (t.original_message.length > 55 ? '…' : '') : '—'
                           const statusActionLabel: Record<string, { label: string; color: string }> = {
