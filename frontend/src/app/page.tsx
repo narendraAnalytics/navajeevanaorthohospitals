@@ -17,12 +17,12 @@ const doctors = [
 ]
 
 const specialties = [
-  { label: 'Knee Replacement',      sub: 'Robotic precision',   g: 'bg-gi-teal',   bg: 'bg-sc-lime' },
-  { label: 'Hip Replacement',       sub: 'Minimally invasive',  g: 'bg-gi-warm',   bg: 'bg-sc-peach' },
-  { label: 'Spine Surgery',         sub: 'Advanced techniques', g: 'bg-gi-warm',   bg: 'bg-sc-salmon' },
-  { label: 'Sports Medicine',       sub: 'Return to play',      g: 'bg-gi-teal',   bg: 'bg-sc-mint' },
-  { label: 'Trauma Care',           sub: '24/7 emergency',      g: 'bg-gi-violet', bg: 'bg-sc-lavender' },
-  { label: 'Physiotherapy & Rehab', sub: 'Faster recovery',     g: 'bg-gi-teal',   bg: 'bg-sc-teal-lt' },
+  { label: 'Knee Replacement',      sub: 'Robotic precision',   g: 'bg-gi-teal',   bg: 'bg-sc-lime',      slug: 'knee-replacement' },
+  { label: 'Hip Replacement',       sub: 'Minimally invasive',  g: 'bg-gi-warm',   bg: 'bg-sc-peach',     slug: 'hip-replacement' },
+  { label: 'Spine Surgery',         sub: 'Advanced techniques', g: 'bg-gi-warm',   bg: 'bg-sc-salmon',    slug: 'spine-surgery' },
+  { label: 'Sports Medicine',       sub: 'Return to play',      g: 'bg-gi-teal',   bg: 'bg-sc-mint',      slug: 'sports-medicine' },
+  { label: 'Trauma Care',           sub: '24/7 emergency',      g: 'bg-gi-violet', bg: 'bg-sc-lavender',  slug: 'trauma-care' },
+  { label: 'Physiotherapy & Rehab', sub: 'Faster recovery',     g: 'bg-gi-teal',   bg: 'bg-sc-teal-lt',   slug: 'physiotherapy' },
 ]
 
 const specIconPaths = [
@@ -73,8 +73,8 @@ export default function LandingPage() {
                 <p>Comprehensive orthopedic care tailored to your needs.</p>
               </div>
               <div className="spec-grid">
-                {specialties.map(({ label, sub, g, bg }, i) => (
-                  <div key={label} className={`spec-card reveal d${i + 1} ${bg}`}>
+                {specialties.map(({ label, sub, g, bg, slug }, i) => (
+                  <Link key={label} href={`/specialties/${slug}`} className={`spec-card reveal d${i + 1} ${bg}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
                     <div className={`si ${g}`}>
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                         <path d={specIconPaths[i]} />
@@ -82,7 +82,7 @@ export default function LandingPage() {
                     </div>
                     <h4>{label}</h4>
                     <div className="sl">{sub}</div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             </div>
