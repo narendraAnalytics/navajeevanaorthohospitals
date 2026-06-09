@@ -52,6 +52,16 @@ function formatReplyHtml(text: string, name: string, urgency: string): string {
           </td>
         </tr>
 
+        <!-- Signature -->
+        <tr>
+          <td style="padding:20px 32px 8px;">
+            <div style="font-size:14px;color:#334155;line-height:1.8;">
+              Thanks,<br>
+              <strong style="color:#0D9488;">NAVAJEEVANA TEAM</strong>
+            </div>
+          </td>
+        </tr>
+
         <!-- Divider -->
         <tr><td style="padding:0 32px;"><div style="border-top:1px solid #E2E8F0;"></div></td></tr>
 
