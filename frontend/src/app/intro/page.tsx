@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 
 const LOGO = 'https://res.cloudinary.com/dkqbzwicr/image/upload/q_auto/f_auto/v1780555373/logo_xr4zab.png'
 const VIDEO = 'https://res.cloudinary.com/dkqbzwicr/video/upload/q_auto/f_auto/v1780937062/Create_an_second_ultra_reali_cdxura.webm'
@@ -12,12 +13,13 @@ export default function IntroPage() {
   const particlesRef = useRef<HTMLDivElement>(null)
   const [exiting, setExiting] = useState(false)
   const calledRef = useRef(false)
+  const router = useRouter()
 
   function enterSite() {
     if (calledRef.current) return
     calledRef.current = true
     setExiting(true)
-    setTimeout(() => { window.location.href = '/?entered=1' }, 680)
+    setTimeout(() => { router.push('/?entered=1') }, 680)
   }
 
   useEffect(() => {

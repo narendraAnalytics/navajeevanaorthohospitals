@@ -1,5 +1,6 @@
 import Nav from '@/components/Nav'
 import CtaBannerButtons from '@/components/CtaBannerButtons'
+import PageReveal from '@/components/PageReveal'
 import HeroSection from '@/components/HeroSection'
 import TestimonialsSection from '@/components/TestimonialsSection'
 import Footer from '@/components/Footer'
@@ -51,6 +52,7 @@ const journey = [
 export default function LandingPage() {
   return (
     <div className="brand-page">
+      <PageReveal />
       {/* Background orbs */}
       <div className="bg-orbs" aria-hidden="true">
         <div className="orb a" /><div className="orb b" /><div className="orb c" />
