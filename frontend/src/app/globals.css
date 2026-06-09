@@ -228,6 +228,9 @@
 .ghost-pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--ink-2); padding: 8px 12px; border-radius: 30px; border: 1px solid var(--line); background: rgba(255,255,255,.5); transition: .25s; white-space: nowrap; text-decoration: none; }
 .ghost-pill:hover { border-color: var(--teal); color: var(--teal-d); }
 /* ── Patient Portal animated ring ── */
+.nav-portfolio-icon { position:relative; display:flex; align-items:center; margin-right:6px; }
+.nav-portfolio-icon img { display:block; opacity:0.85; transition:opacity .2s; }
+.nav-portfolio-icon:hover img { opacity:1; }
 .pp-ring { position: relative; display: inline-flex; border-radius: 32px; padding: 2px; overflow: hidden; }
 .pp-ring::before { content: ''; position: absolute; top: 50%; left: 50%; width: 300%; aspect-ratio: 1 / 1; transform: translate(-50%, -50%) rotate(0deg); background: conic-gradient(#9DF0D6, #11B5A4, #5FD3E6, #FFD0BB, #FF7E67, #9DF0D6); animation: pp-spin 3s linear infinite; }
 @keyframes pp-spin { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }

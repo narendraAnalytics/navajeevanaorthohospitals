@@ -91,6 +91,20 @@ export default function Nav() {
             <UserButton />
           </Show>
           <Show when="signed-out">
+            <a
+              href="https://buildflows.shop/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="nav-portfolio-icon"
+              aria-label="Built by BuildFlows"
+            >
+              <Image
+                src="https://res.cloudinary.com/dkqbzwicr/image/upload/e_bgremoval/q_auto/f_auto/v1780985346/porfolioicon_vqyt3j.png"
+                alt="BuildFlows"
+                width={30}
+                height={30}
+              />
+            </a>
             <div className="pp-ring">
               <SignInButton mode="redirect" forceRedirectUrl="/api/auth/sync">
                 <button className="ghost-pill">
