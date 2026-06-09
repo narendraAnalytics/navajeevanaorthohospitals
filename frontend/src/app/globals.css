@@ -316,12 +316,15 @@
 
 /* specialties */
 .spec-grid { display: grid; grid-template-columns: repeat(6,1fr); gap: 14px; }
-.spec-card { border-radius: 20px; padding: 22px 14px; text-align: center; border: 1px solid var(--line); box-shadow: 0 14px 34px -24px rgba(16,42,40,.5); transition: transform .3s,box-shadow .3s; cursor: pointer; }
+.spec-card { border-radius: 20px; padding: 22px 14px; text-align: center; border: 1px solid var(--line); box-shadow: 0 14px 34px -24px rgba(16,42,40,.5); transition: transform .3s,box-shadow .3s; cursor: pointer; position: relative; overflow: visible; }
 .spec-card:hover { transform: translateY(-7px); box-shadow: var(--shadow-card); }
 .spec-card .si { width: 58px; height: 58px; border-radius: 18px; margin: 0 auto 14px; display: grid; place-items: center; }
 .spec-card .si svg { width: 27px; height: 27px; color: #fff; }
 .spec-card h4 { font-size: 14.5px; line-height: 1.25; }
 .spec-card .sl { font-size: 11px; color: var(--bk-muted); margin-top: 6px; }
+.spec-tip { position: absolute; bottom: -38px; left: 50%; transform: translateX(-50%) translateY(4px); background: #2E8B6E; color: #fff; font-size: 11px; font-weight: 600; white-space: nowrap; padding: 5px 13px; border-radius: 20px; opacity: 0; pointer-events: none; transition: opacity .2s ease, transform .2s ease; z-index: 10; }
+.spec-card:hover .spec-tip { opacity: 1; transform: translateX(-50%) translateY(0); }
+.spec-tip::before { content: ''; position: absolute; top: -5px; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-bottom-color: #2E8B6E; border-top: none; }
 
 /* doctors */
 .doc-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 14px; }

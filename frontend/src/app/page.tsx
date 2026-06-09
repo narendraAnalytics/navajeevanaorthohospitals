@@ -82,6 +82,7 @@ export default function LandingPage() {
                     </div>
                     <h4>{label}</h4>
                     <div className="sl">{sub}</div>
+                    <span className="spec-tip">Click for more info →</span>
                   </Link>
                 ))}
               </div>
