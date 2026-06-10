@@ -112,6 +112,7 @@ export default function HowItWorksPage() {
   const handleEnded = () => setIsPlaying(false)
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0
+  const isBlurred = currentTime >= 137 && currentTime <= 141
 
   return (
     <>
@@ -125,47 +126,6 @@ export default function HowItWorksPage() {
           background: #05101E;
           font-family: 'Sora', sans-serif;
           overflow: hidden;
-          cursor: none;
-        }
-        .hiw-root * { cursor: none; }
-
-        /* grain */
-        .hiw-grain {
-          position: fixed; inset: -50%;
-          width: 200%; height: 200%;
-          background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
-          opacity: 0.035;
-          pointer-events: none;
-          z-index: 2;
-          animation: grain-shift 8s steps(2) infinite;
-        }
-        @keyframes grain-shift {
-          0%   { transform: translate(0, 0) }
-          25%  { transform: translate(-2%, 1%) }
-          50%  { transform: translate(1%, -2%) }
-          75%  { transform: translate(-1%, 2%) }
-          100% { transform: translate(0, 0) }
-        }
-
-        /* vignette */
-        .hiw-vignette {
-          position: fixed; inset: 0;
-          background:
-            radial-gradient(ellipse 80% 80% at 50% 50%, transparent 40%, rgba(2,8,18,0.85) 100%),
-            linear-gradient(to bottom, rgba(2,8,18,0.5) 0%, transparent 18%, transparent 82%, rgba(2,8,18,0.7) 100%);
-          pointer-events: none;
-          z-index: 3;
-        }
-
-        /* scanlines */
-        .hiw-scanlines {
-          position: fixed; inset: 0;
-          background: repeating-linear-gradient(
-            0deg, transparent, transparent 2px,
-            rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 4px
-          );
-          pointer-events: none;
-          z-index: 4;
         }
 
         /* close */
@@ -181,7 +141,7 @@ export default function HowItWorksPage() {
           font-size: 20px; line-height: 1;
           transition: border-color 0.2s, color 0.2s, background 0.2s;
           z-index: 20;
-          cursor: pointer !important;
+          cursor: pointer;
         }
         .hiw-close:hover {
           border-color: #11B5A4;
@@ -220,7 +180,6 @@ export default function HowItWorksPage() {
           width: 100%; height: 100%;
           object-fit: contain;
           z-index: 1;
-          filter: brightness(0.85);
         }
 
         /* play overlay (big center button when paused) */
@@ -243,7 +202,7 @@ export default function HowItWorksPage() {
           pointer-events: all;
           transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
           box-shadow: 0 0 32px rgba(17,181,164,0.15);
-          cursor: pointer !important;
+          cursor: pointer;
         }
         .hiw-center-btn:hover {
           transform: scale(1.1);
@@ -272,7 +231,7 @@ export default function HowItWorksPage() {
           background: rgba(255,255,255,0.1);
           border-radius: 4px;
           overflow: hidden;
-          cursor: pointer !important;
+          cursor: pointer;
         }
         .hiw-timeline-fill {
           position: absolute; left: 0; top: 0; height: 100%;
@@ -285,7 +244,7 @@ export default function HowItWorksPage() {
           position: absolute; inset: -8px 0;
           width: 100%; height: calc(100% + 16px);
           opacity: 0;
-          cursor: pointer !important;
+          cursor: pointer;
           -webkit-appearance: none;
         }
 
@@ -293,7 +252,7 @@ export default function HowItWorksPage() {
         .hiw-scrubber-wrap {
           position: relative; height: 20px; margin-bottom: 8px;
           display: flex; align-items: center;
-          cursor: pointer !important;
+          cursor: pointer;
         }
         .hiw-scrubber-track {
           position: absolute; left: 0; right: 0;
@@ -332,7 +291,7 @@ export default function HowItWorksPage() {
           display: flex; align-items: center; justify-content: center;
           color: rgba(255,255,255,0.8);
           transition: border-color 0.2s, color 0.2s, background 0.2s;
-          cursor: pointer !important;
+          cursor: pointer;
           flex-shrink: 0;
         }
         .hiw-ctrl-btn:hover {
@@ -371,7 +330,7 @@ export default function HowItWorksPage() {
           border-radius: 3px;
           background: rgba(255,255,255,0.15);
           outline: none;
-          cursor: pointer !important;
+          cursor: pointer;
         }
         .hiw-vol-slider::-webkit-slider-thumb {
           -webkit-appearance: none;
@@ -403,11 +362,6 @@ export default function HowItWorksPage() {
         onMouseMove={resetHideTimer}
         onClick={resetHideTimer}
       >
-        {/* layers */}
-        <div className="hiw-grain" />
-        <div className="hiw-vignette" />
-        <div className="hiw-scanlines" />
-
         {/* video */}
         <video
           ref={videoRef}
@@ -420,7 +374,7 @@ export default function HowItWorksPage() {
           onDurationChange={handleLoaded}
           onEnded={handleEnded}
           onClick={handlePlayPause}
-          style={{ cursor: 'pointer' }}
+          style={{ cursor: 'pointer', filter: isBlurred ? 'blur(12px)' : 'none', transition: 'filter 0.2s' }}
         />
 
         {/* top badge */}
