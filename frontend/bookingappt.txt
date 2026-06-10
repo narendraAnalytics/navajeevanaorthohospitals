@@ -1,8 +1,6 @@
-Dr.Vivek Rao = https://res.cloudinary.com/dkqbzwicr/image/upload/q_auto/f_auto/v1780810643/Dr._Vivek_Rao_n2wxu9.png
-Dr.Sandeep Varma=https://res.cloudinary.com/dkqbzwicr/image/upload/q_auto/f_auto/v1780810643/Dr._Sandeep_Varma_sfagtp.png
-Dr.Lakshmi Devi=https://res.cloudinary.com/dkqbzwicr/image/upload/q_auto/f_auto/v1780810642/Dr._Lakshmi_Devi_qilela.png
-Dr.Priya Sharma=https://res.cloudinary.com/dkqbzwicr/image/upload/q_auto/f_auto/v1780810642/Dr.Priya_Sharma_f4exwi.png
-Dr.Kiran Kumar=https://res.cloudinary.com/dkqbzwicr/image/upload/q_auto/f_auto/v1780810639/Dr._Kiran_Kumar_qd99lm.png
-Dr.Meera Nair=https://res.cloudinary.com/dkqbzwicr/image/upload/q_auto/f_auto/v1780810639/Dr._Meera_Nair_xstg4x.png
-Dr.Arjun Reddy=https://res.cloudinary.com/dkqbzwicr/image/upload/q_auto/f_auto/v1780810639/Dr._Arjun_Reddy_u2yqyp.png
-Dr.Ananya Reddy=https://res.cloudinary.com/dkqbzwicr/image/upload/q_auto/f_auto/v1780810638/Dr._Ananya_Reddy_dkda4q.png
+Duration 0:00 — changed to preload="auto" + added onDurationChange handler + useEffect that reads duration on mount (catches the
+  cached-video case where onLoadedMetadata never re-fires).
+
+  Timeline click — replaced the invisible <input type="range"> with a onMouseDown → getBoundingClientRect() → seek pattern directly on the
+  track div. Click seeks precisely to that position AND auto-starts playback. Dragging along the timeline updates position live. The track
+  hit area is now 20px tall so it's easy to click.
