@@ -336,6 +336,7 @@ Stack: Next.js 16 + React 19 + Tailwind 4 + Shadcn (`@base-ui/react`).
 | `/patient/book` | `src/app/patient/book/page.tsx` | ✅ Immediate redirect to `/doctors` |
 | `/patient/book/confirm/[id]` | `src/app/patient/book/confirm/[id]/page.tsx` | ✅ Polls `GET /appointment/{id}` every 4s; confirmed / error states |
 | `/patient/appointments` | `src/app/patient/appointments/page.tsx` | ✅ Standalone appointments list with cancel |
+| `/how-it-works` | `src/app/how-it-works/page.tsx` | ✅ Full-screen video player; dark `#05101E` BG; custom controls (play/pause/stop/±10s/scrubber/volume); auto-hides controls after 3s idle; time-range blur 2:17–2:21; close → `/?entered=1` |
 
 **Key files:**
 
@@ -453,3 +454,4 @@ All scripts are idempotent — safe to re-run on every deploy.
 | Phase H2 — Specialty pages real content: all 6 `/specialties/[slug]` pages populated from authored `.md` files via `specialties-data.ts` | ✅ |
 | Phase H3 — Stale Neon connection fix: `max_inactive_connection_lifetime=300` in asyncpg pool; prevents "no agent ran, error" on Vercel/Render after idle periods | ✅ |
 | Phase H4 — Navbar portfolio icon (BuildFlows): Cloudinary `e_bgremoval` for transparent PNG; teal glow on hover + "My Work →" tooltip | ✅ |
+| Phase I1 — `/how-it-works` full-screen video player page with custom controls, scrubber, volume, auto-hide UI, and time-range blur (2:17–2:21) | ✅ |

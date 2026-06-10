@@ -4,3 +4,5 @@ Duration 0:00 — changed to preload="auto" + added onDurationChange handler + u
   Timeline click — replaced the invisible <input type="range"> with a onMouseDown → getBoundingClientRect() → seek pattern directly on the
   track div. Click seeks precisely to that position AND auto-starts playback. Dragging along the timeline updates position live. The track
   hit area is now 20px tall so it's easy to click.
+
+  ok nice we had the skill : C:\Users\ES\.claude\skills\langgraphpythonfastapi now update the skill are  
